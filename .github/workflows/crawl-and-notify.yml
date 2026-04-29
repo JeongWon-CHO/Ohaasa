@@ -1,0 +1,51 @@
+name: Crawl horoscopes and send notifications
+
+on:
+  schedule:
+    - cron: '0 22 * * 0-5'  # UTC 기준. JST/KST 월~토 07:00 실행. 일요일 스킵.
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'dry-run 모드 (DB 쓰기 없음, 푸시 발송 없음)'
+        type: boolean
+        default: false
+
+# 수동 실행과 cron이 겹쳐 중복 발송되는 것을 방지한다.
+# cancel-in-progress: false — 실행 중인 job은 취소하지 않고 직렬 대기한다.
+concurrency:
+  group: ohaasa-crawl-and-notify
+  cancel-in-progress: false
+
+# 이 workflow는 checkout만 필요하다.
+permissions:
+  contents: read
+
+jobs:
+  crawl-and-notify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install dependencies
+        working-directory: backend
+        run: npm ci
+
+      - name: Crawl and notify
+        working-directory: backend
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          if [ "${{ github.event.inputs.dry_run }}" = "true" ]; then
+            npm run crawl:dry
+          else
+            npm run crawl
+          fi
