@@ -169,26 +169,58 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE user_devices TO service_role;
 | Phase 2 | JSON 파서 구현 (31 tests passed) | ✅ 완료 |
 | Phase 3 | Supabase 스키마 설계·마이그레이션 | ✅ 완료 |
 | Phase 4-1 | fetch → parse → Supabase upsert 파이프라인 | ✅ 완료 |
-| Phase 4-2 | Expo 푸시 알림 발송 | 🔲 다음 단계 |
-| Phase 5 | GitHub Actions 스케줄러 | 🔲 미착수 |
-| Phase 6 | React Native Expo 앱 | 🔲 미착수 |
+| Phase 4-2 | Expo 푸시 알림 발송 | ✅ 완료 (dry-run 검증. 실발송은 Phase 6 앱 이후) |
+| Phase 5 | GitHub Actions 스케줄러 | ✅ 완료 (수동 dry-run·live 검증. cron 자동 실행 확인 예정) |
+| Phase 6 | React Native Expo 앱 | 🔲 다음 단계 |
 
 ---
 
-## Phase 4-2 설계 포인트 (다음 단계)
+## Phase 4-2 구현 내용
 
-`backend/src/notifications/sender.ts` 구현 예정.
-구현 전 아래 사항을 설계 단계에서 먼저 검토한다:
+`backend/src/notifications/sender.ts` 구현 완료.
 
-1. `user_devices`에서 `notifications_enabled = true AND push_token IS NOT NULL`인 기기만 조회
-2. 각 기기의 `zodiac_sign`에 대응하는 오늘 (또는 최신) 운세 매칭
-3. Expo Push API 메시지 포맷 설계
-4. 100개 단위 chunk 전송
-5. Expo Push ticket / receipt 처리
-6. `DeviceNotRegistered` 에러 수신 시 해당 row의 `notifications_enabled = false`로 업데이트
-7. 크롤링 실패 vs 알림 실패를 독립적으로 처리 (한쪽 실패가 다른 쪽에 영향을 주지 않도록)
-8. 로컬 테스트 방법 (실제 push token 없는 dry-run)
-9. GitHub Actions 실행 시 에러 핸들링 정책
+- `fetchLatestHoroscopes()`: 2-step 쿼리로 최신 date 12개 확정 (날짜 혼합 방지)
+- `fetchActiveDevices()`: `notifications_enabled = true AND push_token IS NOT NULL`
+- `buildMessages()`: `Expo.isExpoPushToken()` 검증, 한국어 제목 + 일본어 본문, invalid token 수집
+- `disableDevices()`: `DeviceNotRegistered` 및 invalid token → `notifications_enabled = false`
+- 발송: 100개 단위 chunk, index 기반 ticket 처리, receipt ID 로그 (Phase 5 이후 polling 예정)
+- dry-run: Supabase 조회만 수행, Expo API 호출·DB update 없이 payload 콘솔 출력
+
+`main.ts` 통합:
+- crawl 실패 → warning 후 계속 (기존 DB 데이터로 알림 시도)
+- notify 실패 → `exit(1)` (crawl 결과 무관)
+
+**실발송 테스트**: Phase 6 Expo 앱에서 실제 push_token 등록 후 진행
+
+---
+
+## GitHub Actions 설정
+
+### Secrets 등록 (필수)
+GitHub repo → Settings → Secrets and variables → Actions → New repository secret
+
+| Secret 이름 | 값 |
+|-------------|---|
+| `SUPABASE_URL` | `https://xxxx.supabase.co` |
+| `SUPABASE_SERVICE_ROLE_KEY` | Legacy service_role JWT 키 |
+
+### workflow 파일
+`.github/workflows/crawl-and-notify.yml`
+
+- **cron**: `0 22 * * 0-5` (UTC) = JST/KST 월~토 07:00, 일요일 스킵
+- **concurrency**: 중복 실행 방지 (`cancel-in-progress: false`)
+- **timeout-minutes**: 10 (hang 방지)
+- **permissions**: `contents: read` (최소 권한)
+- **dry_run input**: `workflow_dispatch` 수동 실행 시 체크박스로 선택
+
+### 검증 순서
+1. Secrets 등록 확인
+2. Actions 탭 → `Crawl horoscopes and send notifications` → Run workflow → `dry_run=true` → 로그 확인
+   - `[crawl] dry-run: upsert skipped`
+   - `[main] Parsed 12 entries`
+   - `[sender] Active devices: N` (또는 0건 정상 종료)
+3. `dry_run=false`로 수동 실행 → Supabase horoscopes 실제 upsert 확인
+4. 다음 cron 자동 실행 확인
 
 ---
 
