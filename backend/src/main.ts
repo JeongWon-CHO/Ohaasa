@@ -4,19 +4,45 @@ import "dotenv/config";
 
 import { fetchJson } from "./crawler/fetcher";
 import { parse } from "./crawler/parser";
-import type { HoroscopeEntry } from "./crawler/parser";
 import { createAdminClient } from "./db/supabase";
+import { sendNotifications } from "./notifications/sender";
 
 // ============================================================
 // Pipeline steps
 // ============================================================
 
-async function upsertHoroscopes(
-  entries: HoroscopeEntry[],
-  supabase: ReturnType<typeof createAdminClient>
+async function crawlAndSave(
+  supabase: ReturnType<typeof createAdminClient>,
+  isDryRun: boolean
 ): Promise<void> {
-  // date + zodiac_sign UNIQUE 제약 기준으로 upsert
-  // 같은 날짜에 재실행해도 중복 없이 덮어쓴다
+  const data    = await fetchJson();
+  const entries = parse(data);
+
+  if (entries.length === 0) {
+    throw new Error("Parser returned 0 entries");
+  }
+  if (entries.length < 12) {
+    console.warn(
+      `[main] Expected 12 entries but got ${entries.length}. Proceeding anyway.`
+    );
+  }
+
+  const date   = entries[0].date;
+  const sorted = [...entries].sort((a, b) => a.rank - b.rank);
+
+  console.log(`[main] Parsed ${entries.length} entries  date=${date}`);
+  for (const e of sorted) {
+    const preview = e.advice.split("\n")[0];
+    console.log(
+      `  ${String(e.rank).padStart(2)}. ${e.zodiac_name.padEnd(6)} (${e.zodiac_sign.padEnd(11)})  ${preview}`
+    );
+  }
+
+  if (isDryRun) {
+    console.log("[crawl] dry-run: upsert skipped");
+    return;
+  }
+
   const { error } = await supabase
     .from("horoscopes")
     .upsert(entries, { onConflict: "date,zodiac_sign" });
@@ -24,6 +50,8 @@ async function upsertHoroscopes(
   if (error) {
     throw new Error(`[upsert] ${error.message}`);
   }
+
+  console.log(`[main] ✓ Upserted ${entries.length} rows  date=${date}`);
 }
 
 // ============================================================
@@ -34,58 +62,61 @@ async function main(): Promise<void> {
   const isDryRun = process.argv.includes("--dry-run");
 
   if (isDryRun) {
-    console.log("[main] ========== DRY RUN (upsert skipped) ==========");
-  }
-
-  // ----------------------------------------------------------
-  // Step 1: Fetch
-  // ----------------------------------------------------------
-  const data = await fetchJson();
-
-  // ----------------------------------------------------------
-  // Step 2: Parse
-  // ----------------------------------------------------------
-  const entries = parse(data);
-
-  if (entries.length === 0) {
-    // parser.ts의 검증에서 에러가 나지 않았는데 0건이면 구조 변경 가능성
-    console.error("[main] Parser returned 0 entries.");
-    process.exit(1);
-  }
-
-  if (entries.length < 12) {
-    // 12개 미만이면 경고만 출력하고 계속 진행 (부분 저장 허용)
-    console.warn(
-      `[main] Expected 12 entries but got ${entries.length}. Proceeding anyway.`
-    );
-  }
-
-  const date = entries[0].date;
-  console.log(`[main] Parsed ${entries.length} entries  date=${date}`);
-
-  // 파싱 결과 목록 출력
-  const sorted = [...entries].sort((a, b) => a.rank - b.rank);
-  for (const e of sorted) {
-    const preview = e.advice.split("\n")[0];
-    console.log(
-      `  ${String(e.rank).padStart(2)}. ${e.zodiac_name.padEnd(6)} (${e.zodiac_sign.padEnd(11)})  ${preview}`
-    );
-  }
-
-  // ----------------------------------------------------------
-  // Step 3: Upsert (dry-run 시 건너뜀)
-  // ----------------------------------------------------------
-  if (isDryRun) {
-    console.log("\n[dry-run] Done. No data was written to Supabase.");
-    return;
+    console.log("[main] ========== DRY RUN ==========");
   }
 
   const supabase = createAdminClient();
-  await upsertHoroscopes(entries, supabase);
 
-  console.log(
-    `[main] ✓ Upserted ${entries.length} rows  date=${date}`
-  );
+  // ----------------------------------------------------------
+  // Step 1: Crawl and save
+  // 실패해도 계속 진행한다 — 기존 DB 데이터로 알림 발송을 시도한다.
+  // ----------------------------------------------------------
+  let crawlFailed = false;
+  try {
+    await crawlAndSave(supabase, isDryRun);
+  } catch (err) {
+    console.error(
+      `[main] Crawl failed: ${err instanceof Error ? err.message : String(err)}`
+    );
+    crawlFailed = true;
+  }
+
+  // ----------------------------------------------------------
+  // Step 2: Send notifications
+  // ----------------------------------------------------------
+  let notifyFailed = false;
+  try {
+    const result = await sendNotifications(supabase, isDryRun);
+    console.log(
+      `[main] ✓ Notifications: ${result.succeeded}/${result.total} sent` +
+      `  date=${result.date}  failed=${result.failed}  disabled=${result.disabled}`
+    );
+  } catch (err) {
+    console.error(
+      `[main] Notification failed: ${err instanceof Error ? err.message : String(err)}`
+    );
+    notifyFailed = true;
+  }
+
+  // ----------------------------------------------------------
+  // Exit code policy:
+  //   notify 실패 → exit(1)  (crawl 결과 무관)
+  //   crawl만 실패 → exit(0), warning
+  //   둘 다 성공  → exit(0)
+  // ----------------------------------------------------------
+  if (crawlFailed) {
+    console.warn(
+      "[main] WARN: crawl failed; notifications used existing DB data"
+    );
+  }
+  if (notifyFailed) {
+    console.error(
+      crawlFailed
+        ? "[main] Fatal: both crawl and notification failed"
+        : "[main] Fatal: notification failed"
+    );
+    process.exit(1);
+  }
 }
 
 // ============================================================
@@ -93,6 +124,6 @@ async function main(): Promise<void> {
 // ============================================================
 
 main().catch((err: Error) => {
-  console.error("[main] Fatal:", err.message);
+  console.error("[main] Unexpected error:", err.message);
   process.exit(1);
 });
