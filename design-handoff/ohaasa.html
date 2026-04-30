@@ -1,0 +1,3011 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ohaasa — App Design</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,300&family=Noto+Serif+JP:wght@300;400;500&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script type="text/babel" src="design-canvas.jsx"></script>
+<script type="text/babel" src="ios-frame.jsx"></script>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #1a1814; font-family: 'DM Sans', sans-serif; }
+</style>
+</head>
+<body>
+<script type="text/babel">
+const { useState } = React;
+
+// ─── Design tokens ───────────────────────────────────────────
+const T = {
+  cream:   '#FAF6F0',
+  cream2:  '#F4EDE3',
+  cream3:  '#EDE3D6',
+  sky:     '#B8D8E8',
+  skyDark: '#7BAEC7',
+  yellow:  '#F5D98B',
+  apricot: '#F0B89A',
+  apricotDark: '#D98A68',
+  lavender:'#D4C5E8',
+  text:    '#2C2416',
+  textMid: '#6B5C48',
+  textSoft:'#9C8B78',
+  white:   '#FFFDF9',
+};
+
+// ─── SVG Decorations ─────────────────────────────────────────
+const Star = ({ x, y, size = 6, opacity = 0.6, color = T.yellow }) => (
+  <div style={{ position:'absolute', left: x, top: y, opacity }}>
+    <svg width={size} height={size} viewBox="0 0 10 10">
+      <polygon points="5,0 6.2,3.8 10,3.8 7,6.2 8.2,10 5,7.8 1.8,10 3,6.2 0,3.8 3.8,3.8"
+        fill={color} />
+    </svg>
+  </div>
+);
+
+const MoonDeco = ({ x, y, size = 18, opacity = 0.5, color = T.apricot }) => (
+  <div style={{ position:'absolute', left: x, top: y, opacity }}>
+    <svg width={size} height={size} viewBox="0 0 24 24">
+      <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" fill={color} />
+    </svg>
+  </div>
+);
+
+const CircleDeco = ({ x, y, size = 40, color, opacity = 0.15 }) => (
+  <div style={{
+    position:'absolute', left: x, top: y,
+    width: size, height: size,
+    borderRadius: '50%',
+    background: color,
+    opacity,
+  }} />
+);
+
+// Zodiac data
+const ZODIACS = [
+  { id:'aries',       jp:'おひつじ座', en:'Aries',       sym:'♈', date:'3/21–4/19' },
+  { id:'taurus',      jp:'おうし座',   en:'Taurus',      sym:'♉', date:'4/20–5/20' },
+  { id:'gemini',      jp:'ふたご座',   en:'Gemini',      sym:'♊', date:'5/21–6/21' },
+  { id:'cancer',      jp:'かに座',     en:'Cancer',      sym:'♋', date:'6/22–7/22' },
+  { id:'leo',         jp:'しし座',     en:'Leo',         sym:'♌', date:'7/23–8/22' },
+  { id:'virgo',       jp:'おとめ座',   en:'Virgo',       sym:'♍', date:'8/23–9/22' },
+  { id:'libra',       jp:'てんびん座', en:'Libra',       sym:'♎', date:'9/23–10/23' },
+  { id:'scorpio',     jp:'さそり座',   en:'Scorpio',     sym:'♏', date:'10/24–11/22' },
+  { id:'sagittarius', jp:'いて座',     en:'Sagittarius', sym:'♐', date:'11/23–12/21' },
+  { id:'capricorn',   jp:'やぎ座',     en:'Capricorn',   sym:'♑', date:'12/22–1/19' },
+  { id:'aquarius',    jp:'みずがめ座', en:'Aquarius',    sym:'♒', date:'1/20–2/18' },
+  { id:'pisces',      jp:'うお座',     en:'Pisces',      sym:'♓', date:'2/19–3/20' },
+];
+
+const ZODIAC_COLORS = {
+  aries:'#F9C5BD', taurus:'#C5E8C5', gemini:'#FFF0B3',
+  cancer:'#C5D8F0', leo:'#FFD9A0', virgo:'#D5E8D0',
+  libra:'#E8D0F0', scorpio:'#D0B8C8', sagittarius:'#FFD4A0',
+  capricorn:'#C8D8C8', aquarius:'#A8D8EA', pisces:'#B8D0F0',
+};
+
+// Fortune data
+const FORTUNE = {
+  rank: 3,
+  sign: ZODIACS[6], // libra
+  message: '今日は人との縁が深まる一日。\n午後の会話が思わぬ幸運をもたらすかも。\nラッキーカラーは空色です。',
+  broadcastDate: '2026年4月28日（月）放送分',
+  lucky: { color:'空色', item:'白い花', number: 7 },
+  stars: { love: 4, work: 3, money: 4, health: 5 },
+};
+
+const StarRating = ({ value, max = 5 }) => (
+  <div style={{ display:'flex', gap: 2 }}>
+    {Array.from({ length: max }).map((_, i) => (
+      <svg key={i} width="12" height="12" viewBox="0 0 10 10">
+        <polygon
+          points="5,0 6.2,3.8 10,3.8 7,6.2 8.2,10 5,7.8 1.8,10 3,6.2 0,3.8 3.8,3.8"
+          fill={i < value ? T.yellow : T.cream3}
+        />
+      </svg>
+    ))}
+  </div>
+);
+
+// ─── Screen 1: Onboarding ─────────────────────────────────────
+function OnboardingScreen() {
+  return (
+    <div style={{
+      width: '100%', height: '100%',
+      background: `linear-gradient(165deg, #FAF6F0 0%, #F0E8DC 50%, #EAD9C8 100%)`,
+      position: 'relative', overflow: 'hidden',
+      display: 'flex', flexDirection: 'column',
+      alignItems: 'center', justifyContent: 'center',
+      padding: '0 32px',
+    }}>
+      {/* Decorations */}
+      <CircleDeco x={-30} y={80}  size={120} color={T.sky}     opacity={0.18} />
+      <CircleDeco x={260} y={400} size={160} color={T.apricot} opacity={0.14} />
+      <CircleDeco x={100} y={600} size={80}  color={T.lavender}opacity={0.18} />
+      <Star x={40}  y={120} size={7}  opacity={0.5} color={T.yellow} />
+      <Star x={290} y={90}  size={5}  opacity={0.4} color={T.apricot} />
+      <Star x={60}  y={320} size={4}  opacity={0.35} color={T.skyDark} />
+      <Star x={280} y={280} size={6}  opacity={0.45} color={T.yellow} />
+      <Star x={150} y={520} size={5}  opacity={0.4} color={T.apricot} />
+      <Star x={310} y={540} size={4}  opacity={0.35} color={T.yellow} />
+      <MoonDeco x={270} y={160} size={28} opacity={0.35} color={T.apricot} />
+      <MoonDeco x={20}  y={480} size={20} opacity={0.3}  color={T.skyDark} />
+
+      {/* Hero constellation illustration */}
+      <div style={{
+        width: 200, height: 200,
+        position: 'relative', marginBottom: 36,
+      }}>
+        {/* Soft glow */}
+        <div style={{
+          position: 'absolute', inset: 0,
+          borderRadius: '50%',
+          background: `radial-gradient(circle, ${T.yellow}55 0%, transparent 70%)`,
+        }} />
+        {/* Stars connected */}
+        <svg width="200" height="200" viewBox="0 0 200 200" style={{ position:'absolute', inset:0 }}>
+          {/* Constellation lines */}
+          <line x1="60" y1="80" x2="100" y2="60" stroke={T.yellow} strokeWidth="1.5" strokeOpacity="0.5" />
+          <line x1="100" y1="60" x2="140" y2="75" stroke={T.yellow} strokeWidth="1.5" strokeOpacity="0.5" />
+          <line x1="140" y1="75" x2="150" y2="120" stroke={T.yellow} strokeWidth="1.5" strokeOpacity="0.5" />
+          <line x1="150" y1="120" x2="110" y2="140" stroke={T.yellow} strokeWidth="1.5" strokeOpacity="0.5" />
+          <line x1="110" y1="140" x2="70" y2="130" stroke={T.yellow} strokeWidth="1.5" strokeOpacity="0.5" />
+          <line x1="70" y1="130" x2="60" y2="80" stroke={T.yellow} strokeWidth="1.5" strokeOpacity="0.5" />
+          <line x1="100" y1="60" x2="110" y2="140" stroke={T.yellow} strokeWidth="1.5" strokeOpacity="0.3" />
+          {/* Star dots */}
+          {[[60,80],[100,60],[140,75],[150,120],[110,140],[70,130],[95,105]].map(([cx,cy],i) => (
+            <circle key={i} cx={cx} cy={cy} r={i===0?5:i===2?4:3.5}
+              fill={T.yellow} opacity={0.85} />
+          ))}
+        </svg>
+      </div>
+
+      {/* App name */}
+      <div style={{
+        fontFamily: "'Noto Serif JP', serif",
+        fontSize: 42, fontWeight: 300,
+        color: T.text, letterSpacing: '0.12em',
+        marginBottom: 8,
+      }}>ohaasa</div>
+
+      <div style={{
+        fontSize: 13, fontWeight: 400,
+        color: T.textSoft, letterSpacing: '0.2em',
+        textTransform: 'uppercase', marginBottom: 16,
+      }}>오하아사</div>
+
+      <div style={{
+        fontSize: 14, color: T.textMid, textAlign: 'center',
+        lineHeight: 1.7, marginBottom: 56,
+        fontWeight: 300,
+      }}>
+        매일 아침, 나의 별자리 운세를<br />가장 먼저 확인하세요.
+      </div>
+
+      {/* CTA */}
+      <div style={{
+        width: '100%',
+        background: T.text,
+        borderRadius: 28,
+        padding: '18px 0',
+        textAlign: 'center',
+        color: T.cream,
+        fontSize: 15,
+        fontWeight: 500,
+        letterSpacing: '0.05em',
+        marginBottom: 16,
+        cursor: 'pointer',
+      }}>시작하기</div>
+
+      <div style={{ fontSize: 12, color: T.textSoft }}>
+        매일 아침 7:30에 업데이트됩니다
+      </div>
+    </div>
+  );
+}
+
+// ─── Korean zodiac data ───────────────────────────────────────
+const ZODIACS_KR = [
+  { id:'aries',       kr:'양자리',      en:'Aries',       sym:'♈', date:'3/21–4/19' },
+  { id:'taurus',      kr:'황소자리',    en:'Taurus',      sym:'♉', date:'4/20–5/20' },
+  { id:'gemini',      kr:'쌍둥이자리',  en:'Gemini',      sym:'♊', date:'5/21–6/21' },
+  { id:'cancer',      kr:'게자리',      en:'Cancer',      sym:'♋', date:'6/22–7/22' },
+  { id:'leo',         kr:'사자자리',    en:'Leo',         sym:'♌', date:'7/23–8/22' },
+  { id:'virgo',       kr:'처녀자리',    en:'Virgo',       sym:'♍', date:'8/23–9/22' },
+  { id:'libra',       kr:'천칭자리',    en:'Libra',       sym:'♎', date:'9/23–10/23' },
+  { id:'scorpio',     kr:'전갈자리',    en:'Scorpio',     sym:'♏', date:'10/24–11/22' },
+  { id:'sagittarius', kr:'사수자리',    en:'Sagittarius', sym:'♐', date:'11/23–12/21' },
+  { id:'capricorn',   kr:'염소자리',    en:'Capricorn',   sym:'♑', date:'12/22–1/19' },
+  { id:'aquarius',    kr:'물병자리',    en:'Aquarius',    sym:'♒', date:'1/20–2/18' },
+  { id:'pisces',      kr:'물고기자리',  en:'Pisces',      sym:'♓', date:'2/19–3/20' },
+];
+
+// Tiny constellation path data [cx,cy pairs] per sign
+const CONST_LINES = {
+  aries:       [[30,50],[50,30],[70,40],[80,60]],
+  taurus:      [[20,60],[40,40],[60,38],[80,48],[60,38],[50,60]],
+  gemini:      [[30,30],[30,70],[50,50],[70,30],[70,70]],
+  cancer:      [[30,40],[50,30],[70,40],[60,65],[40,65],[30,40]],
+  leo:         [[20,65],[35,45],[55,35],[75,45],[85,65],[65,70],[55,35]],
+  virgo:       [[25,35],[45,35],[45,55],[65,55],[65,70],[75,50],[65,35]],
+  libra:       [[20,60],[50,60],[80,60],[50,60],[35,35],[65,35]],
+  scorpio:     [[20,35],[40,45],[60,40],[75,55],[80,70],[70,75]],
+  sagittarius: [[20,70],[50,40],[80,20],[50,40],[25,30]],
+  capricorn:   [[20,30],[35,50],[55,55],[75,45],[80,65],[60,70],[40,75]],
+  aquarius:    [[20,45],[40,35],[60,55],[80,45],[20,65],[40,55],[60,75],[80,65]],
+  pisces:      [[20,40],[40,30],[50,50],[60,30],[80,40],[20,70],[40,60],[50,80],[60,60],[80,70]],
+};
+
+// ─── Screen 2: Sign Selection ─────────────────────────────────
+function SignSelectionScreen() {
+  const [selected, setSelected] = useState('libra');
+  return (
+    <div style={{
+      width: '100%', height: '100%',
+      background: T.cream,
+      display: 'flex', flexDirection: 'column',
+      overflow: 'hidden',
+    }}>
+      {/* Header */}
+      <div style={{
+        padding: '24px 24px 16px',
+        background: T.cream,
+      }}>
+        <div style={{
+          fontSize: 11, color: T.textSoft,
+          letterSpacing: '0.2em', textTransform: 'uppercase',
+          marginBottom: 6,
+        }}>STEP 1 / 1</div>
+        <div style={{
+          fontFamily: "'Noto Serif JP', serif",
+          fontSize: 22, fontWeight: 400,
+          color: T.text, lineHeight: 1.4,
+        }}>あなたの星座は？</div>
+        <div style={{ fontSize: 13, color: T.textSoft, marginTop: 4 }}>
+          生まれた日付で選んでね
+        </div>
+      </div>
+
+      {/* Grid */}
+      <div style={{
+        flex: 1,
+        overflowY: 'auto',
+        padding: '8px 20px 20px',
+        display: 'grid',
+        gridTemplateColumns: 'repeat(3, 1fr)',
+        gap: 10,
+        alignContent: 'start',
+      }}>
+        {ZODIACS.map(z => {
+          const isSelected = selected === z.id;
+          return (
+            <div key={z.id}
+              onClick={() => setSelected(z.id)}
+              style={{
+                borderRadius: 16,
+                background: isSelected ? ZODIAC_COLORS[z.id] : T.white,
+                border: isSelected
+                  ? `2px solid ${T.apricotDark}55`
+                  : `1.5px solid ${T.cream3}`,
+                padding: '14px 8px 12px',
+                display: 'flex', flexDirection: 'column',
+                alignItems: 'center', gap: 4,
+                cursor: 'pointer',
+                transition: 'all 0.2s',
+                boxShadow: isSelected
+                  ? `0 4px 16px ${T.apricot}60`
+                  : '0 1px 4px rgba(0,0,0,0.04)',
+                position: 'relative',
+              }}>
+              {isSelected && (
+                <div style={{
+                  position: 'absolute', top: 6, right: 8,
+                  width: 16, height: 16, borderRadius: '50%',
+                  background: T.apricotDark,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}>
+                  <svg width="8" height="8" viewBox="0 0 10 10">
+                    <polyline points="2,5 4,8 8,2" stroke="white" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                </div>
+              )}
+              <div style={{ fontSize: 28, lineHeight: 1 }}>{z.sym}</div>
+              <div style={{
+                fontFamily: "'Noto Serif JP', serif",
+                fontSize: 11, color: T.text, fontWeight: 400,
+              }}>{z.jp}</div>
+              <div style={{ fontSize: 9, color: T.textSoft }}>{z.date}</div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* CTA */}
+      <div style={{ padding: '16px 24px 24px', borderTop: `1px solid ${T.cream3}` }}>
+        {selected && (
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: 8,
+            marginBottom: 12,
+          }}>
+            <div style={{
+              width: 32, height: 32, borderRadius: '50%',
+              background: ZODIAC_COLORS[selected],
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: 16,
+            }}>
+              {ZODIACS.find(z=>z.id===selected)?.sym}
+            </div>
+            <div>
+              <div style={{ fontSize: 13, fontWeight: 500, color: T.text }}>
+                {ZODIACS.find(z=>z.id===selected)?.jp}
+              </div>
+              <div style={{ fontSize: 11, color: T.textSoft }}>
+                {ZODIACS.find(z=>z.id===selected)?.en}
+              </div>
+            </div>
+          </div>
+        )}
+        <div style={{
+          width: '100%',
+          background: selected ? T.text : T.cream3,
+          borderRadius: 28,
+          padding: '18px 0',
+          textAlign: 'center',
+          color: selected ? T.cream : T.textSoft,
+          fontSize: 15, fontWeight: 500,
+          letterSpacing: '0.04em',
+          cursor: selected ? 'pointer' : 'default',
+          transition: 'all 0.25s',
+        }}>
+          {selected ? 'スタート ✦' : '星座を選んでください'}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Screen 2-A: Sign Selection Alt A — Warm Circle Badge ────
+function SignSelectionAltA() {
+  const [selected, setSelected] = useState('libra');
+  const sel = ZODIACS_KR.find(z => z.id === selected);
+  return (
+    <div style={{
+      width: '100%', height: '100%',
+      background: `linear-gradient(170deg, #FAF6F0 0%, #F7EDE0 60%, #F2E4D4 100%)`,
+      display: 'flex', flexDirection: 'column',
+      overflow: 'hidden', position: 'relative',
+    }}>
+      <CircleDeco x={-40} y={50}  size={140} color={T.yellow}  opacity={0.12} />
+      <CircleDeco x={260} y={500} size={120} color={T.apricot} opacity={0.13} />
+      <Star x={280} y={100} size={5} opacity={0.3} color={T.yellow} />
+      <Star x={20}  y={300} size={4} opacity={0.25} color={T.apricot} />
+      <MoonDeco x={270} y={60} size={22} opacity={0.2} color={T.apricot} />
+
+      {/* Header */}
+      <div style={{ padding: '24px 28px 18px', position: 'relative', zIndex: 1 }}>
+        <div style={{
+          fontSize: 11, color: T.textSoft,
+          letterSpacing: '0.18em', marginBottom: 8,
+        }}>STEP 1 / 1</div>
+        <div style={{
+          fontFamily: "'Noto Serif JP', serif",
+          fontSize: 22, fontWeight: 400, color: T.text, lineHeight: 1.4,
+        }}>내 별자리를 선택해 주세요</div>
+        <div style={{ fontSize: 13, color: T.textSoft, marginTop: 4 }}>
+          생년월일에 맞는 별자리를 골라보세요
+        </div>
+      </div>
+
+      {/* 2-column grid with large circle badges */}
+      <div style={{
+        flex: 1, overflowY: 'auto',
+        padding: '4px 20px 16px',
+        display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)',
+        gap: 12, alignContent: 'start',
+        position: 'relative', zIndex: 1,
+      }}>
+        {ZODIACS_KR.map(z => {
+          const isSelected = selected === z.id;
+          const bg = ZODIAC_COLORS[z.id];
+          return (
+            <div key={z.id} onClick={() => setSelected(z.id)} style={{
+              borderRadius: 20,
+              background: isSelected ? bg : T.white,
+              border: isSelected ? `2px solid ${T.apricotDark}50` : `1.5px solid ${T.cream3}`,
+              padding: '18px 12px 14px',
+              display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8,
+              cursor: 'pointer',
+              boxShadow: isSelected ? `0 6px 20px ${bg}cc` : '0 2px 8px rgba(0,0,0,0.04)',
+              transition: 'all 0.22s',
+            }}>
+              {/* Circle with symbol */}
+              <div style={{
+                width: 56, height: 56, borderRadius: '50%',
+                background: isSelected ? `${T.white}80` : `${bg}90`,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: 28,
+                boxShadow: isSelected ? `0 0 0 4px ${T.apricotDark}30` : 'none',
+                transition: 'all 0.22s',
+              }}>
+                {z.sym}
+              </div>
+              <div style={{
+                fontFamily: "'Noto Serif JP', serif",
+                fontSize: 13, fontWeight: 400,
+                color: isSelected ? T.text : T.textMid,
+                textAlign: 'center',
+              }}>{z.kr}</div>
+              <div style={{
+                fontSize: 10, color: isSelected ? T.textMid : T.textSoft,
+              }}>{z.date}</div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* CTA */}
+      <div style={{ padding: '14px 24px 20px', background: `${T.cream}ee`, position: 'relative', zIndex: 1 }}>
+        {sel && (
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12,
+          }}>
+            <div style={{
+              width: 36, height: 36, borderRadius: '50%',
+              background: ZODIAC_COLORS[sel.id],
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: 18,
+            }}>{sel.sym}</div>
+            <div>
+              <div style={{ fontSize: 13, fontWeight: 500, color: T.text }}>{sel.kr}</div>
+              <div style={{ fontSize: 11, color: T.textSoft }}>{sel.en}</div>
+            </div>
+          </div>
+        )}
+        <div style={{
+          width: '100%', background: T.text,
+          borderRadius: 28, padding: '18px 0',
+          textAlign: 'center', color: T.cream,
+          fontSize: 15, fontWeight: 500,
+          letterSpacing: '0.04em', cursor: 'pointer',
+        }}>시작하기 ✦</div>
+      </div>
+    </div>
+  );
+}
+
+// Tiny constellation SVG for Alt B
+const MiniConstellation = ({ id, color = T.yellow, size = 80 }) => {
+  const pts = CONST_LINES[id] || [];
+  if (pts.length < 2) return null;
+  const lines = [];
+  for (let i = 0; i < pts.length - 1; i++) {
+    lines.push(
+      <line key={i}
+        x1={pts[i][0]} y1={pts[i][1]}
+        x2={pts[i+1][0]} y2={pts[i+1][1]}
+        stroke={color} strokeWidth="1.5" strokeOpacity="0.5"
+        strokeLinecap="round"
+      />
+    );
+  }
+  return (
+    <svg width={size} height={size} viewBox="0 0 100 100" style={{ position: 'absolute', inset: 0, opacity: 0.6 }}>
+      {lines}
+      {pts.map(([cx, cy], i) => (
+        <circle key={i} cx={cx} cy={cy} r={i === 0 ? 3.5 : 2.5} fill={color} opacity={0.8} />
+      ))}
+    </svg>
+  );
+};
+
+// ─── Screen 2-B: Sign Selection Alt B — Constellation Cards ──
+function SignSelectionAltB() {
+  const [selected, setSelected] = useState('libra');
+  const sel = ZODIACS_KR.find(z => z.id === selected);
+
+  return (
+    <div style={{
+      width: '100%', height: '100%',
+      background: T.cream,
+      display: 'flex', flexDirection: 'column',
+      overflow: 'hidden',
+    }}>
+      {/* Header */}
+      <div style={{
+        padding: '24px 28px 16px',
+        background: `linear-gradient(180deg, ${T.cream} 80%, transparent)`,
+      }}>
+        <div style={{
+          fontSize: 11, color: T.textSoft,
+          letterSpacing: '0.18em', marginBottom: 8,
+        }}>STEP 1 / 1</div>
+        <div style={{
+          fontFamily: "'Noto Serif JP', serif",
+          fontSize: 22, fontWeight: 400, color: T.text,
+        }}>나의 별자리</div>
+        <div style={{ fontSize: 13, color: T.textSoft, marginTop: 4 }}>
+          별자리를 선택하면 매일 운세를 보내드려요
+        </div>
+      </div>
+
+      {/* 3-col grid: symbol + constellation drawing */}
+      <div style={{
+        flex: 1, overflowY: 'auto',
+        padding: '4px 18px 12px',
+        display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)',
+        gap: 8, alignContent: 'start',
+      }}>
+        {ZODIACS_KR.map(z => {
+          const isSelected = selected === z.id;
+          const bg = ZODIAC_COLORS[z.id];
+          const constellationColor = isSelected ? T.apricotDark : T.textSoft;
+          return (
+            <div key={z.id} onClick={() => setSelected(z.id)} style={{
+              borderRadius: 18,
+              background: isSelected ? bg : T.white,
+              border: isSelected ? `2px solid ${T.apricotDark}40` : `1.5px solid ${T.cream3}`,
+              padding: '10px 6px 10px',
+              display: 'flex', flexDirection: 'column',
+              alignItems: 'center', gap: 4,
+              cursor: 'pointer',
+              boxShadow: isSelected ? `0 4px 18px ${bg}bb` : '0 1px 5px rgba(0,0,0,0.04)',
+              transition: 'all 0.2s',
+              position: 'relative',
+              overflow: 'hidden',
+            }}>
+              {/* Constellation drawing behind */}
+              <div style={{ position: 'relative', width: 54, height: 54 }}>
+                <MiniConstellation id={z.id} color={isSelected ? T.apricotDark : '#C8B8A8'} size={54} />
+                {/* Symbol on top */}
+                <div style={{
+                  position: 'absolute', inset: 0,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: 22, zIndex: 1,
+                  filter: isSelected ? 'none' : 'grayscale(0.2)',
+                }}>{z.sym}</div>
+              </div>
+              <div style={{
+                fontFamily: "'Noto Serif JP', serif",
+                fontSize: 11, fontWeight: isSelected ? 500 : 400,
+                color: isSelected ? T.text : T.textMid,
+                textAlign: 'center', lineHeight: 1.3,
+              }}>{z.kr}</div>
+              <div style={{ fontSize: 9, color: isSelected ? T.textMid : T.textSoft }}>{z.date}</div>
+              {isSelected && (
+                <div style={{
+                  position: 'absolute', top: 6, right: 6,
+                  width: 14, height: 14, borderRadius: '50%',
+                  background: T.apricotDark,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}>
+                  <svg width="7" height="7" viewBox="0 0 10 10">
+                    <polyline points="2,5 4,8 8,2" stroke="white" strokeWidth="2.2" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* CTA */}
+      <div style={{
+        padding: '12px 24px 20px',
+        borderTop: `1px solid ${T.cream3}`,
+        background: T.white,
+      }}>
+        {sel && (
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12,
+          }}>
+            <div style={{
+              width: 32, height: 32, borderRadius: '50%',
+              background: ZODIAC_COLORS[sel.id],
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: 16, position: 'relative',
+            }}>
+              <MiniConstellation id={sel.id} color={T.apricotDark} size={32} />
+              <span style={{ position: 'relative', zIndex: 1 }}>{sel.sym}</span>
+            </div>
+            <div>
+              <div style={{ fontSize: 13, fontWeight: 500, color: T.text }}>{sel.kr}</div>
+              <div style={{ fontSize: 11, color: T.textSoft }}>{sel.en}</div>
+            </div>
+          </div>
+        )}
+        <div style={{
+          width: '100%', background: T.text,
+          borderRadius: 28, padding: '17px 0',
+          textAlign: 'center', color: T.cream,
+          fontSize: 15, fontWeight: 500,
+          letterSpacing: '0.04em', cursor: 'pointer',
+        }}>시작하기 ✦</div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Zodiac thin-line SVG icons (A안) ────────────────────────
+const ZodiacLineSVG = ({ id, color = T.apricotDark, size = 52 }) => {
+  const stroke = { stroke: color, strokeWidth: 2.2, strokeLinecap: 'round', strokeLinejoin: 'round', fill: 'none' };
+  const icons = {
+    aries:       <><path d="M35,72 Q35,28 50,22 Q65,28 65,72" {...stroke}/><line x1="50" y1="22" x2="50" y2="78" {...stroke}/></>,
+    taurus:      <><circle cx="50" cy="57" r="22" {...stroke}/><path d="M28,35 Q50,18 72,35" {...stroke}/></>,
+    gemini:      <><line x1="30" y1="22" x2="30" y2="78" {...stroke}/><line x1="70" y1="22" x2="70" y2="78" {...stroke}/><line x1="30" y1="22" x2="70" y2="22" {...stroke}/><line x1="30" y1="78" x2="70" y2="78" {...stroke}/></>,
+    cancer:      <><path d="M55,35 Q78,35 78,50 Q78,65 55,65" {...stroke}/><path d="M45,65 Q22,65 22,50 Q22,35 45,35" {...stroke}/></>,
+    leo:         <><path d="M28,58 Q28,28 50,24 Q72,28 72,50 Q72,65 58,70 Q44,75 40,65 Q38,55 48,53" {...stroke}/></>,
+    virgo:       <><path d="M28,22 L28,78" {...stroke}/><path d="M28,50 Q40,28 54,50 Q68,72 72,78" {...stroke}/><path d="M72,48 Q72,82 58,82" {...stroke}/></>,
+    libra:       <><line x1="18" y1="68" x2="82" y2="68" {...stroke}/><path d="M22,55 Q50,22 78,55" {...stroke}/></>,
+    scorpio:     <><path d="M25,28 L25,68 Q38,42 52,52 Q65,62 75,42 L75,68" {...stroke}/><polyline points="75,68 85,58 75,68 85,78" {...stroke}/></>,
+    sagittarius: <><line x1="22" y1="78" x2="75" y2="25" {...stroke}/><polyline points="50,25 75,25 75,50" {...stroke}/></>,
+    capricorn:   <><path d="M25,25 Q35,68 50,68" {...stroke}/><path d="M50,68 Q70,68 75,48 Q78,30 65,28 Q55,26 52,38" {...stroke}/><path d="M50,68 Q54,80 66,76 Q75,72 72,62" {...stroke}/></>,
+    aquarius:    <><path d="M18,42 Q33,28 50,42 Q67,56 82,42" {...stroke}/><path d="M18,62 Q33,48 50,62 Q67,76 82,62" {...stroke}/></>,
+    pisces:      <><path d="M32,18 Q12,50 32,82" {...stroke}/><path d="M68,18 Q88,50 68,82" {...stroke}/><line x1="32" y1="50" x2="68" y2="50" {...stroke}/></>,
+  };
+  return (
+    <svg width={size} height={size} viewBox="0 0 100 100">
+      {icons[id] || null}
+    </svg>
+  );
+};
+
+// ─── Constellation badge (B안) ────────────────────────────────
+const ConstellationBadge = ({ id, color = T.apricotDark, size = 56 }) => {
+  const pts = CONST_LINES[id] || [];
+  if (pts.length < 2) return null;
+  return (
+    <svg width={size} height={size} viewBox="0 0 100 100">
+      {pts.slice(0, -1).map(([x1, y1], i) => {
+        const [x2, y2] = pts[i + 1];
+        return <line key={i} x1={x1} y1={y1} x2={x2} y2={y2}
+          stroke={color} strokeWidth="2" strokeOpacity="0.6" strokeLinecap="round" />;
+      })}
+      {pts.map(([cx, cy], i) => (
+        <circle key={i} cx={cx} cy={cy} r={i === 0 ? 4 : 3}
+          fill={color} opacity={i === 0 ? 0.95 : 0.75} />
+      ))}
+    </svg>
+  );
+};
+
+// ─── Screen 02-A2: Alt A — Thin Line Symbol Icons ─────────────
+function SignSelectionAltA2() {
+  const [selected, setSelected] = useState('libra');
+  const sel = ZODIACS_KR.find(z => z.id === selected);
+  return (
+    <div style={{
+      width: '100%', height: '100%',
+      background: `linear-gradient(170deg, #FAF6F0 0%, #F7EDE0 60%, #F2E4D4 100%)`,
+      display: 'flex', flexDirection: 'column',
+      overflow: 'hidden', position: 'relative',
+    }}>
+      <CircleDeco x={-40} y={50}  size={140} color={T.yellow}  opacity={0.12} />
+      <CircleDeco x={260} y={500} size={120} color={T.apricot} opacity={0.13} />
+      <Star x={280} y={100} size={5} opacity={0.3} color={T.yellow} />
+      <Star x={20}  y={300} size={4} opacity={0.25} color={T.apricot} />
+      <MoonDeco x={270} y={60} size={22} opacity={0.2} color={T.apricot} />
+
+      <div style={{ padding: '24px 28px 18px', position: 'relative', zIndex: 1 }}>
+        <div style={{ fontSize: 11, color: T.textSoft, letterSpacing: '0.18em', marginBottom: 8 }}>STEP 1 / 1</div>
+        <div style={{ fontFamily: "'Noto Serif JP', serif", fontSize: 22, fontWeight: 400, color: T.text, lineHeight: 1.4 }}>
+          내 별자리를 선택해 주세요
+        </div>
+        <div style={{ fontSize: 13, color: T.textSoft, marginTop: 4 }}>
+          생년월일에 맞는 별자리를 골라보세요
+        </div>
+      </div>
+
+      <div style={{
+        flex: 1, overflowY: 'auto', padding: '4px 20px 16px',
+        display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)',
+        gap: 12, alignContent: 'start', position: 'relative', zIndex: 1,
+      }}>
+        {ZODIACS_KR.map(z => {
+          const isSelected = selected === z.id;
+          const bg = ZODIAC_COLORS[z.id];
+          const iconColor = isSelected ? T.apricotDark : T.textSoft;
+          return (
+            <div key={z.id} onClick={() => setSelected(z.id)} style={{
+              borderRadius: 20,
+              background: isSelected ? bg : T.white,
+              border: isSelected ? `2px solid ${T.apricotDark}45` : `1.5px solid ${T.cream3}`,
+              padding: '18px 12px 14px',
+              display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8,
+              cursor: 'pointer',
+              boxShadow: isSelected ? `0 6px 20px ${bg}cc` : '0 2px 8px rgba(0,0,0,0.04)',
+              transition: 'all 0.22s',
+            }}>
+              {/* Circle badge with line icon */}
+              <div style={{
+                width: 60, height: 60, borderRadius: '50%',
+                background: isSelected ? `${T.white}70` : `${bg}70`,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                boxShadow: isSelected ? `0 0 0 3px ${T.apricotDark}30` : 'none',
+                transition: 'all 0.22s',
+              }}>
+                <ZodiacLineSVG id={z.id} color={iconColor} size={36} />
+              </div>
+              <div style={{
+                fontFamily: "'Noto Serif JP', serif",
+                fontSize: 13, fontWeight: 400,
+                color: isSelected ? T.text : T.textMid, textAlign: 'center',
+              }}>{z.kr}</div>
+              <div style={{ fontSize: 10, color: isSelected ? T.textMid : T.textSoft }}>{z.date}</div>
+            </div>
+          );
+        })}
+      </div>
+
+      <div style={{ padding: '14px 24px 20px', background: `${T.cream}ee`, position: 'relative', zIndex: 1 }}>
+        {sel && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+            <div style={{
+              width: 36, height: 36, borderRadius: '50%',
+              background: ZODIAC_COLORS[sel.id],
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}>
+              <ZodiacLineSVG id={sel.id} color={T.apricotDark} size={22} />
+            </div>
+            <div>
+              <div style={{ fontSize: 13, fontWeight: 500, color: T.text }}>{sel.kr}</div>
+              <div style={{ fontSize: 11, color: T.textSoft }}>{sel.en}</div>
+            </div>
+          </div>
+        )}
+        <div style={{
+          width: '100%', background: T.text, borderRadius: 28,
+          padding: '18px 0', textAlign: 'center', color: T.cream,
+          fontSize: 15, fontWeight: 500, letterSpacing: '0.04em', cursor: 'pointer',
+        }}>시작하기 ✦</div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Screen 02-A3: Alt A — Constellation Line Icons ──────────
+function SignSelectionAltA3() {
+  const [selected, setSelected] = useState('libra');
+  const sel = ZODIACS_KR.find(z => z.id === selected);
+  return (
+    <div style={{
+      width: '100%', height: '100%',
+      background: `linear-gradient(170deg, #FAF6F0 0%, #F7EDE0 60%, #F2E4D4 100%)`,
+      display: 'flex', flexDirection: 'column',
+      overflow: 'hidden', position: 'relative',
+    }}>
+      <CircleDeco x={-40} y={50}  size={140} color={T.yellow}  opacity={0.12} />
+      <CircleDeco x={260} y={500} size={120} color={T.apricot} opacity={0.13} />
+      <Star x={280} y={100} size={5} opacity={0.3} color={T.yellow} />
+      <Star x={20}  y={300} size={4} opacity={0.25} color={T.apricot} />
+      <MoonDeco x={270} y={60} size={22} opacity={0.2} color={T.apricot} />
+
+      <div style={{ padding: '24px 28px 18px', position: 'relative', zIndex: 1 }}>
+        <div style={{ fontSize: 11, color: T.textSoft, letterSpacing: '0.18em', marginBottom: 8 }}>STEP 1 / 1</div>
+        <div style={{ fontFamily: "'Noto Serif JP', serif", fontSize: 22, fontWeight: 400, color: T.text, lineHeight: 1.4 }}>
+          내 별자리를 선택해 주세요
+        </div>
+        <div style={{ fontSize: 13, color: T.textSoft, marginTop: 4 }}>
+          생년월일에 맞는 별자리를 골라보세요
+        </div>
+      </div>
+
+      <div style={{
+        flex: 1, overflowY: 'auto', padding: '4px 20px 16px',
+        display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)',
+        gap: 12, alignContent: 'start', position: 'relative', zIndex: 1,
+      }}>
+        {ZODIACS_KR.map(z => {
+          const isSelected = selected === z.id;
+          const bg = ZODIAC_COLORS[z.id];
+          const dotColor = isSelected ? T.apricotDark : '#B8A898';
+          return (
+            <div key={z.id} onClick={() => setSelected(z.id)} style={{
+              borderRadius: 20,
+              background: isSelected ? bg : T.white,
+              border: isSelected ? `2px solid ${T.apricotDark}45` : `1.5px solid ${T.cream3}`,
+              padding: '18px 12px 14px',
+              display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8,
+              cursor: 'pointer',
+              boxShadow: isSelected ? `0 6px 20px ${bg}cc` : '0 2px 8px rgba(0,0,0,0.04)',
+              transition: 'all 0.22s',
+            }}>
+              {/* Circle badge with constellation */}
+              <div style={{
+                width: 60, height: 60, borderRadius: '50%',
+                background: isSelected ? `${T.white}70` : `${bg}70`,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                boxShadow: isSelected ? `0 0 0 3px ${T.apricotDark}30` : 'none',
+                transition: 'all 0.22s',
+                overflow: 'hidden',
+              }}>
+                <ConstellationBadge id={z.id} color={dotColor} size={48} />
+              </div>
+              <div style={{
+                fontFamily: "'Noto Serif JP', serif",
+                fontSize: 13, fontWeight: 400,
+                color: isSelected ? T.text : T.textMid, textAlign: 'center',
+              }}>{z.kr}</div>
+              <div style={{ fontSize: 10, color: isSelected ? T.textMid : T.textSoft }}>{z.date}</div>
+            </div>
+          );
+        })}
+      </div>
+
+      <div style={{ padding: '14px 24px 20px', background: `${T.cream}ee`, position: 'relative', zIndex: 1 }}>
+        {sel && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+            <div style={{
+              width: 36, height: 36, borderRadius: '50%',
+              background: ZODIAC_COLORS[sel.id],
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              overflow: 'hidden',
+            }}>
+              <ConstellationBadge id={sel.id} color={T.apricotDark} size={30} />
+            </div>
+            <div>
+              <div style={{ fontSize: 13, fontWeight: 500, color: T.text }}>{sel.kr}</div>
+              <div style={{ fontSize: 11, color: T.textSoft }}>{sel.en}</div>
+            </div>
+          </div>
+        )}
+        <div style={{
+          width: '100%', background: T.text, borderRadius: 28,
+          padding: '18px 0', textAlign: 'center', color: T.cream,
+          fontSize: 15, fontWeight: 500, letterSpacing: '0.04em', cursor: 'pointer',
+        }}>시작하기 ✦</div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Screen 3: Main / Today's Fortune ────────────────────────
+function MainScreen() {
+  const sign = FORTUNE.sign;
+  const rankLabel = ['', '1st', '2nd', '3rd', '4th', '5th', '6th', '7th', '8th', '9th', '10th', '11th', '12th'];
+  const [tab, setTab] = useState('today');
+
+  return (
+    <div style={{
+      width: '100%', height: '100%',
+      background: `linear-gradient(175deg, #F7EFE5 0%, #FAF6F0 60%, #EEE8F8 100%)`,
+      display: 'flex', flexDirection: 'column',
+      overflow: 'hidden', position: 'relative',
+    }}>
+      {/* Background deco */}
+      <CircleDeco x={220} y={-40} size={200} color={T.yellow} opacity={0.1} />
+      <CircleDeco x={-60} y={300} size={180} color={T.sky}    opacity={0.12} />
+      <Star x={260} y={120} size={5} opacity={0.3} color={T.yellow} />
+      <Star x={30}  y={200} size={4} opacity={0.25} color={T.apricot} />
+      <Star x={290} y={380} size={4} opacity={0.2} color={T.yellow} />
+      <MoonDeco x={10} y={90} size={22} opacity={0.2} color={T.apricot} />
+
+      {/* Header */}
+      <div style={{ padding: '20px 24px 0', position: 'relative', zIndex: 1 }}>
+        <div style={{
+          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+          marginBottom: 4,
+        }}>
+          <div style={{
+            fontFamily: "'Noto Serif JP', serif",
+            fontSize: 22, fontWeight: 300, color: T.text,
+          }}>ohaasa</div>
+          <div style={{
+            width: 36, height: 36, borderRadius: '50%',
+            background: T.white,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
+            cursor: 'pointer',
+          }}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={T.textMid} strokeWidth="2">
+              <circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/>
+            </svg>
+          </div>
+        </div>
+        <div style={{ fontSize: 12, color: T.textSoft, letterSpacing: '0.05em' }}>
+          おはようございます ☀️
+        </div>
+      </div>
+
+      {/* Broadcast date notice */}
+      <div style={{
+        margin: '14px 24px 0',
+        background: `${T.sky}40`,
+        borderRadius: 10,
+        padding: '8px 14px',
+        display: 'flex', alignItems: 'center', gap: 6,
+        position: 'relative', zIndex: 1,
+      }}>
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={T.skyDark} strokeWidth="2">
+          <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+        </svg>
+        <div style={{ fontSize: 11, color: T.skyDark }}>
+          {FORTUNE.broadcastDate}
+        </div>
+      </div>
+
+      {/* Hero card */}
+      <div style={{
+        margin: '16px 24px 0',
+        background: T.white,
+        borderRadius: 24,
+        padding: '24px',
+        boxShadow: '0 4px 24px rgba(0,0,0,0.07)',
+        position: 'relative', zIndex: 1,
+        overflow: 'hidden',
+      }}>
+        {/* Card bg deco */}
+        <div style={{
+          position: 'absolute', right: -20, top: -20,
+          width: 100, height: 100, borderRadius: '50%',
+          background: ZODIAC_COLORS[sign.id],
+          opacity: 0.5,
+        }} />
+
+        <div style={{ display:'flex', alignItems:'flex-start', gap: 16, position: 'relative' }}>
+          {/* Rank badge */}
+          <div style={{ flexShrink: 0 }}>
+            <div style={{
+              width: 56, height: 56, borderRadius: 18,
+              background: `linear-gradient(135deg, ${T.yellow}, ${T.apricot})`,
+              display: 'flex', flexDirection: 'column',
+              alignItems: 'center', justifyContent: 'center',
+              boxShadow: `0 4px 12px ${T.apricot}60`,
+            }}>
+              <div style={{ fontSize: 8, color: T.white, letterSpacing: '0.1em', fontWeight: 600 }}>RANK</div>
+              <div style={{ fontSize: 22, fontWeight: 700, color: T.white, lineHeight: 1 }}>
+                {FORTUNE.rank}
+              </div>
+            </div>
+            <div style={{ fontSize: 11, color: T.textSoft, textAlign: 'center', marginTop: 4 }}>
+              {rankLabel[FORTUNE.rank]}
+            </div>
+          </div>
+
+          <div style={{ flex: 1 }}>
+            <div style={{
+              fontSize: 11, color: T.textSoft,
+              letterSpacing: '0.15em', textTransform: 'uppercase',
+              marginBottom: 2,
+            }}>Today</div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+              <span style={{ fontSize: 24 }}>{sign.sym}</span>
+              <div>
+                <div style={{
+                  fontFamily: "'Noto Serif JP', serif",
+                  fontSize: 16, fontWeight: 400, color: T.text,
+                }}>{sign.jp}</div>
+                <div style={{ fontSize: 11, color: T.textSoft }}>{sign.en}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Fortune message */}
+        <div style={{
+          marginTop: 16,
+          padding: '14px 16px',
+          background: T.cream,
+          borderRadius: 14,
+          fontSize: 13, lineHeight: 1.9,
+          color: T.text, fontWeight: 300,
+          whiteSpace: 'pre-line',
+          fontFamily: "'Noto Serif JP', serif",
+        }}>
+          {FORTUNE.message}
+        </div>
+
+        {/* Lucky items */}
+        <div style={{
+          marginTop: 14,
+          display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)',
+          gap: 8,
+        }}>
+          {[
+            { label: 'カラー', value: FORTUNE.lucky.color },
+            { label: 'アイテム', value: FORTUNE.lucky.item },
+            { label: 'ナンバー', value: FORTUNE.lucky.number },
+          ].map(({ label, value }) => (
+            <div key={label} style={{
+              background: T.cream2,
+              borderRadius: 10,
+              padding: '8px 0',
+              textAlign: 'center',
+            }}>
+              <div style={{ fontSize: 9, color: T.textSoft, letterSpacing: '0.1em', marginBottom: 3 }}>
+                {label}
+              </div>
+              <div style={{ fontSize: 13, fontWeight: 500, color: T.text }}>{value}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Star ratings */}
+      <div style={{
+        margin: '12px 24px 0',
+        background: T.white,
+        borderRadius: 18,
+        padding: '16px 20px',
+        boxShadow: '0 2px 12px rgba(0,0,0,0.05)',
+        position: 'relative', zIndex: 1,
+      }}>
+        <div style={{
+          display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)',
+          gap: '10px 16px',
+        }}>
+          {[
+            { label: '恋愛', val: FORTUNE.stars.love },
+            { label: '仕事', val: FORTUNE.stars.work },
+            { label: '金運', val: FORTUNE.stars.money },
+            { label: '健康', val: FORTUNE.stars.health },
+          ].map(({ label, val }) => (
+            <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <div style={{ fontSize: 12, color: T.textMid, width: 28 }}>{label}</div>
+              <StarRating value={val} />
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Bottom nav */}
+      <div style={{
+        marginTop: 'auto',
+        padding: '14px 0 8px',
+        background: T.white,
+        borderTop: `1px solid ${T.cream3}`,
+        display: 'flex', justifyContent: 'space-around',
+        position: 'relative', zIndex: 1,
+      }}>
+        {[
+          { id:'today', label:'今日', icon: '☀️' },
+          { id:'all',   label:'全星座', icon: '✦' },
+          { id:'settings', label:'設定', icon: '⚙' },
+        ].map(item => (
+          <div key={item.id}
+            onClick={() => setTab(item.id)}
+            style={{
+              display: 'flex', flexDirection: 'column',
+              alignItems: 'center', gap: 3, cursor: 'pointer',
+            }}>
+            <div style={{ fontSize: 18 }}>{item.icon}</div>
+            <div style={{
+              fontSize: 10, fontWeight: tab === item.id ? 600 : 400,
+              color: tab === item.id ? T.text : T.textSoft,
+            }}>{item.label}</div>
+            {tab === item.id && (
+              <div style={{
+                width: 20, height: 2, borderRadius: 2,
+                background: T.apricotDark,
+              }} />
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ─── Screen 3-Alt A: Main — Onboarding Mood (센터드) ─────────
+function MainScreenAltA() {
+  const sign = ZODIACS_KR.find(z => z.id === 'libra');
+  const [tab, setTab] = useState('today');
+
+  return (
+    <div style={{
+      width: '100%', height: '100%',
+      background: `linear-gradient(168deg, #FAF6F0 0%, #F5EBD8 45%, #EDD9C4 80%, #EAD5CE 100%)`,
+      display: 'flex', flexDirection: 'column',
+      overflow: 'hidden', position: 'relative',
+    }}>
+      {/* Background decorations — onboarding feel */}
+      <CircleDeco x={-50} y={60}   size={180} color={T.sky}     opacity={0.13} />
+      <CircleDeco x={230} y={-30}  size={160} color={T.yellow}  opacity={0.11} />
+      <CircleDeco x={200} y={580}  size={200} color={T.apricot} opacity={0.12} />
+      <Star x={48}  y={130} size={6} opacity={0.35} color={T.yellow} />
+      <Star x={300} y={95}  size={4} opacity={0.3}  color={T.apricot} />
+      <Star x={22}  y={420} size={4} opacity={0.25} color={T.yellow} />
+      <Star x={315} y={330} size={5} opacity={0.28} color={T.apricot} />
+      <Star x={270} y={510} size={3} opacity={0.22} color={T.yellow} />
+      <MoonDeco x={292} y={170} size={26} opacity={0.22} color={T.apricot} />
+      <MoonDeco x={14}  y={520} size={18} opacity={0.18} color={T.skyDark} />
+
+      {/* Header */}
+      <div style={{ padding: '20px 28px 0', position: 'relative', zIndex: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div>
+          <div style={{ fontFamily: "'Noto Serif JP', serif", fontSize: 20, fontWeight: 300, color: T.text, letterSpacing: '0.1em' }}>ohaasa</div>
+          <div style={{ fontSize: 12, color: T.textSoft, marginTop: 2 }}>오늘도 좋은 하루 되세요 ☀️</div>
+        </div>
+        <div style={{
+          width: 36, height: 36, borderRadius: '50%',
+          background: `${T.white}90`,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          boxShadow: '0 2px 10px rgba(0,0,0,0.07)',
+          cursor: 'pointer',
+        }}>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={T.textMid} strokeWidth="2">
+            <circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/>
+          </svg>
+        </div>
+      </div>
+
+      {/* Broadcast date pill */}
+      <div style={{ margin: '14px 28px 0', position: 'relative', zIndex: 1 }}>
+        <div style={{
+          display: 'inline-flex', alignItems: 'center', gap: 5,
+          background: `${T.sky}50`,
+          borderRadius: 20, padding: '6px 12px',
+        }}>
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke={T.skyDark} strokeWidth="2.5">
+            <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+          </svg>
+          <span style={{ fontSize: 11, color: T.skyDark }}>2026년 4월 29일 (수) 방송분</span>
+        </div>
+      </div>
+
+      {/* Hero: Constellation + Sign */}
+      <div style={{
+        margin: '24px auto 0', position: 'relative', zIndex: 1,
+        display: 'flex', flexDirection: 'column', alignItems: 'center',
+        gap: 8,
+      }}>
+        {/* Glow + constellation */}
+        <div style={{ position: 'relative', width: 130, height: 130 }}>
+          <div style={{
+            position: 'absolute', inset: 0, borderRadius: '50%',
+            background: `radial-gradient(circle, ${T.apricot}50 0%, ${T.yellow}30 50%, transparent 75%)`,
+          }} />
+          <div style={{
+            position: 'absolute', inset: 0,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}>
+            <ConstellationBadge id="libra" color={T.apricotDark} size={100} />
+          </div>
+        </div>
+        {/* Rank + name */}
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ fontSize: 11, color: T.textSoft, letterSpacing: '0.18em', marginBottom: 4 }}>오늘의 운세</div>
+          <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: 6 }}>
+            <span style={{
+              fontSize: 42, fontWeight: 700, color: T.apricotDark,
+              fontVariantNumeric: 'tabular-nums', lineHeight: 1,
+            }}>3</span>
+            <span style={{ fontSize: 14, color: T.textSoft }}>위 / 12</span>
+          </div>
+          <div style={{ fontFamily: "'Noto Serif JP', serif", fontSize: 18, fontWeight: 400, color: T.text, marginTop: 2 }}>
+            천칭자리
+          </div>
+        </div>
+      </div>
+
+      {/* Fortune text */}
+      <div style={{
+        margin: '20px 24px 0', position: 'relative', zIndex: 1,
+        background: `${T.white}70`,
+        borderRadius: 20, padding: '18px 20px',
+        backdropFilter: 'blur(8px)',
+      }}>
+        <div style={{
+          fontFamily: "'Noto Serif JP', serif",
+          fontSize: 13, lineHeight: 1.95, color: T.text,
+          fontWeight: 300, textAlign: 'center',
+          whiteSpace: 'pre-line',
+        }}>{'오늘은 사람과의 인연이 깊어지는 하루예요.\n오후의 대화가 뜻밖의 행운을 가져다 줄지도 몰라요.\n행운의 컬러는 하늘색입니다.'}</div>
+      </div>
+
+      {/* Lucky + Stars row */}
+      <div style={{
+        margin: '12px 24px 0', position: 'relative', zIndex: 1,
+        display: 'grid', gridTemplateColumns: '1fr 1fr',
+        gap: 10,
+      }}>
+        {/* Lucky items */}
+        <div style={{
+          background: `${T.white}70`, borderRadius: 18, padding: '14px 14px',
+        }}>
+          <div style={{ fontSize: 10, color: T.textSoft, letterSpacing: '0.1em', marginBottom: 10 }}>행운 아이템</div>
+          {[
+            { label: '컬러', value: '하늘색' },
+            { label: '아이템', value: '흰 꽃' },
+            { label: '숫자', value: '7' },
+          ].map(({ label, value }) => (
+            <div key={label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+              <span style={{ fontSize: 11, color: T.textSoft }}>{label}</span>
+              <span style={{ fontSize: 12, fontWeight: 500, color: T.text }}>{value}</span>
+            </div>
+          ))}
+        </div>
+
+        {/* Star ratings */}
+        <div style={{ background: `${T.white}70`, borderRadius: 18, padding: '14px 14px' }}>
+          <div style={{ fontSize: 10, color: T.textSoft, letterSpacing: '0.1em', marginBottom: 10 }}>오늘의 운 ✦</div>
+          {[
+            { label: '연애', val: 4 },
+            { label: '직장', val: 3 },
+            { label: '금운', val: 4 },
+            { label: '건강', val: 5 },
+          ].map(({ label, val }) => (
+            <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
+              <span style={{ fontSize: 11, color: T.textSoft, width: 24 }}>{label}</span>
+              <StarRating value={val} />
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Bottom nav */}
+      <div style={{
+        marginTop: 'auto', padding: '14px 0 8px',
+        background: `${T.white}80`,
+        borderTop: `1px solid ${T.cream3}80`,
+        display: 'flex', justifyContent: 'space-around',
+        position: 'relative', zIndex: 1,
+        backdropFilter: 'blur(10px)',
+      }}>
+        {[
+          { id:'today', label:'오늘', icon: '☀️', active: true },
+          { id:'all',   label:'전체',   icon: '✦' },
+          { id:'settings', label:'설정', icon: '⚙' },
+        ].map(item => (
+          <div key={item.id} onClick={() => setTab(item.id)} style={{
+            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, cursor: 'pointer',
+          }}>
+            <div style={{ fontSize: 18 }}>{item.icon}</div>
+            <div style={{ fontSize: 10, fontWeight: item.active ? 600 : 400, color: item.active ? T.text : T.textSoft }}>{item.label}</div>
+            {item.active && <div style={{ width: 20, height: 2, borderRadius: 2, background: T.apricotDark }} />}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ─── Screen 3-Alt B: Main — Onboarding Mood (에디토리얼) ──────
+function MainScreenAltB() {
+  const [tab, setTab] = useState('today');
+
+  return (
+    <div style={{
+      width: '100%', height: '100%',
+      background: `linear-gradient(168deg, #FAF6F0 0%, #F5EBD8 45%, #EDD9C4 80%, #EAD5CE 100%)`,
+      display: 'flex', flexDirection: 'column',
+      overflow: 'hidden', position: 'relative',
+    }}>
+      {/* Watermark constellation in background */}
+      <div style={{ position: 'absolute', right: -20, top: 60, opacity: 0.08, zIndex: 0 }}>
+        <ConstellationBadge id="libra" color={T.text} size={260} />
+      </div>
+
+      <CircleDeco x={-60} y={200} size={200} color={T.sky}    opacity={0.1} />
+      <CircleDeco x={240} y={600} size={160} color={T.yellow} opacity={0.1} />
+      <Star x={50}  y={140} size={5} opacity={0.3}  color={T.yellow} />
+      <Star x={290} y={200} size={4} opacity={0.25} color={T.apricot} />
+      <Star x={30}  y={500} size={4} opacity={0.22} color={T.yellow} />
+      <MoonDeco x={300} y={80} size={24} opacity={0.2} color={T.apricot} />
+
+      {/* Header */}
+      <div style={{ padding: '20px 28px 0', position: 'relative', zIndex: 1 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div style={{ fontFamily: "'Noto Serif JP', serif", fontSize: 20, fontWeight: 300, color: T.text, letterSpacing: '0.1em' }}>ohaasa</div>
+          <div style={{
+            width: 36, height: 36, borderRadius: '50%',
+            background: `${T.white}90`, display: 'flex', alignItems: 'center', justifyContent: 'center',
+            boxShadow: '0 2px 10px rgba(0,0,0,0.07)', cursor: 'pointer',
+          }}>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={T.textMid} strokeWidth="2">
+              <circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/>
+            </svg>
+          </div>
+        </div>
+        <div style={{ fontSize: 12, color: T.textSoft, marginTop: 2 }}>오늘도 좋은 하루 되세요 ☀️</div>
+      </div>
+
+      {/* Broadcast date */}
+      <div style={{ margin: '14px 28px 0', position: 'relative', zIndex: 1 }}>
+        <div style={{
+          display: 'inline-flex', alignItems: 'center', gap: 5,
+          background: `${T.sky}50`, borderRadius: 20, padding: '6px 12px',
+        }}>
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke={T.skyDark} strokeWidth="2.5">
+            <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+          </svg>
+          <span style={{ fontSize: 11, color: T.skyDark }}>2026년 4월 29일 (수) 방송분</span>
+        </div>
+      </div>
+
+      {/* Big rank + sign header */}
+      <div style={{ padding: '28px 28px 0', position: 'relative', zIndex: 1 }}>
+        <div style={{ display: 'flex', alignItems: 'flex-end', gap: 16, marginBottom: 6 }}>
+          <div style={{
+            fontSize: 80, fontWeight: 700, lineHeight: 0.9,
+            color: T.apricotDark, opacity: 0.9,
+            fontVariantNumeric: 'tabular-nums',
+          }}>3</div>
+          <div style={{ paddingBottom: 8 }}>
+            <div style={{ fontSize: 12, color: T.textSoft, marginBottom: 2 }}>오늘의 순위</div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <div style={{
+                width: 32, height: 32, borderRadius: '50%',
+                background: ZODIAC_COLORS['libra'],
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                overflow: 'hidden',
+              }}>
+                <ConstellationBadge id="libra" color={T.apricotDark} size={28} />
+              </div>
+              <div>
+                <div style={{ fontFamily: "'Noto Serif JP', serif", fontSize: 16, fontWeight: 400, color: T.text }}>천칭자리</div>
+                <div style={{ fontSize: 11, color: T.textSoft }}>Libra · 12위 중 3위</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Fortune text */}
+      <div style={{
+        margin: '16px 24px 0', position: 'relative', zIndex: 1,
+        background: `${T.white}65`,
+        borderRadius: 20, padding: '20px 22px',
+        backdropFilter: 'blur(6px)',
+      }}>
+        <div style={{ fontSize: 10, color: T.textSoft, letterSpacing: '0.18em', marginBottom: 10 }}>오늘의 운세</div>
+        <div style={{
+          fontFamily: "'Noto Serif JP', serif",
+          fontSize: 13.5, lineHeight: 2, color: T.text,
+          fontWeight: 300, whiteSpace: 'pre-line',
+        }}>{'오늘은 사람과의 인연이 깊어지는 하루예요.\n오후의 대화가 뜻밖의 행운을 가져다 줄지도 몰라요.\n행운의 컬러는 하늘색입니다.'}</div>
+      </div>
+
+      {/* Lucky + Stars */}
+      <div style={{ margin: '12px 24px 0', position: 'relative', zIndex: 1 }}>
+        <div style={{
+          background: `${T.white}65`, borderRadius: 18, padding: '16px 20px',
+          backdropFilter: 'blur(6px)',
+          display: 'grid', gridTemplateColumns: '1fr 1fr',
+          gap: 16,
+        }}>
+          {/* Lucky */}
+          <div>
+            <div style={{ fontSize: 10, color: T.textSoft, letterSpacing: '0.1em', marginBottom: 10 }}>행운 아이템</div>
+            {[{ label: '컬러', value: '하늘색' }, { label: '아이템', value: '흰 꽃' }, { label: '숫자', value: '7' }].map(({ label, value }) => (
+              <div key={label} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 7 }}>
+                <span style={{ fontSize: 11, color: T.textSoft }}>{label}</span>
+                <span style={{ fontSize: 12, fontWeight: 500, color: T.text }}>{value}</span>
+              </div>
+            ))}
+          </div>
+          {/* Stars */}
+          <div>
+            <div style={{ fontSize: 10, color: T.textSoft, letterSpacing: '0.1em', marginBottom: 10 }}>오늘의 운 ✦</div>
+            {[{ label: '연애', val: 4 }, { label: '직장', val: 3 }, { label: '금운', val: 4 }, { label: '건강', val: 5 }].map(({ label, val }) => (
+              <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 7 }}>
+                <span style={{ fontSize: 11, color: T.textSoft, width: 24 }}>{label}</span>
+                <StarRating value={val} />
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Bottom nav */}
+      <div style={{
+        marginTop: 'auto', padding: '14px 0 8px',
+        background: `${T.white}80`,
+        borderTop: `1px solid ${T.cream3}80`,
+        display: 'flex', justifyContent: 'space-around',
+        position: 'relative', zIndex: 1,
+        backdropFilter: 'blur(10px)',
+      }}>
+        {[
+          { id:'today', label:'오늘', icon: '☀️', active: true },
+          { id:'all',   label:'전체',   icon: '✦' },
+          { id:'settings', label:'설정', icon: '⚙' },
+        ].map(item => (
+          <div key={item.id} onClick={() => setTab(item.id)} style={{
+            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, cursor: 'pointer',
+          }}>
+            <div style={{ fontSize: 18 }}>{item.icon}</div>
+            <div style={{ fontSize: 10, fontWeight: item.active ? 600 : 400, color: item.active ? T.text : T.textSoft }}>{item.label}</div>
+            {item.active && <div style={{ width: 20, height: 2, borderRadius: 2, background: T.apricotDark }} />}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ─── Full ranking data ────────────────────────────────────────
+const FULL_RANKING = [
+  { rank:1,  id:'pisces',      fortune:'최고의 하루! 모든 일이 순조롭게',    lucky:'보라색' },
+  { rank:2,  id:'aries',       fortune:'활력 넘치는 하루. 도전하기 좋은 날', lucky:'빨간색' },
+  { rank:3,  id:'libra',       fortune:'인연이 깊어지는 하루. 대화가 행운',  lucky:'하늘색' },
+  { rank:4,  id:'leo',         fortune:'자신감이 빛나는 날. 표현을 아끼지 말 것', lucky:'금색' },
+  { rank:5,  id:'gemini',      fortune:'새로운 아이디어가 샘솟는 하루',      lucky:'노란색' },
+  { rank:6,  id:'sagittarius', fortune:'멀리 내다보는 시각이 도움이 됩니다', lucky:'주황색' },
+  { rank:7,  id:'taurus',      fortune:'천천히 나아가는 것이 현명합니다',    lucky:'초록색' },
+  { rank:8,  id:'capricorn',   fortune:'계획을 점검해보는 하루',             lucky:'갈색' },
+  { rank:9,  id:'aquarius',    fortune:'독창적인 아이디어를 발휘하세요',      lucky:'파란색' },
+  { rank:10, id:'virgo',       fortune:'세밀한 부분에 집중하면 성과가 있어요', lucky:'베이지' },
+  { rank:11, id:'cancer',      fortune:'감정을 조금 가다듬어 보세요',        lucky:'흰색' },
+  { rank:12, id:'scorpio',     fortune:'오늘은 충분한 휴식이 필요합니다',    lucky:'검정색' },
+];
+
+const MY_SIGN_ID = 'libra';
+
+// ─── All Rankings Screen A — 리스트형 ─────────────────────────
+function AllRankingsScreenA() {
+  return (
+    <div style={{
+      width: '100%', height: '100%',
+      background: `linear-gradient(168deg, #FAF6F0 0%, #F5EBD8 45%, #EDD9C4 80%, #EAD5CE 100%)`,
+      display: 'flex', flexDirection: 'column',
+      overflow: 'hidden', position: 'relative',
+    }}>
+      <CircleDeco x={-50} y={60}  size={180} color={T.sky}    opacity={0.12} />
+      <CircleDeco x={230} y={-30} size={160} color={T.yellow} opacity={0.10} />
+      <Star x={48}  y={130} size={5} opacity={0.28} color={T.yellow} />
+      <Star x={300} y={95}  size={4} opacity={0.22} color={T.apricot} />
+      <MoonDeco x={292} y={160} size={22} opacity={0.18} color={T.apricot} />
+
+      {/* Header */}
+      <div style={{ padding: '20px 24px 0', position: 'relative', zIndex: 1 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div style={{ fontFamily: "'Noto Serif JP', serif", fontSize: 20, fontWeight: 300, color: T.text, letterSpacing: '0.1em' }}>ohaasa</div>
+          <div style={{
+            width: 34, height: 34, borderRadius: '50%',
+            background: `${T.white}90`, display: 'flex', alignItems: 'center', justifyContent: 'center',
+            boxShadow: '0 2px 10px rgba(0,0,0,0.07)', cursor: 'pointer',
+          }}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={T.textMid} strokeWidth="2">
+              <circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/>
+            </svg>
+          </div>
+        </div>
+        <div style={{ marginTop: 14 }}>
+          <div style={{ fontFamily: "'Noto Serif JP', serif", fontSize: 18, fontWeight: 400, color: T.text }}>오늘의 전체 순위</div>
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4, marginTop: 6, background: `${T.sky}50`, borderRadius: 20, padding: '4px 10px' }}>
+            <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke={T.skyDark} strokeWidth="2.5">
+              <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+            </svg>
+            <span style={{ fontSize: 10, color: T.skyDark }}>2026년 4월 29일 (수) 방송분</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Ranking list */}
+      <div style={{
+        flex: 1, overflowY: 'auto',
+        padding: '14px 18px 20px',
+        display: 'flex', flexDirection: 'column', gap: 8,
+        position: 'relative', zIndex: 1,
+      }}>
+        {FULL_RANKING.map(item => {
+          const isMine = item.id === MY_SIGN_ID;
+          const sign = ZODIACS_KR.find(z => z.id === item.id);
+          const bg = ZODIAC_COLORS[item.id];
+          const rankColor = item.rank === 1 ? '#C8922A' : item.rank === 2 ? '#8A9BAA' : item.rank === 3 ? '#B07A60' : T.textSoft;
+
+          return (
+            <div key={item.id} style={{
+              borderRadius: 16,
+              background: isMine ? bg : `${T.white}85`,
+              border: isMine ? `2px solid ${T.apricotDark}60` : `1.5px solid ${T.cream3}80`,
+              padding: '12px 16px',
+              display: 'flex', alignItems: 'center', gap: 12,
+              boxShadow: isMine
+                ? `0 4px 20px ${bg}cc, 0 0 0 1px ${T.apricotDark}20`
+                : '0 1px 6px rgba(0,0,0,0.04)',
+              position: 'relative', overflow: 'hidden',
+            }}>
+              {/* Rank number */}
+              <div style={{
+                width: 28, textAlign: 'center', flexShrink: 0,
+                fontSize: item.rank <= 3 ? 17 : 14,
+                fontWeight: item.rank <= 3 ? 700 : 500,
+                color: rankColor,
+                fontVariantNumeric: 'tabular-nums',
+              }}>{item.rank}</div>
+
+              {/* Constellation icon */}
+              <div style={{
+                width: 40, height: 40, borderRadius: '50%', flexShrink: 0,
+                background: isMine ? `${T.white}70` : `${bg}80`,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                overflow: 'hidden',
+              }}>
+                <ConstellationBadge id={item.id} color={isMine ? T.apricotDark : '#A89888'} size={34} />
+              </div>
+
+              {/* Sign info */}
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
+                  <span style={{
+                    fontFamily: "'Noto Serif JP', serif",
+                    fontSize: 13, fontWeight: isMine ? 600 : 400, color: T.text,
+                  }}>{sign?.kr}</span>
+                  {isMine && (
+                    <span style={{
+                      fontSize: 9, fontWeight: 600, color: T.apricotDark,
+                      background: `${T.white}80`, borderRadius: 6, padding: '2px 6px',
+                      letterSpacing: '0.08em',
+                    }}>내 별자리</span>
+                  )}
+                </div>
+                <div style={{
+                  fontSize: 11, color: isMine ? T.textMid : T.textSoft,
+                  whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                }}>{item.fortune}</div>
+              </div>
+
+              {/* Lucky color dot */}
+              <div style={{
+                flexShrink: 0, textAlign: 'right',
+              }}>
+                <div style={{ fontSize: 9, color: T.textSoft, marginBottom: 2 }}>행운색</div>
+                <div style={{ fontSize: 11, fontWeight: 500, color: isMine ? T.textMid : T.textSoft }}>{item.lucky}</div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Bottom nav */}
+      <div style={{
+        padding: '12px 0 8px',
+        background: `${T.white}80`, backdropFilter: 'blur(10px)',
+        borderTop: `1px solid ${T.cream3}80`,
+        display: 'flex', justifyContent: 'space-around',
+        position: 'relative', zIndex: 1,
+      }}>
+        {[
+          { id:'today', label:'오늘', icon:'☀️' },
+          { id:'all',   label:'전체', icon:'✦', active: true },
+          { id:'settings', label:'설정', icon:'⚙' },
+        ].map(item => (
+          <div key={item.id} style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:3, cursor:'pointer' }}>
+            <div style={{ fontSize: 18 }}>{item.icon}</div>
+            <div style={{ fontSize: 10, fontWeight: item.active ? 600 : 400, color: item.active ? T.text : T.textSoft }}>{item.label}</div>
+            {item.active && <div style={{ width: 20, height: 2, borderRadius: 2, background: T.apricotDark }} />}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ─── All Rankings Screen B — 감성 카드형 ──────────────────────
+function AllRankingsScreenB() {
+  return (
+    <div style={{
+      width: '100%', height: '100%',
+      background: `linear-gradient(168deg, #FAF6F0 0%, #F5EBD8 45%, #EDD9C4 80%, #EAD5CE 100%)`,
+      display: 'flex', flexDirection: 'column',
+      overflow: 'hidden', position: 'relative',
+    }}>
+      <CircleDeco x={-50} y={60}  size={180} color={T.sky}    opacity={0.12} />
+      <CircleDeco x={230} y={-30} size={160} color={T.yellow} opacity={0.10} />
+      <Star x={48}  y={130} size={5} opacity={0.28} color={T.yellow} />
+      <Star x={300} y={95}  size={4} opacity={0.22} color={T.apricot} />
+      <MoonDeco x={292} y={160} size={22} opacity={0.18} color={T.apricot} />
+
+      {/* Header */}
+      <div style={{ padding: '20px 24px 0', position: 'relative', zIndex: 1 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div style={{ fontFamily: "'Noto Serif JP', serif", fontSize: 20, fontWeight: 300, color: T.text, letterSpacing: '0.1em' }}>ohaasa</div>
+          <div style={{
+            width: 34, height: 34, borderRadius: '50%',
+            background: `${T.white}90`, display: 'flex', alignItems: 'center', justifyContent: 'center',
+            boxShadow: '0 2px 10px rgba(0,0,0,0.07)',
+          }}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={T.textMid} strokeWidth="2">
+              <circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/>
+            </svg>
+          </div>
+        </div>
+        <div style={{ marginTop: 14 }}>
+          <div style={{ fontFamily: "'Noto Serif JP', serif", fontSize: 18, fontWeight: 400, color: T.text }}>오늘의 전체 순위</div>
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4, marginTop: 6, background: `${T.sky}50`, borderRadius: 20, padding: '4px 10px' }}>
+            <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke={T.skyDark} strokeWidth="2.5">
+              <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+            </svg>
+            <span style={{ fontSize: 10, color: T.skyDark }}>2026년 4월 29일 (수) 방송분</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Scrollable list */}
+      <div style={{
+        flex: 1, overflowY: 'auto',
+        padding: '14px 18px 20px',
+        display: 'flex', flexDirection: 'column', gap: 10,
+        position: 'relative', zIndex: 1,
+      }}>
+        {FULL_RANKING.map(item => {
+          const isMine = item.id === MY_SIGN_ID;
+          const sign = ZODIACS_KR.find(z => z.id === item.id);
+          const bg = ZODIAC_COLORS[item.id];
+          const medal = item.rank === 1 ? '🥇' : item.rank === 2 ? '🥈' : item.rank === 3 ? '🥉' : null;
+
+          return (
+            <div key={item.id} style={{
+              borderRadius: 18,
+              background: isMine
+                ? `linear-gradient(130deg, ${bg} 0%, ${bg}cc 100%)`
+                : `${T.white}80`,
+              border: isMine
+                ? `2px solid ${T.apricotDark}50`
+                : `1.5px solid ${T.cream3}70`,
+              padding: '14px 18px',
+              boxShadow: isMine
+                ? `0 6px 24px ${bg}aa`
+                : '0 2px 8px rgba(0,0,0,0.04)',
+              position: 'relative', overflow: 'hidden',
+            }}>
+              {/* Watermark rank number behind card */}
+              <div style={{
+                position: 'absolute', right: 12, top: '50%',
+                transform: 'translateY(-50%)',
+                fontSize: 56, fontWeight: 800, lineHeight: 1,
+                color: isMine ? `${T.apricotDark}18` : `${T.cream3}cc`,
+                fontVariantNumeric: 'tabular-nums',
+                pointerEvents: 'none',
+                userSelect: 'none',
+              }}>{String(item.rank).padStart(2, '0')}</div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, position: 'relative' }}>
+                {/* Rank + constellation */}
+                <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+                  <div style={{
+                    width: 44, height: 44, borderRadius: '50%',
+                    background: isMine ? `${T.white}60` : `${bg}90`,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    overflow: 'hidden',
+                  }}>
+                    <ConstellationBadge id={item.id} color={isMine ? T.apricotDark : '#A89888'} size={38} />
+                  </div>
+                  <div style={{
+                    fontSize: medal ? 13 : 11, fontWeight: 700,
+                    color: isMine ? T.apricotDark : T.textSoft,
+                    lineHeight: 1,
+                  }}>{medal || `${item.rank}위`}</div>
+                </div>
+
+                {/* Text content */}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                    <span style={{
+                      fontFamily: "'Noto Serif JP', serif",
+                      fontSize: 14, fontWeight: isMine ? 600 : 400, color: T.text,
+                    }}>{sign?.kr}</span>
+                    {isMine && (
+                      <span style={{
+                        fontSize: 9, fontWeight: 700, color: T.white,
+                        background: T.apricotDark, borderRadius: 6, padding: '2px 7px',
+                        letterSpacing: '0.06em',
+                      }}>내 별자리</span>
+                    )}
+                  </div>
+                  <div style={{
+                    fontSize: 11.5, color: isMine ? T.textMid : T.textSoft,
+                    lineHeight: 1.5, paddingRight: 40,
+                  }}>{item.fortune}</div>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Bottom nav */}
+      <div style={{
+        padding: '12px 0 8px',
+        background: `${T.white}80`, backdropFilter: 'blur(10px)',
+        borderTop: `1px solid ${T.cream3}80`,
+        display: 'flex', justifyContent: 'space-around',
+        position: 'relative', zIndex: 1,
+      }}>
+        {[
+          { id:'today', label:'오늘', icon:'☀️' },
+          { id:'all',   label:'전체', icon:'✦', active: true },
+          { id:'settings', label:'설정', icon:'⚙' },
+        ].map(item => (
+          <div key={item.id} style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:3, cursor:'pointer' }}>
+            <div style={{ fontSize: 18 }}>{item.icon}</div>
+            <div style={{ fontSize: 10, fontWeight: item.active ? 600 : 400, color: item.active ? T.text : T.textSoft }}>{item.label}</div>
+            {item.active && <div style={{ width: 20, height: 2, borderRadius: 2, background: T.apricotDark }} />}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ─── Screen Settings-A: 톤 맞춤 안정적 버전 ──────────────────
+function SettingsScreenAltA() {
+  const [notif, setNotif] = useState(true);
+
+  const Toggle = ({ on, onToggle }) => (
+    <div onClick={onToggle} style={{
+      width: 44, height: 26, borderRadius: 13,
+      background: on ? T.apricotDark : T.cream3,
+      position: 'relative', cursor: 'pointer',
+      transition: 'background 0.25s', flexShrink: 0,
+    }}>
+      <div style={{
+        position: 'absolute', top: 3, left: on ? 21 : 3,
+        width: 20, height: 20, borderRadius: '50%',
+        background: T.white,
+        boxShadow: '0 1px 4px rgba(0,0,0,0.2)',
+        transition: 'left 0.25s',
+      }} />
+    </div>
+  );
+
+  return (
+    <div style={{
+      width: '100%', height: '100%',
+      background: `linear-gradient(168deg, #FAF6F0 0%, #F5EBD8 45%, #EDD9C4 80%, #EAD5CE 100%)`,
+      display: 'flex', flexDirection: 'column',
+      overflow: 'hidden', position: 'relative',
+    }}>
+      <CircleDeco x={-50} y={60}  size={160} color={T.sky}    opacity={0.11} />
+      <CircleDeco x={230} y={500} size={140} color={T.apricot} opacity={0.10} />
+      <Star x={48}  y={130} size={5} opacity={0.25} color={T.yellow} />
+      <Star x={295} y={110} size={4} opacity={0.2}  color={T.apricot} />
+      <Star x={30}  y={450} size={3} opacity={0.18} color={T.yellow} />
+      <MoonDeco x={285} y={170} size={22} opacity={0.18} color={T.apricot} />
+
+      {/* Header */}
+      <div style={{ padding: '20px 28px 0', position: 'relative', zIndex: 1 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+          <div>
+            <div style={{ fontFamily: "'Noto Serif JP', serif", fontSize: 20, fontWeight: 300, color: T.text, letterSpacing: '0.1em' }}>ohaasa</div>
+            <div style={{ fontFamily: "'Noto Serif JP', serif", fontSize: 22, fontWeight: 400, color: T.text, marginTop: 6 }}>설정</div>
+          </div>
+          <MoonDeco x={0} y={0} size={20} opacity={0.3} color={T.apricot} />
+        </div>
+      </div>
+
+      {/* Content */}
+      <div style={{ flex: 1, overflowY: 'auto', padding: '20px 20px 16px', position: 'relative', zIndex: 1 }}>
+
+        {/* My Sign */}
+        <div style={{ fontSize: 10, color: T.textSoft, letterSpacing: '0.18em', marginBottom: 8, paddingLeft: 4 }}>MY SIGN</div>
+        <div style={{
+          background: `${T.white}75`, borderRadius: 20, padding: '16px 18px',
+          marginBottom: 18,
+          boxShadow: '0 2px 12px rgba(0,0,0,0.05)',
+          display: 'flex', alignItems: 'center', gap: 14,
+        }}>
+          <div style={{
+            width: 52, height: 52, borderRadius: '50%', flexShrink: 0,
+            background: ZODIAC_COLORS['libra'],
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            overflow: 'hidden',
+          }}>
+            <ConstellationBadge id="libra" color={T.apricotDark} size={44} />
+          </div>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontFamily: "'Noto Serif JP', serif", fontSize: 16, fontWeight: 400, color: T.text }}>천칭자리</div>
+            <div style={{ fontSize: 11, color: T.textSoft, marginTop: 2 }}>Libra · 9/23–10/23</div>
+          </div>
+          <div style={{
+            background: `${T.apricot}40`, borderRadius: 12, padding: '7px 14px',
+            fontSize: 12, color: T.apricotDark, fontWeight: 500, cursor: 'pointer',
+          }}>변경</div>
+        </div>
+
+        {/* Notifications */}
+        <div style={{ fontSize: 10, color: T.textSoft, letterSpacing: '0.18em', marginBottom: 8, paddingLeft: 4 }}>NOTIFICATIONS</div>
+        <div style={{
+          background: `${T.white}75`, borderRadius: 20, padding: '0 18px',
+          marginBottom: 18,
+          boxShadow: '0 2px 12px rgba(0,0,0,0.05)',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 0', borderBottom: `1px solid ${T.cream3}60` }}>
+            <div>
+              <div style={{ fontSize: 14, color: T.text }}>아침 알림</div>
+              <div style={{ fontSize: 11, color: T.textSoft, marginTop: 2 }}>매일 아침 운세 알림 받기</div>
+            </div>
+            <Toggle on={notif} onToggle={() => setNotif(!notif)} />
+          </div>
+          {notif && (
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 0' }}>
+              <div>
+                <div style={{ fontSize: 14, color: T.text }}>알림 시각</div>
+                <div style={{ fontSize: 11, color: T.textSoft, marginTop: 2 }}>업데이트 직후 알림</div>
+              </div>
+              <div style={{ background: `${T.apricot}35`, borderRadius: 10, padding: '7px 14px', fontSize: 13, color: T.textMid, fontWeight: 500 }}>07:30</div>
+            </div>
+          )}
+        </div>
+
+        {/* App info */}
+        <div style={{ fontSize: 10, color: T.textSoft, letterSpacing: '0.18em', marginBottom: 8, paddingLeft: 4 }}>ABOUT</div>
+        <div style={{
+          background: `${T.white}75`, borderRadius: 20, padding: '0 18px',
+          marginBottom: 24,
+          boxShadow: '0 2px 12px rgba(0,0,0,0.05)',
+        }}>
+          {[
+            { label: '데이터 소스', sub: '일본 TV 아침 별자리 운세' },
+            { label: '버전', sub: '1.0.0' },
+            { label: '개인정보 처리방침', sub: null },
+          ].map((item, i, arr) => (
+            <div key={item.label} style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              padding: '15px 0',
+              borderBottom: i < arr.length - 1 ? `1px solid ${T.cream3}60` : 'none',
+            }}>
+              <div>
+                <div style={{ fontSize: 14, color: T.text }}>{item.label}</div>
+                {item.sub && <div style={{ fontSize: 11, color: T.textSoft, marginTop: 2 }}>{item.sub}</div>}
+              </div>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={T.textSoft} strokeWidth="2">
+                <polyline points="9 18 15 12 9 6"/>
+              </svg>
+            </div>
+          ))}
+        </div>
+
+        {/* Footer */}
+        <div style={{ textAlign: 'center', paddingBottom: 8 }}>
+          <div style={{ fontFamily: "'Noto Serif JP', serif", fontSize: 20, color: T.textSoft, fontWeight: 300, letterSpacing: '0.14em' }}>ohaasa ✦</div>
+          <div style={{ fontSize: 11, color: T.apricot, marginTop: 4 }}>おはあさ</div>
+        </div>
+      </div>
+
+      {/* Bottom nav */}
+      <div style={{
+        padding: '12px 0 8px',
+        background: `${T.white}80`, backdropFilter: 'blur(10px)',
+        borderTop: `1px solid ${T.cream3}80`,
+        display: 'flex', justifyContent: 'space-around',
+        position: 'relative', zIndex: 1,
+      }}>
+        {[
+          { id:'today', label:'오늘', icon:'☀️' },
+          { id:'all',   label:'전체', icon:'✦' },
+          { id:'settings', label:'설정', icon:'⚙', active: true },
+        ].map(item => (
+          <div key={item.id} style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:3, cursor:'pointer' }}>
+            <div style={{ fontSize: 18 }}>{item.icon}</div>
+            <div style={{ fontSize: 10, fontWeight: item.active ? 600 : 400, color: item.active ? T.text : T.textSoft }}>{item.label}</div>
+            {item.active && <div style={{ width: 20, height: 2, borderRadius: 2, background: T.apricotDark }} />}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ─── Screen Settings-B: 감성 카드 섹션 버전 ──────────────────
+function SettingsScreenAltB() {
+  const [notif, setNotif] = useState(true);
+
+  const Toggle = ({ on, onToggle }) => (
+    <div onClick={onToggle} style={{
+      width: 44, height: 26, borderRadius: 13,
+      background: on ? T.apricotDark : T.cream3,
+      position: 'relative', cursor: 'pointer',
+      transition: 'background 0.25s', flexShrink: 0,
+    }}>
+      <div style={{
+        position: 'absolute', top: 3, left: on ? 21 : 3,
+        width: 20, height: 20, borderRadius: '50%',
+        background: T.white,
+        boxShadow: '0 1px 4px rgba(0,0,0,0.2)',
+        transition: 'left 0.25s',
+      }} />
+    </div>
+  );
+
+  return (
+    <div style={{
+      width: '100%', height: '100%',
+      background: `linear-gradient(168deg, #FAF6F0 0%, #F5EBD8 45%, #EDD9C4 80%, #EAD5CE 100%)`,
+      display: 'flex', flexDirection: 'column',
+      overflow: 'hidden', position: 'relative',
+    }}>
+      {/* Watermark constellation */}
+      <div style={{ position: 'absolute', right: -30, top: 40, opacity: 0.06, zIndex: 0 }}>
+        <ConstellationBadge id="libra" color={T.text} size={220} />
+      </div>
+      <CircleDeco x={-50} y={80}  size={160} color={T.sky}    opacity={0.10} />
+      <CircleDeco x={220} y={520} size={140} color={T.apricot} opacity={0.10} />
+      <Star x={48}  y={140} size={5} opacity={0.25} color={T.yellow} />
+      <Star x={295} y={120} size={4} opacity={0.20} color={T.apricot} />
+      <MoonDeco x={280} y={180} size={22} opacity={0.18} color={T.apricot} />
+
+      {/* Header */}
+      <div style={{ padding: '20px 28px 20px', position: 'relative', zIndex: 1 }}>
+        <div style={{ fontFamily: "'Noto Serif JP', serif", fontSize: 20, fontWeight: 300, color: T.text, letterSpacing: '0.1em', marginBottom: 2 }}>ohaasa</div>
+        <div style={{ fontFamily: "'Noto Serif JP', serif", fontSize: 22, fontWeight: 400, color: T.text }}>설정</div>
+      </div>
+
+      <div style={{ flex: 1, overflowY: 'auto', padding: '0 20px 16px', position: 'relative', zIndex: 1 }}>
+
+        {/* MY SIGN — feature card */}
+        <div style={{
+          background: `linear-gradient(130deg, ${ZODIAC_COLORS['libra']} 0%, ${ZODIAC_COLORS['libra']}aa 100%)`,
+          borderRadius: 22, padding: '20px 20px',
+          marginBottom: 14,
+          boxShadow: `0 6px 20px ${ZODIAC_COLORS['libra']}99`,
+          display: 'flex', alignItems: 'center', gap: 14, position: 'relative', overflow: 'hidden',
+        }}>
+          {/* Watermark */}
+          <div style={{ position: 'absolute', right: -10, bottom: -10, opacity: 0.12 }}>
+            <ConstellationBadge id="libra" color={T.text} size={90} />
+          </div>
+          <div style={{
+            width: 60, height: 60, borderRadius: '50%', flexShrink: 0,
+            background: `${T.white}60`,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            overflow: 'hidden',
+          }}>
+            <ConstellationBadge id="libra" color={T.apricotDark} size={50} />
+          </div>
+          <div style={{ flex: 1, position: 'relative' }}>
+            <div style={{ fontSize: 10, color: T.textMid, letterSpacing: '0.14em', marginBottom: 4 }}>내 별자리</div>
+            <div style={{ fontFamily: "'Noto Serif JP', serif", fontSize: 18, fontWeight: 500, color: T.text }}>천칭자리</div>
+            <div style={{ fontSize: 11, color: T.textMid, marginTop: 1 }}>Libra · 9/23–10/23</div>
+          </div>
+          <div style={{
+            background: `${T.white}70`, borderRadius: 14, padding: '8px 14px',
+            fontSize: 12, color: T.apricotDark, fontWeight: 600,
+            cursor: 'pointer', flexShrink: 0, position: 'relative',
+          }}>변경</div>
+        </div>
+
+        {/* Notification card */}
+        <div style={{
+          background: `${T.white}75`, borderRadius: 22, padding: '18px 20px',
+          marginBottom: 14, boxShadow: '0 2px 12px rgba(0,0,0,0.05)',
+        }}>
+          <div style={{ fontSize: 10, color: T.textSoft, letterSpacing: '0.16em', marginBottom: 14 }}>알림 설정</div>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: notif ? 14 : 0 }}>
+            <div>
+              <div style={{ fontSize: 14, color: T.text, fontWeight: 400 }}>아침 알림</div>
+              <div style={{ fontSize: 11, color: T.textSoft, marginTop: 2 }}>매일 아침 운세 알림 받기</div>
+            </div>
+            <Toggle on={notif} onToggle={() => setNotif(!notif)} />
+          </div>
+          {notif && (
+            <div style={{
+              background: `${T.apricot}25`, borderRadius: 14,
+              padding: '12px 16px',
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <div style={{ fontSize: 18 }}>🌅</div>
+                <div style={{ fontSize: 13, color: T.textMid }}>알림 시각</div>
+              </div>
+              <div style={{ fontSize: 14, fontWeight: 600, color: T.apricotDark }}>07:30</div>
+            </div>
+          )}
+        </div>
+
+        {/* App info card */}
+        <div style={{
+          background: `${T.white}75`, borderRadius: 22, padding: '18px 20px',
+          marginBottom: 24, boxShadow: '0 2px 12px rgba(0,0,0,0.05)',
+        }}>
+          <div style={{ fontSize: 10, color: T.textSoft, letterSpacing: '0.16em', marginBottom: 14 }}>앱 정보</div>
+          {[
+            { label: '데이터 소스', sub: '일본 TV 아침 별자리 운세', icon: '📡' },
+            { label: '버전', sub: '1.0.0', icon: '✦' },
+            { label: '개인정보 처리방침', sub: null, icon: '🔒' },
+          ].map((item, i, arr) => (
+            <div key={item.label} style={{
+              display: 'flex', alignItems: 'center', gap: 12,
+              padding: `${i === 0 ? 0 : 12}px 0 ${i === arr.length - 1 ? 0 : 12}px`,
+              borderBottom: i < arr.length - 1 ? `1px solid ${T.cream3}70` : 'none',
+            }}>
+              <div style={{
+                width: 32, height: 32, borderRadius: 10, flexShrink: 0,
+                background: `${T.apricot}30`,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: 14,
+              }}>{item.icon}</div>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 13, color: T.text }}>{item.label}</div>
+                {item.sub && <div style={{ fontSize: 10, color: T.textSoft, marginTop: 1 }}>{item.sub}</div>}
+              </div>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={T.textSoft} strokeWidth="2">
+                <polyline points="9 18 15 12 9 6"/>
+              </svg>
+            </div>
+          ))}
+        </div>
+
+        {/* Footer */}
+        <div style={{ textAlign: 'center', paddingBottom: 8 }}>
+          <div style={{ position: 'relative', display: 'inline-block' }}>
+            <Star x={-16} y={-8} size={6} opacity={0.4} color={T.yellow} />
+            <Star x={110} y={0} size={5} opacity={0.35} color={T.apricot} />
+            <div style={{ fontFamily: "'Noto Serif JP', serif", fontSize: 22, color: T.textSoft, fontWeight: 300, letterSpacing: '0.14em' }}>ohaasa</div>
+          </div>
+          <div style={{ fontSize: 11, color: T.apricot, marginTop: 4, letterSpacing: '0.2em' }}>おはあさ</div>
+          <div style={{ fontSize: 10, color: T.cream3, marginTop: 4 }}>매일 아침 7:30, 당신의 별자리 운세</div>
+        </div>
+      </div>
+
+      {/* Bottom nav */}
+      <div style={{
+        padding: '12px 0 8px',
+        background: `${T.white}80`, backdropFilter: 'blur(10px)',
+        borderTop: `1px solid ${T.cream3}80`,
+        display: 'flex', justifyContent: 'space-around',
+        position: 'relative', zIndex: 1,
+      }}>
+        {[
+          { id:'today', label:'오늘', icon:'☀️' },
+          { id:'all',   label:'전체', icon:'✦' },
+          { id:'settings', label:'설정', icon:'⚙', active: true },
+        ].map(item => (
+          <div key={item.id} style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:3, cursor:'pointer' }}>
+            <div style={{ fontSize: 18 }}>{item.icon}</div>
+            <div style={{ fontSize: 10, fontWeight: item.active ? 600 : 400, color: item.active ? T.text : T.textSoft }}>{item.label}</div>
+            {item.active && <div style={{ width: 20, height: 2, borderRadius: 2, background: T.apricotDark }} />}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ─── Screen 4: Settings ───────────────────────────────────────
+function SettingsScreen() {
+  const [notif, setNotif] = useState(true);
+  const [time, setTime]   = useState('07:30');
+
+  const Toggle = ({ on, onToggle }) => (
+    <div onClick={onToggle} style={{
+      width: 44, height: 26, borderRadius: 13,
+      background: on ? T.apricotDark : T.cream3,
+      position: 'relative', cursor: 'pointer',
+      transition: 'background 0.25s',
+      flexShrink: 0,
+    }}>
+      <div style={{
+        position: 'absolute',
+        top: 3, left: on ? 21 : 3,
+        width: 20, height: 20, borderRadius: '50%',
+        background: T.white,
+        boxShadow: '0 1px 4px rgba(0,0,0,0.2)',
+        transition: 'left 0.25s',
+      }} />
+    </div>
+  );
+
+  const Row = ({ label, sublabel, right, noBorder }) => (
+    <div style={{
+      padding: '14px 0',
+      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+      borderBottom: noBorder ? 'none' : `1px solid ${T.cream3}`,
+    }}>
+      <div>
+        <div style={{ fontSize: 14, color: T.text }}>{label}</div>
+        {sublabel && <div style={{ fontSize: 11, color: T.textSoft, marginTop: 2 }}>{sublabel}</div>}
+      </div>
+      {right}
+    </div>
+  );
+
+  return (
+    <div style={{
+      width: '100%', height: '100%',
+      background: T.cream2,
+      display: 'flex', flexDirection: 'column',
+      overflow: 'hidden',
+    }}>
+      {/* Header */}
+      <div style={{
+        background: T.cream,
+        padding: '20px 24px 20px',
+        borderBottom: `1px solid ${T.cream3}`,
+      }}>
+        <div style={{
+          fontFamily: "'Noto Serif JP', serif",
+          fontSize: 20, fontWeight: 400, color: T.text,
+        }}>設定</div>
+      </div>
+
+      <div style={{ flex: 1, overflowY: 'auto', padding: '16px 0' }}>
+        {/* My Sign section */}
+        <div style={{ padding: '0 0 6px 20px' }}>
+          <div style={{ fontSize: 11, color: T.textSoft, letterSpacing: '0.12em' }}>MY SIGN</div>
+        </div>
+        <div style={{
+          background: T.white, margin: '0 16px',
+          borderRadius: 16, padding: '0 16px',
+          boxShadow: '0 1px 6px rgba(0,0,0,0.04)',
+          marginBottom: 20,
+        }}>
+          <Row
+            label="星座を変更"
+            sublabel="てんびん座 / Libra"
+            right={
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <span style={{ fontSize: 20 }}>♎</span>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={T.textSoft} strokeWidth="2">
+                  <polyline points="9 18 15 12 9 6"/>
+                </svg>
+              </div>
+            }
+            noBorder
+          />
+        </div>
+
+        {/* Notification section */}
+        <div style={{ padding: '0 0 6px 20px' }}>
+          <div style={{ fontSize: 11, color: T.textSoft, letterSpacing: '0.12em' }}>NOTIFICATIONS</div>
+        </div>
+        <div style={{
+          background: T.white, margin: '0 16px',
+          borderRadius: 16, padding: '0 16px',
+          boxShadow: '0 1px 6px rgba(0,0,0,0.04)',
+          marginBottom: 20,
+        }}>
+          <Row
+            label="朝の通知"
+            sublabel="毎朝の占いをお知らせ"
+            right={<Toggle on={notif} onToggle={() => setNotif(!notif)} />}
+          />
+          {notif && (
+            <Row
+              label="通知時刻"
+              sublabel="更新後すぐにお知らせ"
+              right={
+                <div style={{
+                  background: T.cream, borderRadius: 8,
+                  padding: '6px 12px', fontSize: 13,
+                  color: T.textMid, fontWeight: 500,
+                }}>07:30</div>
+              }
+              noBorder
+            />
+          )}
+        </div>
+
+        {/* App Info */}
+        <div style={{ padding: '0 0 6px 20px' }}>
+          <div style={{ fontSize: 11, color: T.textSoft, letterSpacing: '0.12em' }}>ABOUT</div>
+        </div>
+        <div style={{
+          background: T.white, margin: '0 16px',
+          borderRadius: 16, padding: '0 16px',
+          boxShadow: '0 1px 6px rgba(0,0,0,0.04)',
+          marginBottom: 20,
+        }}>
+          {[
+            { label: 'データソース', sub: '日本テレビ系朝の星座占い' },
+            { label: 'バージョン', sub: '1.0.0' },
+            { label: 'プライバシーポリシー', sub: null },
+          ].map((item, i, arr) => (
+            <Row
+              key={item.label}
+              label={item.label}
+              sublabel={item.sub}
+              right={
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={T.textSoft} strokeWidth="2">
+                  <polyline points="9 18 15 12 9 6"/>
+                </svg>
+              }
+              noBorder={i === arr.length - 1}
+            />
+          ))}
+        </div>
+
+        {/* App name footer */}
+        <div style={{ textAlign: 'center', padding: '8px 0 24px' }}>
+          <div style={{
+            fontFamily: "'Noto Serif JP', serif",
+            fontSize: 18, color: T.textSoft,
+            fontWeight: 300, letterSpacing: '0.12em',
+          }}>ohaasa ✦</div>
+          <div style={{ fontSize: 11, color: T.cream3, marginTop: 4 }}>おはあさ</div>
+        </div>
+      </div>
+
+      {/* Bottom nav */}
+      <div style={{
+        padding: '14px 0 8px',
+        background: T.white,
+        borderTop: `1px solid ${T.cream3}`,
+        display: 'flex', justifyContent: 'space-around',
+      }}>
+        {[
+          { id:'today', label:'今日', icon: '☀️' },
+          { id:'all',   label:'全星座', icon: '✦' },
+          { id:'settings', label:'設定', icon: '⚙', active: true },
+        ].map(item => (
+          <div key={item.id} style={{
+            display: 'flex', flexDirection: 'column',
+            alignItems: 'center', gap: 3, cursor: 'pointer',
+          }}>
+            <div style={{ fontSize: 18 }}>{item.icon}</div>
+            <div style={{
+              fontSize: 10, fontWeight: item.active ? 600 : 400,
+              color: item.active ? T.text : T.textSoft,
+            }}>{item.label}</div>
+            {item.active && (
+              <div style={{ width: 20, height: 2, borderRadius: 2, background: T.apricotDark }} />
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// FINAL FLOW — 통일된 디자인 스펙 기준
+// ═══════════════════════════════════════════════════════════════
+
+// ─── Shared Final Design Tokens ──────────────────────────────
+const FBG = `linear-gradient(168deg, #FAF6F0 0%, #F5EBD8 45%, #EDD9C4 80%, #EAD5CE 100%)`;
+const FCARD = { background: 'rgba(255,253,249,0.75)', borderRadius: 20, boxShadow: '0 2px 14px rgba(0,0,0,0.06)' };
+const FBORDER = `1.5px solid rgba(237,227,214,0.7)`;
+
+// ─── Shared sub-components ───────────────────────────────────
+const FHeader = ({ subtitle = '오늘도 좋은 하루 되세요 ☀️' }) => (
+  <div style={{ padding: '20px 28px 0', position: 'relative', zIndex: 1 }}>
+    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <div>
+        <div style={{ fontFamily: "'Noto Serif JP', serif", fontSize: 20, fontWeight: 300, color: T.text, letterSpacing: '0.1em' }}>ohaasa</div>
+        <div style={{ fontSize: 11, color: T.textSoft, marginTop: 2 }}>{subtitle}</div>
+      </div>
+      <div style={{
+        width: 34, height: 34, borderRadius: '50%', background: 'rgba(255,253,249,0.85)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        boxShadow: '0 2px 10px rgba(0,0,0,0.07)', cursor: 'pointer',
+      }}>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={T.textMid} strokeWidth="2">
+          <circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/>
+        </svg>
+      </div>
+    </div>
+  </div>
+);
+
+const FBroadcastPill = ({ date = '2026년 4월 29일 (수) 방송분' }) => (
+  <div style={{ margin: '12px 28px 0', position: 'relative', zIndex: 1 }}>
+    <div style={{
+      display: 'inline-flex', alignItems: 'center', gap: 5,
+      background: 'rgba(184,216,232,0.45)', borderRadius: 20, padding: '5px 12px',
+    }}>
+      <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke={T.skyDark} strokeWidth="2.5">
+        <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+      </svg>
+      <span style={{ fontSize: 10, color: T.skyDark }}>{date}</span>
+    </div>
+  </div>
+);
+
+const FBottomNav = ({ active = 'today' }) => (
+  <div style={{
+    padding: '12px 0 8px',
+    background: 'rgba(255,253,249,0.82)', backdropFilter: 'blur(12px)',
+    borderTop: '1px solid rgba(237,227,214,0.6)',
+    display: 'flex', justifyContent: 'space-around',
+    position: 'relative', zIndex: 10,
+  }}>
+    {[
+      { id:'today',    label:'오늘', icon:'☀️' },
+      { id:'all',      label:'전체', icon:'✦' },
+      { id:'settings', label:'설정', icon:'⚙' },
+    ].map(item => (
+      <div key={item.id} style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:3, cursor:'pointer' }}>
+        <div style={{ fontSize: 18 }}>{item.icon}</div>
+        <div style={{ fontSize: 10, fontWeight: item.id === active ? 600 : 400, color: item.id === active ? T.text : T.textSoft }}>{item.label}</div>
+        {item.id === active && <div style={{ width: 20, height: 2, borderRadius: 2, background: T.apricotDark }} />}
+      </div>
+    ))}
+  </div>
+);
+
+const FScreenBase = ({ children, active }) => (
+  <div style={{
+    width: '100%', height: '100%',
+    background: FBG,
+    display: 'flex', flexDirection: 'column',
+    overflow: 'hidden', position: 'relative',
+  }}>
+    <CircleDeco x={-50} y={50}  size={170} color={T.sky}     opacity={0.11} />
+    <CircleDeco x={230} y={-30} size={160} color={T.yellow}  opacity={0.10} />
+    <CircleDeco x={200} y={590} size={160} color={T.apricot} opacity={0.10} />
+    <Star x={46}  y={128} size={5} opacity={0.26} color={T.yellow} />
+    <Star x={294} y={108} size={4} opacity={0.22} color={T.apricot} />
+    <Star x={28}  y={440} size={3} opacity={0.18} color={T.yellow} />
+    <MoonDeco x={286} y={174} size={22} opacity={0.18} color={T.apricot} />
+    {children}
+    <FBottomNav active={active} />
+  </div>
+);
+
+// ─── F1: Final Onboarding ─────────────────────────────────────
+function FinalOnboarding() {
+  return (
+    <div style={{
+      width: '100%', height: '100%',
+      background: FBG,
+      position: 'relative', overflow: 'hidden',
+      display: 'flex', flexDirection: 'column',
+      alignItems: 'center', justifyContent: 'center',
+      padding: '0 36px',
+    }}>
+      <CircleDeco x={-30}  y={80}  size={130} color={T.sky}      opacity={0.16} />
+      <CircleDeco x={255}  y={400} size={160} color={T.apricot}  opacity={0.13} />
+      <CircleDeco x={100}  y={620} size={80}  color={T.lavender} opacity={0.16} />
+      <Star x={40}  y={118} size={7} opacity={0.45} color={T.yellow} />
+      <Star x={288} y={90}  size={5} opacity={0.38} color={T.apricot} />
+      <Star x={58}  y={316} size={4} opacity={0.30} color={T.skyDark} />
+      <Star x={278} y={278} size={6} opacity={0.40} color={T.yellow} />
+      <Star x={148} y={518} size={5} opacity={0.35} color={T.apricot} />
+      <MoonDeco x={265} y={158} size={28} opacity={0.30} color={T.apricot} />
+      <MoonDeco x={18}  y={475} size={20} opacity={0.25} color={T.skyDark} />
+
+      {/* Hero constellation */}
+      <div style={{ width: 190, height: 190, position: 'relative', marginBottom: 32 }}>
+        <div style={{
+          position: 'absolute', inset: 0, borderRadius: '50%',
+          background: `radial-gradient(circle, ${T.yellow}50 0%, transparent 70%)`,
+        }} />
+        <svg width="190" height="190" viewBox="0 0 190 190" style={{ position:'absolute', inset:0 }}>
+          {[[60,78],[100,58],[140,74],[150,118],[110,138],[70,128]].reduce((acc, pt, i, arr) => {
+            if (i === 0) return acc;
+            const [x1,y1] = arr[i-1]; const [x2,y2] = pt;
+            return [...acc, <line key={i} x1={x1} y1={y1} x2={x2} y2={y2} stroke={T.yellow} strokeWidth="1.5" strokeOpacity="0.5" strokeLinecap="round"/>];
+          }, [])}
+          <line x1="70" y1="128" x2="60" y2="78" stroke={T.yellow} strokeWidth="1.5" strokeOpacity="0.5" strokeLinecap="round"/>
+          <line x1="100" y1="58" x2="110" y2="138" stroke={T.yellow} strokeWidth="1.5" strokeOpacity="0.28" strokeLinecap="round"/>
+          {[[60,78,5],[100,58,4.5],[140,74,4],[150,118,3.5],[110,138,4.5],[70,128,3.5],[95,103,3]].map(([cx,cy,r],i) => (
+            <circle key={i} cx={cx} cy={cy} r={r} fill={T.yellow} opacity={0.85} />
+          ))}
+        </svg>
+      </div>
+
+      <div style={{ fontFamily: "'Noto Serif JP', serif", fontSize: 40, fontWeight: 300, color: T.text, letterSpacing: '0.12em', marginBottom: 6 }}>ohaasa</div>
+      <div style={{ fontSize: 11, fontWeight: 400, color: T.textSoft, letterSpacing: '0.22em', marginBottom: 16 }}>おはあさ</div>
+      <div style={{ fontSize: 14, color: T.textMid, textAlign: 'center', lineHeight: 1.8, marginBottom: 52, fontWeight: 300 }}>
+        매일 아침, 나의 별자리 운세를<br />가장 먼저 확인하세요.
+      </div>
+
+      <div style={{
+        width: '100%', background: T.text, borderRadius: 28,
+        padding: '18px 0', textAlign: 'center', color: T.cream,
+        fontSize: 15, fontWeight: 500, letterSpacing: '0.06em',
+        marginBottom: 14, cursor: 'pointer',
+      }}>시작하기</div>
+      <div style={{ fontSize: 12, color: T.textSoft }}>매일 아침 7:30에 업데이트됩니다</div>
+    </div>
+  );
+}
+
+// ─── F2: Final Sign Selection ─────────────────────────────────
+function FinalSignSelection() {
+  const [selected, setSelected] = useState('libra');
+  const sel = ZODIACS_KR.find(z => z.id === selected);
+  return (
+    <div style={{
+      width: '100%', height: '100%', background: FBG,
+      display: 'flex', flexDirection: 'column', overflow: 'hidden', position: 'relative',
+    }}>
+      <CircleDeco x={-40} y={50}  size={140} color={T.yellow}  opacity={0.11} />
+      <CircleDeco x={258} y={500} size={120} color={T.apricot} opacity={0.12} />
+      <Star x={278} y={98}  size={5} opacity={0.26} color={T.yellow} />
+      <Star x={18}  y={298} size={4} opacity={0.22} color={T.apricot} />
+      <MoonDeco x={268} y={58} size={22} opacity={0.20} color={T.apricot} />
+
+      {/* Header */}
+      <div style={{ padding: '24px 28px 18px', position: 'relative', zIndex: 1 }}>
+        <div style={{ fontSize: 10, color: T.textSoft, letterSpacing: '0.20em', marginBottom: 8 }}>STEP 1 / 1</div>
+        <div style={{ fontFamily: "'Noto Serif JP', serif", fontSize: 22, fontWeight: 400, color: T.text }}>내 별자리를 선택해 주세요</div>
+        <div style={{ fontSize: 12, color: T.textSoft, marginTop: 4 }}>생년월일에 맞는 별자리를 골라보세요</div>
+      </div>
+
+      {/* 3-column grid */}
+      <div style={{
+        flex: 1, overflowY: 'auto', padding: '4px 18px 12px',
+        display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 9,
+        alignContent: 'start', position: 'relative', zIndex: 1,
+      }}>
+        {ZODIACS_KR.map(z => {
+          const isSel = selected === z.id;
+          const bg = ZODIAC_COLORS[z.id];
+          return (
+            <div key={z.id} onClick={() => setSelected(z.id)} style={{
+              borderRadius: 18,
+              background: isSel ? bg : 'rgba(255,253,249,0.80)',
+              border: isSel ? `2px solid rgba(217,138,104,0.40)` : FBORDER,
+              padding: '11px 6px 10px',
+              display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5,
+              cursor: 'pointer',
+              boxShadow: isSel ? `0 5px 18px ${bg}bb` : '0 1px 5px rgba(0,0,0,0.04)',
+              transition: 'all 0.2s', position: 'relative', overflow: 'hidden',
+            }}>
+              {isSel && (
+                <div style={{
+                  position: 'absolute', top: 6, right: 6,
+                  width: 14, height: 14, borderRadius: '50%', background: T.apricotDark,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}>
+                  <svg width="7" height="7" viewBox="0 0 10 10">
+                    <polyline points="2,5 4,8 8,2" stroke="white" strokeWidth="2.2" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                </div>
+              )}
+              {/* Constellation in circle */}
+              <div style={{
+                width: 52, height: 52, borderRadius: '50%',
+                background: isSel ? 'rgba(255,253,249,0.65)' : `${bg}80`,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                overflow: 'hidden',
+                boxShadow: isSel ? `0 0 0 3px rgba(217,138,104,0.28)` : 'none',
+              }}>
+                <ConstellationBadge id={z.id} color={isSel ? T.apricotDark : '#A89888'} size={44} />
+              </div>
+              <div style={{ fontFamily: "'Noto Serif JP', serif", fontSize: 11, fontWeight: isSel ? 500 : 400, color: isSel ? T.text : T.textMid, textAlign: 'center' }}>{z.kr}</div>
+              <div style={{ fontSize: 9, color: isSel ? T.textMid : T.textSoft }}>{z.date}</div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* CTA */}
+      <div style={{ padding: '12px 24px 20px', background: 'rgba(250,246,240,0.90)', borderTop: `1px solid rgba(237,227,214,0.6)`, position: 'relative', zIndex: 1 }}>
+        {sel && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+            <div style={{ width: 34, height: 34, borderRadius: '50%', background: ZODIAC_COLORS[sel.id], display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+              <ConstellationBadge id={sel.id} color={T.apricotDark} size={28} />
+            </div>
+            <div>
+              <div style={{ fontSize: 13, fontWeight: 500, color: T.text }}>{sel.kr}</div>
+              <div style={{ fontSize: 10, color: T.textSoft }}>{sel.en}</div>
+            </div>
+          </div>
+        )}
+        <div style={{
+          width: '100%', background: T.text, borderRadius: 28,
+          padding: '17px 0', textAlign: 'center', color: T.cream,
+          fontSize: 15, fontWeight: 500, letterSpacing: '0.05em', cursor: 'pointer',
+        }}>시작하기 ✦</div>
+      </div>
+    </div>
+  );
+}
+
+// ─── F3: Final Main / Today's Fortune ────────────────────────
+function FinalMain() {
+  const sign = ZODIACS_KR.find(z => z.id === 'libra');
+  return (
+    <FScreenBase active="today">
+      <FHeader />
+      <FBroadcastPill />
+
+      {/* Hero */}
+      <div style={{ margin: '22px auto 0', display: 'flex', flexDirection: 'column', alignItems: 'center', position: 'relative', zIndex: 1 }}>
+        <div style={{ background: `linear-gradient(135deg, ${T.yellow}, ${T.apricot})`, borderRadius: 20, padding: '4px 18px', fontSize: 11, fontWeight: 600, color: T.white, letterSpacing: '0.06em', boxShadow: `0 4px 14px ${T.apricot}80`, marginBottom: 16 }}>
+          오늘의 운세 3위
+        </div>
+        <div style={{ position: 'relative', width: 132, height: 132 }}>
+          <div style={{
+            position: 'absolute', inset: 0, borderRadius: '50%',
+            background: `radial-gradient(circle, ${T.apricot}50 0%, ${T.yellow}28 55%, transparent 75%)`,
+          }} />
+          <div style={{ position: 'absolute', inset: -8, borderRadius: '50%', border: `1px dashed rgba(217,138,104,0.32)` }} />
+          <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <ConstellationBadge id="libra" color={T.apricotDark} size={102} />
+          </div>
+        </div>
+        <div style={{ textAlign: 'center', marginTop: 14 }}>
+          <div style={{ fontFamily: "'Noto Serif JP', serif", fontSize: 19, fontWeight: 400, color: T.text }}>천칭자리</div>
+          <div style={{ fontSize: 11, color: T.textSoft, marginTop: 2 }}>Libra · 9/23–10/23</div>
+        </div>
+      </div>
+
+      {/* Fortune card */}
+      <div style={{ margin: '18px 24px 0', ...FCARD, padding: '18px 20px', border: FBORDER, position: 'relative', zIndex: 1 }}>
+        <div style={{ fontFamily: "'Noto Serif JP', serif", fontSize: 13, lineHeight: 1.95, color: T.text, fontWeight: 300, textAlign: 'center', whiteSpace: 'pre-line' }}>
+          {'오늘은 사람과의 인연이 깊어지는 하루예요.\n오후의 대화가 뜻밖의 행운을 가져다 줄지도 몰라요.\n행운의 컬러는 하늘색입니다.'}
+        </div>
+      </div>
+
+      {/* Lucky + Stars */}
+      <div style={{ margin: '10px 24px 0', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, position: 'relative', zIndex: 1 }}>
+        <div style={{ ...FCARD, padding: '14px', border: FBORDER }}>
+          <div style={{ fontSize: 9, color: T.textSoft, letterSpacing: '0.12em', marginBottom: 10 }}>행운 아이템</div>
+          {[['컬러','하늘색'],['아이템','흰 꽃'],['숫자','7']].map(([l,v]) => (
+            <div key={l} style={{ display:'flex', justifyContent:'space-between', marginBottom: 6 }}>
+              <span style={{ fontSize: 11, color: T.textSoft }}>{l}</span>
+              <span style={{ fontSize: 12, fontWeight: 500, color: T.text }}>{v}</span>
+            </div>
+          ))}
+        </div>
+        <div style={{ ...FCARD, padding: '14px', border: FBORDER }}>
+          <div style={{ fontSize: 9, color: T.textSoft, letterSpacing: '0.12em', marginBottom: 10 }}>오늘의 운 ✦</div>
+          {[['연애',4],['직장',3],['금운',4],['건강',5]].map(([l,v]) => (
+            <div key={l} style={{ display:'flex', alignItems:'center', gap: 6, marginBottom: 6 }}>
+              <span style={{ fontSize: 11, color: T.textSoft, width: 24 }}>{l}</span>
+              <StarRating value={v} />
+            </div>
+          ))}
+        </div>
+      </div>
+    </FScreenBase>
+  );
+}
+
+// ─── F3-R: Final Main Revised (nav pinned to bottom) ─────────
+function FinalMainRevised() {
+  const sign = ZODIACS_KR.find(z => z.id === 'libra');
+  return (
+    <div style={{
+      width: '100%', height: '100%',
+      background: FBG,
+      display: 'flex', flexDirection: 'column',
+      overflow: 'hidden', position: 'relative',
+    }}>
+      {/* Background deco */}
+      <CircleDeco x={-50} y={50}  size={170} color={T.sky}     opacity={0.11} />
+      <CircleDeco x={230} y={-30} size={160} color={T.yellow}  opacity={0.10} />
+      <CircleDeco x={200} y={590} size={160} color={T.apricot} opacity={0.10} />
+      <Star x={46}  y={128} size={5} opacity={0.26} color={T.yellow} />
+      <Star x={294} y={108} size={4} opacity={0.22} color={T.apricot} />
+      <Star x={28}  y={440} size={3} opacity={0.18} color={T.yellow} />
+      <MoonDeco x={286} y={174} size={22} opacity={0.18} color={T.apricot} />
+
+      {/* Scrollable content — flex: 1, paddingBottom for nav */}
+      <div style={{
+        flex: 1,
+        overflowY: 'auto',
+        display: 'flex', flexDirection: 'column',
+        paddingBottom: 4,
+        position: 'relative', zIndex: 1,
+      }}>
+        <FHeader />
+        <FBroadcastPill />
+
+        {/* Hero — slightly more breathing room */}
+        <div style={{
+          marginTop: 28, display: 'flex', flexDirection: 'column',
+          alignItems: 'center', position: 'relative', zIndex: 1,
+        }}>
+          <div style={{
+            background: `linear-gradient(135deg, ${T.yellow}, ${T.apricot})`,
+            borderRadius: 20, padding: '4px 18px',
+            fontSize: 11, fontWeight: 600, color: T.white,
+            letterSpacing: '0.06em',
+            boxShadow: `0 4px 14px ${T.apricot}80`,
+            marginBottom: 18,
+          }}>
+            오늘의 운세 3위
+          </div>
+          <div style={{ position: 'relative', width: 136, height: 136 }}>
+            <div style={{
+              position: 'absolute', inset: 0, borderRadius: '50%',
+              background: `radial-gradient(circle, ${T.apricot}50 0%, ${T.yellow}28 55%, transparent 75%)`,
+            }} />
+            <div style={{ position: 'absolute', inset: -8, borderRadius: '50%', border: `1px dashed rgba(217,138,104,0.32)` }} />
+            <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <ConstellationBadge id="libra" color={T.apricotDark} size={106} />
+            </div>
+          </div>
+          <div style={{ textAlign: 'center', marginTop: 16 }}>
+            <div style={{ fontFamily: "'Noto Serif JP', serif", fontSize: 19, fontWeight: 400, color: T.text }}>천칭자리</div>
+            <div style={{ fontSize: 11, color: T.textSoft, marginTop: 3 }}>Libra · 9/23–10/23</div>
+          </div>
+        </div>
+
+        {/* Fortune card — more vertical padding */}
+        <div style={{
+          margin: '22px 24px 0',
+          ...FCARD, padding: '20px 22px',
+          border: FBORDER, position: 'relative', zIndex: 1,
+        }}>
+          <div style={{
+            fontFamily: "'Noto Serif JP', serif",
+            fontSize: 13, lineHeight: 2.05,
+            color: T.text, fontWeight: 300,
+            textAlign: 'center', whiteSpace: 'pre-line',
+          }}>
+            {'오늘은 사람과의 인연이 깊어지는 하루예요.\n오후의 대화가 뜻밖의 행운을 가져다 줄지도 몰라요.\n행운의 컬러는 하늘색입니다.'}
+          </div>
+        </div>
+
+        {/* Lucky + Stars — slightly taller cards */}
+        <div style={{
+          margin: '12px 24px 0',
+          display: 'grid', gridTemplateColumns: '1fr 1fr',
+          gap: 10, position: 'relative', zIndex: 1,
+        }}>
+          <div style={{ ...FCARD, padding: '16px', border: FBORDER }}>
+            <div style={{ fontSize: 9, color: T.textSoft, letterSpacing: '0.12em', marginBottom: 12 }}>행운 아이템</div>
+            {[['컬러','하늘색'],['아이템','흰 꽃'],['숫자','7']].map(([l,v]) => (
+              <div key={l} style={{ display:'flex', justifyContent:'space-between', marginBottom: 8 }}>
+                <span style={{ fontSize: 11, color: T.textSoft }}>{l}</span>
+                <span style={{ fontSize: 12, fontWeight: 500, color: T.text }}>{v}</span>
+              </div>
+            ))}
+          </div>
+          <div style={{ ...FCARD, padding: '16px', border: FBORDER }}>
+            <div style={{ fontSize: 9, color: T.textSoft, letterSpacing: '0.12em', marginBottom: 12 }}>오늘의 운 ✦</div>
+            {[['연애',4],['직장',3],['금운',4],['건강',5]].map(([l,v]) => (
+              <div key={l} style={{ display:'flex', alignItems:'center', gap: 6, marginBottom: 8 }}>
+                <span style={{ fontSize: 11, color: T.textSoft, width: 24 }}>{l}</span>
+                <StarRating value={v} />
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Spacer so content never crowds the nav */}
+        <div style={{ flex: 1, minHeight: 20 }} />
+      </div>
+
+      {/* Bottom nav — always at the true bottom */}
+      <FBottomNav active="today" />
+    </div>
+  );
+}
+
+// ─── F4: Final All Rankings ───────────────────────────────────
+function FinalAllRankings() {
+  return (
+    <FScreenBase active="all">
+      <FHeader subtitle="12개 별자리 오늘의 순위" />
+      <FBroadcastPill />
+
+      <div style={{ margin: '10px 28px 0', position: 'relative', zIndex: 1 }}>
+        <div style={{ fontFamily: "'Noto Serif JP', serif", fontSize: 18, fontWeight: 400, color: T.text }}>오늘의 전체 순위</div>
+      </div>
+
+      <div style={{
+        flex: 1, overflowY: 'auto',
+        padding: '12px 18px 16px',
+        display: 'flex', flexDirection: 'column', gap: 7,
+        position: 'relative', zIndex: 1,
+      }}>
+        {FULL_RANKING.map(item => {
+          const isMine = item.id === MY_SIGN_ID;
+          const sign = ZODIACS_KR.find(z => z.id === item.id);
+          const bg = ZODIAC_COLORS[item.id];
+          const rankColor = item.rank === 1 ? '#C8922A' : item.rank === 2 ? '#8A9BAA' : item.rank === 3 ? '#B07A60' : T.textSoft;
+
+          return (
+            <div key={item.id} style={{
+              borderRadius: 16,
+              background: isMine ? bg : 'rgba(255,253,249,0.82)',
+              border: isMine ? `2px solid rgba(217,138,104,0.55)` : FBORDER,
+              padding: '11px 16px',
+              display: 'flex', alignItems: 'center', gap: 11,
+              boxShadow: isMine ? `0 5px 20px ${bg}cc` : '0 1px 6px rgba(0,0,0,0.04)',
+            }}>
+              <div style={{ width: 26, textAlign: 'center', flexShrink: 0, fontSize: item.rank <= 3 ? 16 : 13, fontWeight: item.rank <= 3 ? 700 : 500, color: rankColor, fontVariantNumeric: 'tabular-nums' }}>{item.rank}</div>
+              <div style={{ width: 38, height: 38, borderRadius: '50%', flexShrink: 0, background: isMine ? 'rgba(255,253,249,0.65)' : `${bg}80`, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+                <ConstellationBadge id={item.id} color={isMine ? T.apricotDark : '#A89888'} size={32} />
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 2 }}>
+                  <span style={{ fontFamily: "'Noto Serif JP', serif", fontSize: 13, fontWeight: isMine ? 600 : 400, color: T.text }}>{sign?.kr}</span>
+                  {isMine && (
+                    <span style={{ fontSize: 9, fontWeight: 700, color: T.apricotDark, background: 'rgba(255,253,249,0.80)', borderRadius: 6, padding: '2px 6px', letterSpacing: '0.06em' }}>내 별자리</span>
+                  )}
+                </div>
+                <div style={{ fontSize: 10.5, color: isMine ? T.textMid : T.textSoft, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.fortune}</div>
+              </div>
+              <div style={{ flexShrink: 0, textAlign: 'right' }}>
+                <div style={{ fontSize: 9, color: T.textSoft, marginBottom: 1 }}>행운색</div>
+                <div style={{ fontSize: 10, fontWeight: 500, color: isMine ? T.textMid : T.textSoft }}>{item.lucky}</div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </FScreenBase>
+  );
+}
+
+// ─── F5: Final Settings ───────────────────────────────────────
+function FinalSettings() {
+  const [notif, setNotif] = useState(true);
+  const Toggle = ({ on, onToggle }) => (
+    <div onClick={onToggle} style={{ width: 44, height: 26, borderRadius: 13, background: on ? T.apricotDark : T.cream3, position: 'relative', cursor: 'pointer', transition: 'background 0.25s', flexShrink: 0 }}>
+      <div style={{ position: 'absolute', top: 3, left: on ? 21 : 3, width: 20, height: 20, borderRadius: '50%', background: T.white, boxShadow: '0 1px 4px rgba(0,0,0,0.2)', transition: 'left 0.25s' }} />
+    </div>
+  );
+
+  return (
+    <div style={{ width: '100%', height: '100%', background: FBG, display: 'flex', flexDirection: 'column', overflow: 'hidden', position: 'relative' }}>
+      <CircleDeco x={-50} y={50}  size={160} color={T.sky}    opacity={0.10} />
+      <CircleDeco x={228} y={500} size={140} color={T.apricot} opacity={0.10} />
+      <Star x={46}  y={128} size={5} opacity={0.24} color={T.yellow} />
+      <Star x={293} y={108} size={4} opacity={0.20} color={T.apricot} />
+      <MoonDeco x={284} y={172} size={22} opacity={0.17} color={T.apricot} />
+
+      <div style={{ padding: '20px 28px 0', position: 'relative', zIndex: 1 }}>
+        <div style={{ fontFamily: "'Noto Serif JP', serif", fontSize: 20, fontWeight: 300, color: T.text, letterSpacing: '0.1em' }}>ohaasa</div>
+        <div style={{ fontFamily: "'Noto Serif JP', serif", fontSize: 22, fontWeight: 400, color: T.text, marginTop: 6 }}>설정</div>
+      </div>
+
+      <div style={{ flex: 1, overflowY: 'auto', padding: '18px 20px 16px', position: 'relative', zIndex: 1 }}>
+        {/* My Sign */}
+        <div style={{ fontSize: 10, color: T.textSoft, letterSpacing: '0.18em', marginBottom: 8, paddingLeft: 4 }}>MY SIGN</div>
+        <div style={{ ...FCARD, border: FBORDER, padding: '16px 18px', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 14 }}>
+          <div style={{ width: 52, height: 52, borderRadius: '50%', flexShrink: 0, background: ZODIAC_COLORS['libra'], display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+            <ConstellationBadge id="libra" color={T.apricotDark} size={44} />
+          </div>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontFamily: "'Noto Serif JP', serif", fontSize: 15, fontWeight: 400, color: T.text }}>천칭자리</div>
+            <div style={{ fontSize: 11, color: T.textSoft, marginTop: 2 }}>Libra · 9/23–10/23</div>
+          </div>
+          <div style={{ background: 'rgba(240,184,154,0.35)', borderRadius: 12, padding: '7px 14px', fontSize: 12, color: T.apricotDark, fontWeight: 500, cursor: 'pointer' }}>변경</div>
+        </div>
+
+        {/* Notifications */}
+        <div style={{ fontSize: 10, color: T.textSoft, letterSpacing: '0.18em', marginBottom: 8, paddingLeft: 4 }}>NOTIFICATIONS</div>
+        <div style={{ ...FCARD, border: FBORDER, padding: '0 18px', marginBottom: 16 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '15px 0', borderBottom: notif ? `1px solid rgba(237,227,214,0.6)` : 'none' }}>
+            <div>
+              <div style={{ fontSize: 14, color: T.text }}>아침 알림</div>
+              <div style={{ fontSize: 11, color: T.textSoft, marginTop: 2 }}>매일 아침 운세 알림 받기</div>
+            </div>
+            <Toggle on={notif} onToggle={() => setNotif(!notif)} />
+          </div>
+          {notif && (
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '15px 0' }}>
+              <div>
+                <div style={{ fontSize: 14, color: T.text }}>알림 시각</div>
+                <div style={{ fontSize: 11, color: T.textSoft, marginTop: 2 }}>업데이트 직후 알림</div>
+              </div>
+              <div style={{ background: 'rgba(240,184,154,0.30)', borderRadius: 10, padding: '7px 14px', fontSize: 13, color: T.textMid, fontWeight: 500 }}>07:30</div>
+            </div>
+          )}
+        </div>
+
+        {/* About */}
+        <div style={{ fontSize: 10, color: T.textSoft, letterSpacing: '0.18em', marginBottom: 8, paddingLeft: 4 }}>ABOUT</div>
+        <div style={{ ...FCARD, border: FBORDER, padding: '0 18px', marginBottom: 24 }}>
+          {[
+            { label: '데이터 소스', sub: '일본 TV 아침 별자리 운세' },
+            { label: '버전', sub: '1.0.0' },
+            { label: '개인정보 처리방침', sub: null },
+          ].map((item, i, arr) => (
+            <div key={item.label} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 0', borderBottom: i < arr.length - 1 ? `1px solid rgba(237,227,214,0.6)` : 'none' }}>
+              <div>
+                <div style={{ fontSize: 14, color: T.text }}>{item.label}</div>
+                {item.sub && <div style={{ fontSize: 11, color: T.textSoft, marginTop: 2 }}>{item.sub}</div>}
+              </div>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={T.textSoft} strokeWidth="2"><polyline points="9 18 15 12 9 6"/></svg>
+            </div>
+          ))}
+        </div>
+
+        {/* Footer */}
+        <div style={{ textAlign: 'center', paddingBottom: 6 }}>
+          <div style={{ position: 'relative', display: 'inline-block' }}>
+            <Star x={-14} y={-6} size={6} opacity={0.38} color={T.yellow} />
+            <Star x={102} y={2}  size={5} opacity={0.32} color={T.apricot} />
+            <div style={{ fontFamily: "'Noto Serif JP', serif", fontSize: 20, color: T.textSoft, fontWeight: 300, letterSpacing: '0.14em' }}>ohaasa ✦</div>
+          </div>
+          <div style={{ fontSize: 11, color: T.apricot, marginTop: 4, letterSpacing: '0.18em' }}>おはあさ</div>
+          <div style={{ fontSize: 10, color: T.cream3, marginTop: 4 }}>매일 아침 7:30, 당신의 별자리 운세</div>
+        </div>
+      </div>
+      <FBottomNav active="settings" />
+    </div>
+  );
+}
+
+// ─── Design Spec Artboard ────────────────────────────────────
+function DesignSpec() {
+  const swatch = (color, label) => (
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+      <div style={{ width: 36, height: 36, borderRadius: 10, background: color, border: '1px solid rgba(0,0,0,0.06)' }} />
+      <div style={{ fontSize: 9, color: T.textSoft, textAlign: 'center', maxWidth: 44 }}>{label}</div>
+    </div>
+  );
+
+  return (
+    <div style={{ width: '100%', height: '100%', background: T.cream, overflowY: 'auto', padding: '28px 24px', fontFamily: "'DM Sans', sans-serif" }}>
+      <div style={{ fontFamily: "'Noto Serif JP', serif", fontSize: 18, fontWeight: 400, color: T.text, marginBottom: 4 }}>ohaasa</div>
+      <div style={{ fontSize: 10, color: T.textSoft, letterSpacing: '0.18em', marginBottom: 24 }}>DESIGN SPEC v1.0</div>
+
+      {/* Colors */}
+      <div style={{ fontSize: 10, color: T.textSoft, letterSpacing: '0.18em', marginBottom: 10 }}>COLOR TOKENS</div>
+      <div style={{ background: 'rgba(255,253,249,0.85)', borderRadius: 16, padding: '14px 16px', marginBottom: 16, border: FBORDER }}>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
+          {swatch('#FAF6F0','cream')}
+          {swatch('#F4EDE3','cream2')}
+          {swatch('#EDE3D6','cream3')}
+          {swatch('#B8D8E8','sky')}
+          {swatch('#7BAEC7','skyDark')}
+          {swatch('#F5D98B','yellow')}
+          {swatch('#F0B89A','apricot')}
+          {swatch('#D98A68','apricotDk')}
+          {swatch('#D4C5E8','lavender')}
+          {swatch('#2C2416','text')}
+          {swatch('#6B5C48','textMid')}
+          {swatch('#9C8B78','textSoft')}
+        </div>
+      </div>
+
+      {/* Gradient */}
+      <div style={{ fontSize: 10, color: T.textSoft, letterSpacing: '0.18em', marginBottom: 10 }}>BACKGROUND GRADIENT</div>
+      <div style={{ height: 48, borderRadius: 14, background: FBG, marginBottom: 16, border: FBORDER }} />
+
+      {/* Typography */}
+      <div style={{ fontSize: 10, color: T.textSoft, letterSpacing: '0.18em', marginBottom: 10 }}>TYPOGRAPHY</div>
+      <div style={{ background: 'rgba(255,253,249,0.85)', borderRadius: 16, padding: '14px 16px', marginBottom: 16, border: FBORDER }}>
+        {[
+          { label: 'App Name', style: { fontFamily: "'Noto Serif JP', serif", fontSize: 22, fontWeight: 300, color: T.text, letterSpacing: '0.1em' }, sample: 'ohaasa' },
+          { label: 'Section Title / 18–22px / Noto Serif 400', style: { fontFamily: "'Noto Serif JP', serif", fontSize: 18, fontWeight: 400, color: T.text }, sample: '내 별자리를 선택해 주세요' },
+          { label: 'Fortune Text / 13px / Noto Serif 300', style: { fontFamily: "'Noto Serif JP', serif", fontSize: 13, fontWeight: 300, color: T.text, lineHeight: 1.9 }, sample: '오늘은 인연이 깊어지는 하루예요.' },
+          { label: 'Body / 13px / DM Sans 400', style: { fontSize: 13, color: T.text }, sample: '아침 알림 설정' },
+          { label: 'Label / 11px / DM Sans 400', style: { fontSize: 11, color: T.textMid }, sample: 'Libra · 9/23–10/23' },
+          { label: 'Caption / 10px / DM Sans 400', style: { fontSize: 10, color: T.textSoft, letterSpacing: '0.16em' }, sample: 'MY SIGN' },
+        ].map((t, i, arr) => (
+          <div key={t.label} style={{ paddingBottom: i < arr.length-1 ? 10 : 0, marginBottom: i < arr.length-1 ? 10 : 0, borderBottom: i < arr.length-1 ? `1px solid rgba(237,227,214,0.5)` : 'none' }}>
+            <div style={{ fontSize: 9, color: T.textSoft, marginBottom: 3 }}>{t.label}</div>
+            <div style={t.style}>{t.sample}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Components */}
+      <div style={{ fontSize: 10, color: T.textSoft, letterSpacing: '0.18em', marginBottom: 10 }}>COMPONENTS</div>
+      <div style={{ background: 'rgba(255,253,249,0.85)', borderRadius: 16, padding: '14px 16px', marginBottom: 16, border: FBORDER }}>
+        {[
+          ['FScreenBase', '전체 화면 래퍼 — 그라디언트 bg + 별/달 장식'],
+          ['FHeader', '앱명 + 아바타 버튼 (상단 공통)'],
+          ['FBroadcastPill', '방송 날짜 pill (하늘색 배경)'],
+          ['FBottomNav', '하단 탭바 — 오늘 / 전체 / 설정'],
+          ['ConstellationBadge', '별자리 점선 라인 SVG (02-A3 스타일)'],
+          ['StarRating', '★ 5개 별점 (yellow / cream3)'],
+          ['Toggle', '살구색 토글 스위치'],
+          ['FCARD', '공통 카드 스타일 — white 75%, r:20, shadow'],
+        ].map(([name, desc]) => (
+          <div key={name} style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 7 }}>
+            <div style={{ fontSize: 11, fontWeight: 600, color: T.apricotDark, minWidth: 148 }}>{name}</div>
+            <div style={{ fontSize: 11, color: T.textSoft }}>{desc}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Screen flow */}
+      <div style={{ fontSize: 10, color: T.textSoft, letterSpacing: '0.18em', marginBottom: 10 }}>SCREEN FLOW</div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 20 }}>
+        {[
+          ['F1','FinalOnboarding','최초 실행 — 앱 소개 → 시작하기'],
+          ['F2','FinalSignSelection','별자리 선택 — 3열 그리드 → 시작'],
+          ['F3','FinalMainRevised','오늘의 운세 — 탭: 오늘 (확정)'],
+          ['F4','FinalAllRankings','전체 순위 — 탭: 전체'],
+          ['F5','FinalSettings','설정 — 탭: 설정'],
+        ].map(([code, name, desc]) => (
+          <div key={code} style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'rgba(255,253,249,0.85)', borderRadius: 12, padding: '10px 14px', border: FBORDER }}>
+            <div style={{ width: 24, height: 24, borderRadius: 8, background: code === 'F3' ? T.apricotDark : T.textMid, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <span style={{ fontSize: 9, fontWeight: 700, color: T.white }}>{code}</span>
+            </div>
+            <div style={{ flex: 1 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <div style={{ fontSize: 12, fontWeight: 600, color: T.text }}>{name}</div>
+                {code === 'F3' && <div style={{ fontSize: 9, fontWeight: 700, color: T.apricotDark, background: 'rgba(240,184,154,0.25)', borderRadius: 6, padding: '2px 7px', letterSpacing: '0.05em' }}>확정</div>}
+              </div>
+              <div style={{ fontSize: 10, color: T.textSoft }}>{desc}</div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* F3 Layout Note */}
+      <div style={{ fontSize: 10, color: T.textSoft, letterSpacing: '0.18em', marginBottom: 10 }}>F3 레이아웃 구조 (핸드오프)</div>
+      <div style={{ background: 'rgba(255,253,249,0.85)', borderRadius: 16, padding: '14px 16px', border: FBORDER }}>
+        <div style={{ fontSize: 11, fontWeight: 600, color: T.apricotDark, marginBottom: 10 }}>오늘의 운세 화면 — 레이아웃 스펙</div>
+        {[
+          ['화면 구조', 'flex column, height: 100%, overflow: hidden'],
+          ['본문 영역', 'flex: 1, overflowY: auto — 스크롤 가능'],
+          ['하단 탭바', '본문 영역 밖, 화면 하단에 고정 (safe area 근처)'],
+          ['탭바 아래 여백', '없음 — 탭바가 화면 가장 하단에 붙음'],
+          ['탭바 높이', '약 58px (padding 12px top / 8px bottom)'],
+          ['콘텐츠 순서', '헤더 → 방송일 pill → 별자리 Hero → 운세 카드 → 행운/운 그리드'],
+          ['배경', 'FBG gradient (FAF6F0 → F5EBD8 → EDD9C4 → EAD5CE)'],
+          ['카드 스타일', 'FCARD — white 75%, border-radius 20, soft shadow'],
+        ].map(([label, val]) => (
+          <div key={label} style={{ display: 'flex', gap: 8, marginBottom: 8, alignItems: 'flex-start' }}>
+            <div style={{ fontSize: 10, color: T.textSoft, minWidth: 80, flexShrink: 0, paddingTop: 1 }}>{label}</div>
+            <div style={{ fontSize: 10, color: T.text, lineHeight: 1.5 }}>{val}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ─── Root App ─────────────────────────────────────────────────
+function App() {
+  return (
+    <DesignCanvas title="ohaasa — Mobile App Design">
+
+      <DCSection id="final" title="✦ Final Flow">
+        <DCArtboard id="f0" label="Design Spec" width={390} height={844}>
+          <DesignSpec />
+        </DCArtboard>
+        <DCArtboard id="f1" label="F1 온보딩" width={390} height={844}>
+          <IOSDevice width={390} height={844}><FinalOnboarding /></IOSDevice>
+        </DCArtboard>
+        <DCArtboard id="f2" label="F2 별자리 선택" width={390} height={844}>
+          <IOSDevice width={390} height={844}><FinalSignSelection /></IOSDevice>
+        </DCArtboard>
+        <DCArtboard id="f3" label="F3 오늘의 운세" width={390} height={844}>
+          <IOSDevice width={390} height={844}><FinalMainRevised /></IOSDevice>
+        </DCArtboard>
+        <DCArtboard id="f4" label="F4 전체 순위" width={390} height={844}>
+          <IOSDevice width={390} height={844}><FinalAllRankings /></IOSDevice>
+        </DCArtboard>
+        <DCArtboard id="f5" label="F5 설정" width={390} height={844}>
+          <IOSDevice width={390} height={844}><FinalSettings /></IOSDevice>
+        </DCArtboard>
+      </DCSection>
+
+      <DCSection id="onboarding" title="Onboarding & Sign Selection">
+        <DCArtboard id="s1" label="01 온보딩" width={390} height={844}>
+          <IOSDevice width={390} height={844}><OnboardingScreen /></IOSDevice>
+        </DCArtboard>
+        <DCArtboard id="s2" label="02 별자리 선택 — 기존안" width={390} height={844}>
+          <IOSDevice width={390} height={844}><SignSelectionScreen /></IOSDevice>
+        </DCArtboard>
+        <DCArtboard id="s2a" label="02-A 별자리 선택 — 원형 배지" width={390} height={844}>
+          <IOSDevice width={390} height={844}><SignSelectionAltA /></IOSDevice>
+        </DCArtboard>
+        <DCArtboard id="s2a2" label="02-A2 별자리 선택 — 라인 심볼" width={390} height={844}>
+          <IOSDevice width={390} height={844}><SignSelectionAltA2 /></IOSDevice>
+        </DCArtboard>
+        <DCArtboard id="s2a3" label="02-A3 별자리 선택 — 별자리 라인" width={390} height={844}>
+          <IOSDevice width={390} height={844}><SignSelectionAltA3 /></IOSDevice>
+        </DCArtboard>
+        <DCArtboard id="s2b" label="02-B 별자리 선택 — 별자리 라인" width={390} height={844}>
+          <IOSDevice width={390} height={844}><SignSelectionAltB /></IOSDevice>
+        </DCArtboard>
+      </DCSection>
+
+      <DCSection id="main" title="Main App">
+        <DCArtboard id="s3" label="03 Today's Fortune — 기존안" width={390} height={844}>
+          <IOSDevice width={390} height={844}><MainScreen /></IOSDevice>
+        </DCArtboard>
+        <DCArtboard id="s3a" label="03-A 오늘의 운세 — 센터드" width={390} height={844}>
+          <IOSDevice width={390} height={844}><MainScreenAltA /></IOSDevice>
+        </DCArtboard>
+        <DCArtboard id="s3b" label="03-B 오늘의 운세 — 에디토리얼" width={390} height={844}>
+          <IOSDevice width={390} height={844}><MainScreenAltB /></IOSDevice>
+        </DCArtboard>
+        <DCArtboard id="s4a" label="04-A 전체 순위 — 리스트형" width={390} height={844}>
+          <IOSDevice width={390} height={844}><AllRankingsScreenA /></IOSDevice>
+        </DCArtboard>
+        <DCArtboard id="s4b" label="04-B 전체 순위 — 감성 카드형" width={390} height={844}>
+          <IOSDevice width={390} height={844}><AllRankingsScreenB /></IOSDevice>
+        </DCArtboard>
+        <DCArtboard id="s5a" label="05-A 설정 — 톤 맞춤" width={390} height={844}>
+          <IOSDevice width={390} height={844}><SettingsScreenAltA /></IOSDevice>
+        </DCArtboard>
+        <DCArtboard id="s5b" label="05-B 설정 — 감성 카드" width={390} height={844}>
+          <IOSDevice width={390} height={844}><SettingsScreenAltB /></IOSDevice>
+        </DCArtboard>
+        <DCArtboard id="s4" label="05 Settings — 기존안" width={390} height={844}>
+          <IOSDevice width={390} height={844}><SettingsScreen /></IOSDevice>
+        </DCArtboard>
+      </DCSection>
+
+    </DesignCanvas>
+  );
+}
+
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(<App />);
+</script>
+<div id="root"></div>
+</body>
+</html>
