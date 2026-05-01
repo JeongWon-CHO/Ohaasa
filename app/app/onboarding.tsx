@@ -10,30 +10,21 @@ import {
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import Svg, { Path, Polygon } from 'react-native-svg';
+import Svg, { Circle, Line, Path, Polygon } from 'react-native-svg';
 
 import { ZodiacPicker, ZODIAC_SIGN_COLORS } from '@/src/components/ZodiacPicker';
 import { ConstellationBadge } from '@/src/components/final/ConstellationBadge';
-import { FinalCard } from '@/src/components/final/FinalCard';
-import { ScreenBackground } from '@/src/components/final/ScreenBackground';
 import { ZODIAC_MAP, type ZodiacInfo, type ZodiacSign } from '@/src/constants/zodiac';
-import { colors, gradients, radius, spacing, typography } from '@/src/constants/design';
+import { colors, gradients } from '@/src/constants/design';
 import { useZodiac } from '@/src/hooks/useZodiac';
 import { getOrCreateDeviceId } from '@/src/lib/storage';
 
 type OnboardingStep = 'intro' | 'selection';
 
 const COPY = {
-  appName: 'ohaasa',
-  introKicker: 'MORNING HOROSCOPE',
-  introTitle: '매일 아침, 나의 별자리 운세',
-  introBody:
-    '별자리를 한 번 선택하면 매일 아침 조용히 운세를 확인할 수 있어요.',
-  introCta: '시작하기',
   selectionKicker: 'STEP 1 / 1',
   selectionTitle: '내 별자리를 선택해 주세요',
   selectionBody: '생년월일에 맞는 별자리를 골라보세요',
-  emptySelection: '별자리를 하나 선택해주세요.',
   saving: '저장 중...',
   finalCta: '시작하기 ✦',
   errorFallback: '온보딩 정보를 저장하지 못했습니다.',
@@ -135,18 +126,29 @@ export default function OnboardingScreen() {
   const selectedZodiac = selectedZodiacSign ? ZODIAC_MAP[selectedZodiacSign] : null;
   const disabled = loading || saving;
 
-  // ── Intro step: use ScreenBackground (sky/lavender deco, unchanged)
+  // ── Intro step — FinalOnboarding layout
   if (step === 'intro') {
     return (
-      <ScreenBackground>
+      <LinearGradient colors={gradients.screen} style={styles.fill}>
+        {/* FinalOnboarding decorations — HTML spec */}
+        <CircleDeco x={-30} y={80}   size={130} color={colors.sky}      opacity={0.16} />
+        <CircleDeco x={255} y={400}  size={160} color={colors.apricot}  opacity={0.13} />
+        <CircleDeco x={100} y={620}  size={80}  color={colors.lavender} opacity={0.16} />
+        <StarDeco   x={40}  y={118}  size={7}   color={colors.yellow}   opacity={0.45} />
+        <StarDeco   x={288} y={90}   size={5}   color={colors.apricot}  opacity={0.38} />
+        <StarDeco   x={58}  y={316}  size={4}   color={colors.skyDark}  opacity={0.30} />
+        <StarDeco   x={278} y={278}  size={6}   color={colors.yellow}   opacity={0.40} />
+        <StarDeco   x={148} y={518}  size={5}   color={colors.apricot}  opacity={0.35} />
+        <MoonDeco   x={265} y={158}  size={28}  color={colors.apricot}  opacity={0.30} />
+        <MoonDeco   x={18}  y={475}  size={20}  color={colors.skyDark}  opacity={0.25} />
         <SafeAreaView style={styles.safeArea}>
           <OnboardingIntro onStart={() => setStep('selection')} />
         </SafeAreaView>
-      </ScreenBackground>
+      </LinearGradient>
     );
   }
 
-  // ── Selection step: FinalSignSelection background (yellow/apricot deco)
+  // ── Selection step — FinalSignSelection layout (unchanged)
   return (
     <LinearGradient colors={gradients.screen} style={styles.fill}>
       {/* FinalSignSelection CircleDeco */}
@@ -199,35 +201,68 @@ export default function OnboardingScreen() {
   );
 }
 
-// ─── Intro step (unchanged) ───────────────────────────────────
+// ─── Intro step ───────────────────────────────────────────────
 
 function OnboardingIntro({ onStart }: { onStart: () => void }) {
   return (
-    <View style={styles.introContent}>
-      <View style={styles.moon} />
-      <Text style={styles.appName}>{COPY.appName}</Text>
-      <View style={styles.hero}>
-        <ConstellationBadge sign="libra" size={132} />
-        <View style={[styles.star, styles.starOne]} />
-        <View style={[styles.star, styles.starTwo]} />
-        <View style={[styles.star, styles.starThree]} />
+    <View style={styles.introWrap}>
+      {/* Hero constellation — 190×190, hex pattern per HTML spec */}
+      <View style={styles.heroContainer}>
+        <View style={styles.heroGlow} />
+        <Svg
+          width={190}
+          height={190}
+          viewBox="0 0 190 190"
+          style={{ position: 'absolute', top: 0, left: 0 }}
+        >
+          {/* Hex outline — sequential edges, strokeOpacity 0.5 */}
+          <Line x1="60"  y1="78"  x2="100" y2="58"  stroke={colors.yellow} strokeWidth="1.5" strokeOpacity="0.5"  strokeLinecap="round" />
+          <Line x1="100" y1="58"  x2="140" y2="74"  stroke={colors.yellow} strokeWidth="1.5" strokeOpacity="0.5"  strokeLinecap="round" />
+          <Line x1="140" y1="74"  x2="150" y2="118" stroke={colors.yellow} strokeWidth="1.5" strokeOpacity="0.5"  strokeLinecap="round" />
+          <Line x1="150" y1="118" x2="110" y2="138" stroke={colors.yellow} strokeWidth="1.5" strokeOpacity="0.5"  strokeLinecap="round" />
+          <Line x1="110" y1="138" x2="70"  y2="128" stroke={colors.yellow} strokeWidth="1.5" strokeOpacity="0.5"  strokeLinecap="round" />
+          {/* Closing edge */}
+          <Line x1="70"  y1="128" x2="60"  y2="78"  stroke={colors.yellow} strokeWidth="1.5" strokeOpacity="0.5"  strokeLinecap="round" />
+          {/* Cross diagonal — lower opacity */}
+          <Line x1="100" y1="58"  x2="110" y2="138" stroke={colors.yellow} strokeWidth="1.5" strokeOpacity="0.28" strokeLinecap="round" />
+          {/* Vertex dots + center dot */}
+          <Circle cx="60"  cy="78"  r="5"   fill={colors.yellow} opacity="0.85" />
+          <Circle cx="100" cy="58"  r="4.5" fill={colors.yellow} opacity="0.85" />
+          <Circle cx="140" cy="74"  r="4"   fill={colors.yellow} opacity="0.85" />
+          <Circle cx="150" cy="118" r="3.5" fill={colors.yellow} opacity="0.85" />
+          <Circle cx="110" cy="138" r="4.5" fill={colors.yellow} opacity="0.85" />
+          <Circle cx="70"  cy="128" r="3.5" fill={colors.yellow} opacity="0.85" />
+          <Circle cx="95"  cy="103" r="3"   fill={colors.yellow} opacity="0.85" />
+        </Svg>
       </View>
-      <FinalCard style={styles.introCard}>
-        <Text style={styles.kicker}>{COPY.introKicker}</Text>
-        <Text style={styles.introTitle}>{COPY.introTitle}</Text>
-        <Text style={styles.introBody}>{COPY.introBody}</Text>
-      </FinalCard>
+
+      {/* Logo */}
+      <Text style={styles.introLogo}>ohaasa</Text>
+
+      {/* おはあさ subtitle */}
+      <Text style={styles.introSubtext}>おはあさ</Text>
+
+      {/* Body */}
+      <Text style={styles.introBody}>
+        {'매일 아침, 나의 별자리 운세를\n가장 먼저 확인하세요.'}
+      </Text>
+
+      {/* CTA — dark bg, borderRadius 28 per HTML spec */}
       <Pressable
         accessibilityRole="button"
         onPress={onStart}
-        style={({ pressed }) => [styles.primaryButton, pressed && styles.primaryButtonPressed]}>
-        <Text style={styles.primaryButtonText}>{COPY.introCta}</Text>
+        style={({ pressed }) => [styles.introButton, pressed && styles.introButtonPressed]}
+      >
+        <Text style={styles.introButtonText}>시작하기</Text>
       </Pressable>
+
+      {/* Caption */}
+      <Text style={styles.introCaption}>매일 아침 7:30에 업데이트됩니다</Text>
     </View>
   );
 }
 
-// ─── Selection step CTA footer ────────────────────────────────
+// ─── Selection step CTA footer (unchanged) ───────────────────
 
 interface SelectedZodiacBarProps {
   disabled: boolean;
@@ -293,98 +328,79 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
   },
-
-  // ── Selection step outer wrapper ─────────────────────────────
   fill: {
     flex: 1,
     overflow: 'hidden',
   },
 
-  // ── Intro step ──────────────────────────────────────────────
-  introContent: {
+  // ── F1: Intro step ────────────────────────────────────────────
+  introWrap: {
     flex: 1,
-    justifyContent: 'space-between',
-    padding: spacing.xl,
-    paddingTop: spacing.xxxl,
-    paddingBottom: spacing.xxl,
-  },
-  appName: {
-    ...typography.appName,
-    alignSelf: 'center',
-    fontSize: 38,
-  },
-  hero: {
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: 230,
+    paddingHorizontal: 36,
   },
-  introCard: {
-    gap: spacing.md,
+  heroContainer: {
+    width: 190,
+    height: 190,
+    marginBottom: 32,
   },
-  kicker: {
-    ...typography.label,
+  heroGlow: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    borderRadius: 95,
+    backgroundColor: colors.yellow,
+    opacity: 0.22,
   },
-  introTitle: {
-    ...typography.sectionTitle,
-    fontSize: 29,
-    lineHeight: 38,
+  introLogo: {
+    fontSize: 40,
+    fontWeight: '300',
+    color: colors.text,
+    letterSpacing: 4.8,
+    marginBottom: 6,
+  },
+  introSubtext: {
+    fontSize: 11,
+    fontWeight: '400',
+    color: colors.textSoft,
+    letterSpacing: 2.42,
+    marginBottom: 16,
   },
   introBody: {
-    ...typography.body,
-    fontSize: 15,
-    lineHeight: 24,
+    fontSize: 14,
+    fontWeight: '300',
+    color: colors.textMid,
+    textAlign: 'center',
+    lineHeight: 25.2,
+    marginBottom: 52,
   },
-  primaryButton: {
+  introButton: {
+    alignSelf: 'stretch',
+    backgroundColor: colors.text,
+    borderRadius: 28,
+    paddingVertical: 18,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: radius.pill,
-    backgroundColor: colors.apricotDark,
-    minHeight: 54,
-    paddingHorizontal: spacing.xl,
+    marginBottom: 14,
   },
-  primaryButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '800',
+  introButtonText: {
+    fontSize: 15,
+    fontWeight: '500',
+    color: colors.cream,
+    letterSpacing: 0.9,
   },
-  primaryButtonPressed: {
+  introButtonPressed: {
     opacity: 0.72,
   },
-  moon: {
-    position: 'absolute',
-    right: 32,
-    top: 76,
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    borderRightWidth: 8,
-    borderRightColor: colors.yellow,
-    opacity: 0.8,
-    transform: [{ rotate: '-18deg' }],
-  },
-  star: {
-    position: 'absolute',
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: colors.yellow,
-  },
-  starOne: {
-    left: 62,
-    top: 56,
-  },
-  starTwo: {
-    right: 58,
-    top: 96,
-    width: 6,
-    height: 6,
-  },
-  starThree: {
-    bottom: 52,
-    right: 92,
+  introCaption: {
+    fontSize: 12,
+    color: colors.textSoft,
   },
 
-  // ── Selection step ───────────────────────────────────────────
+  // ── F2: Selection step ────────────────────────────────────────
   selectionScreen: {
     flex: 1,
   },
@@ -424,7 +440,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
 
-  // ── Flat footer CTA ──────────────────────────────────────────
+  // ── F2: Flat footer CTA ───────────────────────────────────────
   ctaFooter: {
     paddingTop: 12,
     paddingHorizontal: 24,
