@@ -208,7 +208,11 @@ function OnboardingIntro({ onStart }: { onStart: () => void }) {
     <View style={styles.introWrap}>
       {/* Hero constellation — 190×190, hex pattern per HTML spec */}
       <View style={styles.heroContainer}>
-        <View style={styles.heroGlow} />
+        {/* Radial glow — 4 concentric circles, center most opaque → edge transparent */}
+        <View style={styles.heroGlowL1} />
+        <View style={styles.heroGlowL2} />
+        <View style={styles.heroGlowL3} />
+        <View style={styles.heroGlowL4} />
         <Svg
           width={190}
           height={190}
@@ -345,15 +349,35 @@ const styles = StyleSheet.create({
     height: 190,
     marginBottom: 32,
   },
-  heroGlow: {
+  // Radial glow approximation — 4 layers, opacity accumulates toward center
+  // center total ~0.34, outer edge ~0.07, beyond r=85 transparent
+  heroGlowL1: {
     position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    borderRadius: 95,
+    top: 10, left: 10, right: 10, bottom: 10,
+    borderRadius: 85,
     backgroundColor: colors.yellow,
-    opacity: 0.22,
+    opacity: 0.07,
+  },
+  heroGlowL2: {
+    position: 'absolute',
+    top: 28, left: 28, right: 28, bottom: 28,
+    borderRadius: 67,
+    backgroundColor: colors.yellow,
+    opacity: 0.09,
+  },
+  heroGlowL3: {
+    position: 'absolute',
+    top: 48, left: 48, right: 48, bottom: 48,
+    borderRadius: 47,
+    backgroundColor: colors.yellow,
+    opacity: 0.10,
+  },
+  heroGlowL4: {
+    position: 'absolute',
+    top: 66, left: 66, right: 66, bottom: 66,
+    borderRadius: 29,
+    backgroundColor: colors.yellow,
+    opacity: 0.08,
   },
   introLogo: {
     fontSize: 40,
