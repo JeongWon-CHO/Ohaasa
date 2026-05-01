@@ -1,8 +1,8 @@
-import { StyleSheet, View } from 'react-native';
-import Svg, { Circle, Line } from 'react-native-svg';
+import { StyleSheet, View } from "react-native";
+import Svg, { Circle, Line } from "react-native-svg";
 
-import type { ZodiacSign } from '@/src/constants/zodiac';
-import { colors, radius } from '@/src/constants/design';
+import type { ZodiacSign } from "@/src/constants/zodiac";
+import { colors, radius } from "@/src/constants/design";
 
 interface Point {
   x: number;
@@ -96,11 +96,21 @@ const POINTS_BY_SIGN: Partial<Record<ZodiacSign, Point[]>> = {
   ],
 };
 
-export function ConstellationBadge({ sign, size = 74 }: ConstellationBadgeProps) {
-  const points = sign ? POINTS_BY_SIGN[sign] ?? DEFAULT_POINTS : DEFAULT_POINTS;
+export function ConstellationBadge({
+  sign,
+  size = 74,
+}: ConstellationBadgeProps) {
+  const points = sign
+    ? (POINTS_BY_SIGN[sign] ?? DEFAULT_POINTS)
+    : DEFAULT_POINTS;
 
   return (
-    <View style={[styles.badge, { width: size, height: size, borderRadius: size / 2 }]}>
+    <View
+      style={[
+        styles.badge,
+        { width: size, height: size, borderRadius: size / 2 },
+      ]}
+    >
       <Svg width={size} height={size} viewBox="0 0 72 72">
         {points.slice(1).map((point, index) => {
           const previous = points[index];
@@ -136,12 +146,12 @@ export function ConstellationBadge({ sign, size = 74 }: ConstellationBadgeProps)
 
 const styles = StyleSheet.create({
   badge: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: 'rgba(255,253,249,0.68)',
-    overflow: 'hidden',
+    alignItems: "center",
+    justifyContent: "center",
+    // borderWidth: 1,
+    // borderColor: colors.border,
+    // backgroundColor: 'rgba(255,253,249,0.68)',
+    overflow: "hidden",
     borderRadius: radius.pill,
   },
 });
