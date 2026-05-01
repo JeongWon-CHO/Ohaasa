@@ -69,6 +69,21 @@ export const typography = {
   },
 } as const;
 
+export const zodiacColors = {
+  aries:       '#F9C5BD',
+  taurus:      '#C5E8C5',
+  gemini:      '#FFF0B3',
+  cancer:      '#C5D8F0',
+  leo:         '#FFD9A0',
+  virgo:       '#D5E8D0',
+  libra:       '#E8D0F0',
+  scorpio:     '#D0B8C8',
+  sagittarius: '#FFD4A0',
+  capricorn:   '#C8D8C8',
+  aquarius:    '#A8D8EA',
+  pisces:      '#B8D0F0',
+} as const;
+
 export const shadows = {
   card: Platform.select({
     ios: {
