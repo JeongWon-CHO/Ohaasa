@@ -1,41 +1,36 @@
 import type { PropsWithChildren } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
 
 import { FinalCard } from '@/src/components/final/FinalCard';
-import { spacing, typography } from '@/src/constants/design';
+import { colors } from '@/src/constants/design';
 
 interface SettingsSectionProps extends PropsWithChildren {
-  title: string;
-  caption?: string;
+  label: string;
+  style?: StyleProp<ViewStyle>;
+  cardStyle?: StyleProp<ViewStyle>;
 }
 
-export function SettingsSection({ title, caption, children }: SettingsSectionProps) {
+export function SettingsSection({ label, children, style, cardStyle }: SettingsSectionProps) {
   return (
-    <FinalCard style={styles.section}>
-      <View style={styles.header}>
-        <Text style={styles.title}>{title}</Text>
-        {caption ? <Text style={styles.caption}>{caption}</Text> : null}
-      </View>
-      <View style={styles.body}>{children}</View>
-    </FinalCard>
+    <View style={style}>
+      <Text style={styles.label}>{label}</Text>
+      <FinalCard style={[styles.card, cardStyle]}>
+        {children}
+      </FinalCard>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  section: {
-    gap: spacing.lg,
+  label: {
+    fontSize: 10,
+    color: colors.textSoft,
+    letterSpacing: 1.8,
+    marginBottom: 8,
+    paddingLeft: 4,
   },
-  header: {
-    gap: spacing.xs,
-  },
-  title: {
-    ...typography.sectionTitle,
-  },
-  caption: {
-    ...typography.body,
-    lineHeight: 21,
-  },
-  body: {
-    gap: spacing.md,
+  card: {
+    paddingHorizontal: 18,
+    paddingVertical: 0,
   },
 });

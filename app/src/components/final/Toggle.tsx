@@ -35,6 +35,11 @@ const styles = StyleSheet.create({
     height: 20,
     borderRadius: 10,
     backgroundColor: '#fff',
+    shadowColor: '#000',
+    shadowOpacity: 0.20,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 1 },
+    elevation: 1,
   },
   thumbOn: {
     transform: [{ translateX: 18 }],

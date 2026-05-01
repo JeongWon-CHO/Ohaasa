@@ -1,186 +1,359 @@
 import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import Svg, { Path, Polygon } from 'react-native-svg';
 import { useRouter } from 'expo-router';
 
 import { ConstellationBadge } from '@/src/components/final/ConstellationBadge';
-import { FinalCard } from '@/src/components/final/FinalCard';
-import { FinalHeader } from '@/src/components/final/FinalHeader';
-import { ScreenBackground } from '@/src/components/final/ScreenBackground';
 import { SettingsRow } from '@/src/components/final/SettingsRow';
 import { SettingsSection } from '@/src/components/final/SettingsSection';
 import { Toggle } from '@/src/components/final/Toggle';
-import { colors, radius, spacing, typography } from '@/src/constants/design';
+import { colors, gradients, zodiacColors } from '@/src/constants/design';
 import type { ZodiacSign } from '@/src/constants/zodiac';
 import { ZODIAC_MAP } from '@/src/constants/zodiac';
 import { useZodiac } from '@/src/hooks/useZodiac';
 
-const COPY = {
-  subtitle: '\uc124\uc815',
-  zodiacTitle: '\ub098\uc758 \ubcc4\uc790\ub9ac',
-  changeZodiac: '\ubcc4\uc790\ub9ac \ubcc0\uacbd\ud558\uae30',
-  notSelected: '\uc120\ud0dd\ub41c \ubcc4\uc790\ub9ac\uac00 \uc5c6\uc2b5\ub2c8\ub2e4',
-  notificationTitle: '\uc544\uce68 \uc54c\ub9bc',
-  notificationCaption:
-    '\uc54c\ub9bc \uc124\uc815\uc740 \ud604\uc7ac UI\ub9cc \uc900\ube44\ub418\uc5b4 \uc788\uc2b5\ub2c8\ub2e4.',
-  notificationToggle: '\uc624\uc804 \uc54c\ub9bc',
-  notificationTime: '\uc54c\ub9bc \uc2dc\uac01',
-  notificationHint:
-    '\uc54c\ub9bc \uae30\ub2a5\uc740 \ucd94\ud6c4 \uc2e4\uc81c \uae30\uae30 \ud1a0\ud070 \ub4f1\ub85d \ud6c4 \ud65c\uc131\ud654\ub429\ub2c8\ub2e4.',
-  appInfoTitle: '\uc571 \uc815\ubcf4',
-  source: '\ub370\uc774\ud130 \uc18c\uc2a4',
-  sourceBody: '\uc544\uc0ac\ud788\ubc29\uc1a1 \ubcc4\uc790\ub9ac \uc6b4\uc138 JSON API',
-  fallback: '\ubc29\uc1a1 \uc5c6\ub294 \ub0a0',
-  fallbackBody: '\uc77c\uc694\uc77c\uc774\ub098 \ub370\uc774\ud130\uac00 \uc5c6\ub294 \ub0a0\uc740 \ucd5c\uc2e0 \ubc29\uc1a1\ubd84\uc744 \ud45c\uc2dc\ud560 \uc608\uc815\uc785\ub2c8\ub2e4.',
-  version: '\uc571 \ubc84\uc804',
-  policy: '\uac1c\uc778\uc815\ubcf4 \ucc98\ub9ac\ubc29\uce68',
-  policyBody: '\uc900\ube44 \uc911',
-};
+// ─── Background deco helpers (same pattern as F3/F4) ─────────
+
+type DecoProps = { x: number; y: number; size: number; color: string; opacity: number };
+
+function CircleDeco({ x, y, size, color, opacity }: DecoProps) {
+  return (
+    <View
+      pointerEvents="none"
+      style={{
+        position: 'absolute', left: x, top: y,
+        width: size, height: size, borderRadius: size / 2,
+        backgroundColor: color, opacity,
+      }}
+    />
+  );
+}
+
+function StarDeco({ x, y, size, color, opacity }: DecoProps) {
+  return (
+    <View pointerEvents="none" style={{ position: 'absolute', left: x, top: y, opacity }}>
+      <Svg width={size} height={size} viewBox="0 0 10 10">
+        <Polygon
+          points="5,0 6.2,3.8 10,3.8 7,6.2 8.2,10 5,7.8 1.8,10 3,6.2 0,3.8 3.8,3.8"
+          fill={color}
+        />
+      </Svg>
+    </View>
+  );
+}
+
+function MoonDeco({ x, y, size, color, opacity }: DecoProps) {
+  return (
+    <View pointerEvents="none" style={{ position: 'absolute', left: x, top: y, opacity }}>
+      <Svg width={size} height={size} viewBox="0 0 24 24">
+        <Path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" fill={color} />
+      </Svg>
+    </View>
+  );
+}
+
+// ─── Date ranges — "월/일–월/일" format per HTML spec ─────────
 
 const DATE_RANGES: Record<ZodiacSign, string> = {
-  aries: '3.21 - 4.19',
-  taurus: '4.20 - 5.20',
-  gemini: '5.21 - 6.21',
-  cancer: '6.22 - 7.22',
-  leo: '7.23 - 8.22',
-  virgo: '8.23 - 9.22',
-  libra: '9.23 - 10.23',
-  scorpio: '10.24 - 11.22',
-  sagittarius: '11.23 - 12.21',
-  capricorn: '12.22 - 1.19',
-  aquarius: '1.20 - 2.18',
-  pisces: '2.19 - 3.20',
+  aries:       '3/21–4/19',
+  taurus:      '4/20–5/20',
+  gemini:      '5/21–6/21',
+  cancer:      '6/22–7/22',
+  leo:         '7/23–8/22',
+  virgo:       '8/23–9/22',
+  libra:       '9/23–10/23',
+  scorpio:     '10/24–11/22',
+  sagittarius: '11/23–12/21',
+  capricorn:   '12/22–1/19',
+  aquarius:    '1/20–2/18',
+  pisces:      '2/19–3/20',
 };
+
+// ─── Screen ───────────────────────────────────────────────────
 
 export default function SettingsScreen() {
   const router = useRouter();
   const { zodiacSign } = useZodiac();
-  const [morningNotificationEnabled, setMorningNotificationEnabled] = useState(false);
+  const [notificationsEnabled, setNotificationsEnabled] = useState(false);
+
   const zodiac = zodiacSign ? ZODIAC_MAP[zodiacSign] : null;
+  const signColor = zodiacSign ? zodiacColors[zodiacSign] : colors.cream2;
+  const enName = zodiac
+    ? zodiac.sign.charAt(0).toUpperCase() + zodiac.sign.slice(1)
+    : '';
 
   return (
-    <ScreenBackground>
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <FinalHeader subtitle={COPY.subtitle} />
+    <LinearGradient colors={gradients.screen} style={styles.fill}>
+      {/* FinalSettings decorations — HTML spec */}
+      <CircleDeco x={-50} y={50}   size={160} color={colors.sky}     opacity={0.10} />
+      <CircleDeco x={228} y={500}  size={140} color={colors.apricot} opacity={0.10} />
+      <StarDeco   x={46}  y={128}  size={5}   color={colors.yellow}  opacity={0.24} />
+      <StarDeco   x={293} y={108}  size={4}   color={colors.apricot} opacity={0.20} />
+      <MoonDeco   x={284} y={172}  size={22}  color={colors.apricot} opacity={0.17} />
 
-        <FinalCard style={styles.zodiacCard}>
-          {zodiac ? (
-            <>
-              <ConstellationBadge sign={zodiac.sign} size={76} />
-              <View style={styles.zodiacCopy}>
-                <Text style={styles.sectionLabel}>{COPY.zodiacTitle}</Text>
-                <Text style={styles.zodiacName}>{zodiac.ko}</Text>
-                <Text style={styles.zodiacMeta}>
-                  {zodiac.ja} · {DATE_RANGES[zodiac.sign]}
-                </Text>
-              </View>
-            </>
-          ) : (
-            <View style={styles.zodiacCopy}>
-              <Text style={styles.sectionLabel}>{COPY.zodiacTitle}</Text>
-              <Text style={styles.zodiacName}>{COPY.notSelected}</Text>
-            </View>
-          )}
-          <Pressable
-            accessibilityRole="button"
-            onPress={() => router.push('/onboarding')}
-            style={({ pressed }) => [styles.changeButton, pressed && styles.pressed]}>
-            <Text style={styles.changeButtonText}>{COPY.changeZodiac}</Text>
-          </Pressable>
-        </FinalCard>
+      {/* Header — padding '20px 28px 0', outside scroll per HTML spec */}
+      <View style={styles.headerWrap}>
+        <Text style={styles.headerLogo}>ohaasa</Text>
+        <Text style={styles.headerTitle}>설정</Text>
+      </View>
 
+      {/* Scroll — padding '18px 20px 16px' → paddingBottom 96 for tab bar */}
+      <ScrollView
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+        style={styles.scroll}
+      >
+        {/* MY SIGN */}
         <SettingsSection
-          caption={COPY.notificationCaption}
-          title={COPY.notificationTitle}>
+          label="MY SIGN"
+          style={styles.sectionGap}
+          cardStyle={styles.mySignCardOverride}
+        >
+          <View style={styles.mySignInner}>
+            {zodiac ? (
+              <>
+                <View style={[styles.zodiacCircle, { backgroundColor: signColor }]}>
+                  <ConstellationBadge sign={zodiac.sign} size={44} />
+                </View>
+                <View style={styles.zodiacCopy}>
+                  <Text style={styles.zodiacName}>{zodiac.ko}</Text>
+                  <Text style={styles.zodiacSub}>
+                    {enName} · {DATE_RANGES[zodiac.sign]}
+                  </Text>
+                </View>
+              </>
+            ) : (
+              <>
+                <View style={[styles.zodiacCircle, { backgroundColor: colors.cream2 }]}>
+                  <ConstellationBadge size={44} />
+                </View>
+                <View style={styles.zodiacCopy}>
+                  <Text style={styles.zodiacName}>선택된 별자리가 없습니다</Text>
+                </View>
+              </>
+            )}
+            <Pressable
+              accessibilityRole="button"
+              onPress={() => router.push('/onboarding')}
+              style={({ pressed }) => [styles.changeButton, pressed && styles.pressed]}
+            >
+              <Text style={styles.changeButtonText}>변경</Text>
+            </Pressable>
+          </View>
+        </SettingsSection>
+
+        {/* NOTIFICATIONS */}
+        <SettingsSection label="NOTIFICATIONS" style={styles.sectionGap}>
           <SettingsRow
-            description={COPY.notificationHint}
+            title="아침 알림"
+            description="매일 아침 운세 알림 받기"
             right={
               <Toggle
-                onChange={setMorningNotificationEnabled}
-                value={morningNotificationEnabled}
+                value={notificationsEnabled}
+                onChange={setNotificationsEnabled}
               />
             }
-            title={COPY.notificationToggle}
+            style={[
+              styles.notifRow,
+              notificationsEnabled && styles.rowBorder,
+            ]}
           />
-          <View style={styles.divider} />
+          {notificationsEnabled && (
+            <SettingsRow
+              title="알림 시각"
+              description="업데이트 직후 알림"
+              right={
+                <View style={styles.timePill}>
+                  <Text style={styles.timePillText}>07:30</Text>
+                </View>
+              }
+              style={styles.notifRow}
+            />
+          )}
+        </SettingsSection>
+
+        {/* ABOUT */}
+        <SettingsSection label="ABOUT" style={styles.aboutSection}>
           <SettingsRow
-            description="07:30"
-            right={<Text style={styles.valueText}>KST/JST</Text>}
-            title={COPY.notificationTime}
+            title="데이터 소스"
+            description="일본 TV 아침 별자리 운세"
+            showChevron
+            style={[styles.aboutRow, styles.rowBorder]}
+          />
+          <SettingsRow
+            title="버전"
+            description="1.0.0"
+            showChevron
+            style={[styles.aboutRow, styles.rowBorder]}
+          />
+          <SettingsRow
+            title="개인정보 처리방침"
+            showChevron
+            style={styles.aboutRow}
           />
         </SettingsSection>
 
-        <SettingsSection title={COPY.appInfoTitle}>
-          <SettingsRow description={COPY.sourceBody} title={COPY.source} />
-          <View style={styles.divider} />
-          <SettingsRow description={COPY.fallbackBody} title={COPY.fallback} />
-          <View style={styles.divider} />
-          <SettingsRow description="MVP · Phase 6 UI" title={COPY.version} />
-          <View style={styles.divider} />
-          <SettingsRow description={COPY.policyBody} title={COPY.policy} />
-        </SettingsSection>
+        {/* Footer */}
+        <View style={styles.footer}>
+          <View style={styles.footerLogoWrap}>
+            <StarDeco x={-14} y={-6} size={6} color={colors.yellow}  opacity={0.38} />
+            <StarDeco x={102} y={2}  size={5} color={colors.apricot} opacity={0.32} />
+            <Text style={styles.footerLogo}>ohaasa ✦</Text>
+          </View>
+          <Text style={styles.footerJa}>おはあさ</Text>
+          <Text style={styles.footerCaption}>매일 아침 7:30, 당신의 별자리 운세</Text>
+        </View>
 
         <View style={styles.spacer} />
       </ScrollView>
-    </ScreenBackground>
+    </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
+  fill: {
+    flex: 1,
+    overflow: 'hidden',
+  },
+  scroll: {
+    flex: 1,
+    zIndex: 1,
+  },
+
+  // ── Header ────────────────────────────────────────────────────
+  headerWrap: {
+    paddingTop: 20,
+    paddingHorizontal: 28,
+    zIndex: 1,
+  },
+  headerLogo: {
+    fontSize: 20,
+    fontWeight: '300',
+    color: colors.text,
+    letterSpacing: 2,
+  },
+  headerTitle: {
+    fontSize: 22,
+    fontWeight: '400',
+    color: colors.text,
+    marginTop: 6,
+  },
+
+  // ── Scroll content ────────────────────────────────────────────
   content: {
-    gap: spacing.lg,
-    padding: spacing.xl,
-    paddingTop: spacing.xxxl,
+    paddingTop: 18,
+    paddingHorizontal: 20,
     paddingBottom: 96,
   },
-  zodiacCard: {
-    alignItems: 'center',
+
+  // ── Section spacing ───────────────────────────────────────────
+  sectionGap: {
+    marginBottom: 16,
+  },
+  aboutSection: {
+    marginBottom: 24,
+  },
+
+  // ── MY SIGN card ──────────────────────────────────────────────
+  mySignCardOverride: {
+    paddingVertical: 16,
+    paddingHorizontal: 18,
+  },
+  mySignInner: {
     flexDirection: 'row',
-    gap: spacing.lg,
+    alignItems: 'center',
+    gap: 14,
+  },
+  zodiacCircle: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    flexShrink: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
   },
   zodiacCopy: {
     flex: 1,
     minWidth: 0,
   },
-  sectionLabel: {
-    ...typography.label,
-  },
   zodiacName: {
+    fontSize: 15,
+    fontWeight: '400',
     color: colors.text,
-    fontSize: 22,
-    fontWeight: '800',
-    marginTop: spacing.xs,
   },
-  zodiacMeta: {
+  zodiacSub: {
+    fontSize: 11,
     color: colors.textSoft,
-    fontSize: 12,
-    fontWeight: '700',
-    marginTop: spacing.xs,
+    marginTop: 2,
   },
   changeButton: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: radius.pill,
-    backgroundColor: colors.apricotDark,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
+    backgroundColor: 'rgba(240,184,154,0.35)',
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 7,
   },
   changeButtonText: {
-    color: '#fff',
     fontSize: 12,
-    fontWeight: '800',
+    fontWeight: '500',
+    color: colors.apricotDark,
   },
   pressed: {
     opacity: 0.72,
   },
-  divider: {
-    height: 1,
-    backgroundColor: colors.border,
+
+  // ── Row styles ────────────────────────────────────────────────
+  notifRow: {
+    paddingVertical: 15,
   },
-  valueText: {
-    color: colors.textMid,
+  aboutRow: {
+    paddingVertical: 14,
+  },
+  rowBorder: {
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(237,227,214,0.6)',
+  },
+
+  // ── Time pill ─────────────────────────────────────────────────
+  timePill: {
+    backgroundColor: 'rgba(240,184,154,0.30)',
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+  },
+  timePillText: {
     fontSize: 13,
-    fontWeight: '800',
+    fontWeight: '500',
+    color: colors.textMid,
   },
+
+  // ── Footer ────────────────────────────────────────────────────
+  footer: {
+    alignItems: 'center',
+    paddingBottom: 6,
+  },
+  footerLogoWrap: {
+    position: 'relative',
+  },
+  footerLogo: {
+    fontSize: 20,
+    fontWeight: '300',
+    color: colors.textSoft,
+    letterSpacing: 2.8,
+  },
+  footerJa: {
+    fontSize: 11,
+    color: colors.apricot,
+    marginTop: 4,
+    letterSpacing: 2,
+  },
+  footerCaption: {
+    fontSize: 10,
+    color: colors.cream3,
+    marginTop: 4,
+  },
+
   spacer: {
     minHeight: 20,
   },
