@@ -3,16 +3,95 @@
 import "dotenv/config";
 
 import { fetchJson } from "./crawler/fetcher";
-import { parse } from "./crawler/parser";
+import { parse, type HoroscopeEntry } from "./crawler/parser";
 import { createAdminClient } from "./db/supabase";
 import { sendNotifications } from "./notifications/sender";
+import { translateAdvice } from "./translator/translate";
+
+// ============================================================
+// Types
+// ============================================================
+
+type SupabaseClient = ReturnType<typeof createAdminClient>;
+
+interface HoroscopeUpsertRow extends HoroscopeEntry {
+  advice_ko: string | null;
+}
+
+// ============================================================
+// Translation step
+// ============================================================
+
+/**
+ * DB에서 기존 번역을 조회해 재번역 방지 로직을 적용한 후 각 entry에
+ * advice_ko를 붙여 반환한다.
+ *
+ * 재번역 skip 조건 (둘 다 만족해야 함):
+ *   1. 동일 (date, zodiac_sign) row가 이미 존재
+ *   2. 기존 advice === 새 advice (원문이 바뀌지 않음)
+ *   3. 기존 advice_ko IS NOT NULL (이미 번역 완료)
+ *
+ * 하나라도 다르면 GPT를 재호출한다.
+ */
+async function attachTranslations(
+  supabase: SupabaseClient,
+  entries: HoroscopeEntry[]
+): Promise<HoroscopeUpsertRow[]> {
+  const date = entries[0].date;
+
+  // 오늘 날짜의 기존 row 조회
+  const { data: existingRows, error: queryError } = await supabase
+    .from("horoscopes")
+    .select("zodiac_sign, advice, advice_ko")
+    .eq("date", date);
+
+  if (queryError) {
+    console.warn(
+      `[translator] Failed to query existing rows: ${queryError.message}. Translating all entries.`
+    );
+  }
+
+  type ExistingRow = { zodiac_sign: string; advice: string; advice_ko: string | null };
+  const existingMap = new Map<string, ExistingRow>(
+    (existingRows ?? []).map((r: ExistingRow) => [r.zodiac_sign, r])
+  );
+
+  const results: HoroscopeUpsertRow[] = [];
+
+  for (const entry of entries) {
+    const existing = existingMap.get(entry.zodiac_sign);
+    const canSkip =
+      existing !== undefined &&
+      existing.advice === entry.advice &&
+      existing.advice_ko !== null;
+
+    if (canSkip) {
+      console.log(`[translator] ${entry.zodiac_sign}: skip (same advice, already translated)`);
+      results.push({ ...entry, advice_ko: existing.advice_ko });
+      continue;
+    }
+
+    const label = existing
+      ? `${entry.zodiac_sign}: re-translating (advice changed or advice_ko missing)`
+      : `${entry.zodiac_sign}: translating (new entry)`;
+    console.log(`[translator] ${label}`);
+
+    const advice_ko = await translateAdvice(entry.advice);
+    if (advice_ko === null) {
+      console.warn(`[translator] ${entry.zodiac_sign}: translation failed, advice_ko=null`);
+    }
+    results.push({ ...entry, advice_ko });
+  }
+
+  return results;
+}
 
 // ============================================================
 // Pipeline steps
 // ============================================================
 
 async function crawlAndSave(
-  supabase: ReturnType<typeof createAdminClient>,
+  supabase: SupabaseClient,
   isDryRun: boolean
 ): Promise<void> {
   const data    = await fetchJson();
@@ -39,19 +118,25 @@ async function crawlAndSave(
   }
 
   if (isDryRun) {
-    console.log("[crawl] dry-run: upsert skipped");
+    console.log("[crawl] dry-run: translation and upsert skipped");
     return;
   }
 
+  // Translation step — 실패해도 파이프라인은 계속 진행 (advice_ko=null로 upsert)
+  const rows = await attachTranslations(supabase, entries);
+
   const { error } = await supabase
     .from("horoscopes")
-    .upsert(entries, { onConflict: "date,zodiac_sign" });
+    .upsert(rows, { onConflict: "date,zodiac_sign" });
 
   if (error) {
     throw new Error(`[upsert] ${error.message}`);
   }
 
-  console.log(`[main] ✓ Upserted ${entries.length} rows  date=${date}`);
+  const translated = rows.filter((r) => r.advice_ko !== null).length;
+  console.log(
+    `[main] ✓ Upserted ${rows.length} rows  date=${date}  translated=${translated}/${rows.length}`
+  );
 }
 
 // ============================================================
@@ -68,7 +153,7 @@ async function main(): Promise<void> {
   const supabase = createAdminClient();
 
   // ----------------------------------------------------------
-  // Step 1: Crawl and save
+  // Step 1: Crawl, translate, and save
   // 실패해도 계속 진행한다 — 기존 DB 데이터로 알림 발송을 시도한다.
   // ----------------------------------------------------------
   let crawlFailed = false;

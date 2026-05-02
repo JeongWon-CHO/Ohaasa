@@ -18,21 +18,20 @@ import Svg, {
 
 import { ConstellationBadge } from "@/src/components/final/ConstellationBadge";
 import { DatePill } from "@/src/components/final/DatePill";
-import { FinalCard } from "@/src/components/final/FinalCard";
+// 행운 아이템·오늘의 운 카드에서 사용. 오하아사에는 해당 필드가 없어 주석 처리.
+// 추후 고고별자리 연동 Phase에서 복구 예정.
+// import { FinalCard } from "@/src/components/final/FinalCard";
 import { FinalHeader } from "@/src/components/final/FinalHeader";
 import { HoroscopeCard } from "@/src/components/HoroscopeCard";
 import { colors, gradients } from "@/src/constants/design";
-import {
-  MOCK_BROADCAST_DATE,
-  MOCK_HOROSCOPES,
-  type MockHoroscope,
-} from "@/src/constants/mockHoroscope";
 import { ZODIAC_MAP, type ZodiacSign } from "@/src/constants/zodiac";
+import { useAllHoroscopes } from "@/src/hooks/useHoroscope";
 import { useZodiac } from "@/src/hooks/useZodiac";
 
 const COPY = {
   headerSubtitle: "오늘도 좋은 하루 되세요 ☀️",
-  noZodiac: "선택된 별자리가 없습니다.",
+  noZodiac: "별자리를 선택해주세요.",
+  noData: "방송 데이터가 없습니다.",
 };
 
 const EN_NAMES: Record<ZodiacSign, string> = {
@@ -128,63 +127,54 @@ function MoonDeco({ x, y, size, color, opacity }: DecoProps) {
 // ─── Main screen ─────────────────────────────────────────────
 
 export default function TodayScreen() {
-  const { zodiacSign, loading, error } = useZodiac();
+  const { zodiacSign, loading: zodiacLoading, error: zodiacError } = useZodiac();
+  const {
+    horoscopes,
+    broadcastDate,
+    loading: horoscopeLoading,
+    error: horoscopeError,
+  } = useAllHoroscopes();
+
+  const loading = zodiacLoading || horoscopeLoading;
+  const error = zodiacError ?? horoscopeError;
   const zodiac = zodiacSign ? ZODIAC_MAP[zodiacSign] : null;
-  const horoscope = zodiacSign ? MOCK_HOROSCOPES[zodiacSign] : null;
+  const horoscope = zodiacSign
+    ? (horoscopes.find((h) => h.zodiac_sign === zodiacSign) ?? null)
+    : null;
 
   return (
     <LinearGradient colors={gradients.screen} style={styles.fill}>
       {/* FinalMainRevised background decorations */}
       <CircleDeco x={-50} y={50} size={170} color={colors.sky} opacity={0.11} />
-      <CircleDeco
-        x={230}
-        y={-30}
-        size={160}
-        color={colors.yellow}
-        opacity={0.1}
-      />
-      <CircleDeco
-        x={200}
-        y={590}
-        size={160}
-        color={colors.apricot}
-        opacity={0.1}
-      />
+      <CircleDeco x={230} y={-30} size={160} color={colors.yellow} opacity={0.1} />
+      <CircleDeco x={200} y={590} size={160} color={colors.apricot} opacity={0.1} />
       <StarDeco x={46} y={128} size={5} color={colors.yellow} opacity={0.26} />
-      <StarDeco
-        x={294}
-        y={108}
-        size={4}
-        color={colors.apricot}
-        opacity={0.22}
-      />
+      <StarDeco x={294} y={108} size={4} color={colors.apricot} opacity={0.22} />
       <StarDeco x={28} y={440} size={3} color={colors.yellow} opacity={0.18} />
-      <MoonDeco
-        x={286}
-        y={174}
-        size={22}
-        color={colors.apricot}
-        opacity={0.18}
-      />
+      <MoonDeco x={286} y={174} size={22} color={colors.apricot} opacity={0.18} />
 
       <ScrollView
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
         style={styles.scroll}
       >
-        {/* Header — padding 20px top / 28px horizontal per HTML spec */}
+        {/* Header */}
         <View style={styles.headerWrap}>
           <FinalHeader subtitle={COPY.headerSubtitle} />
         </View>
 
-        {/* DatePill — margin 12px top / 28px horizontal per HTML spec */}
+        {/* DatePill — 오하아사 방송 기준일 표시 */}
         <View style={styles.pillWrap}>
-          <DatePill dateText={MOCK_BROADCAST_DATE} />
+          <DatePill dateText={broadcastDate ?? ""} />
         </View>
 
         {loading ? (
           <View style={styles.loadingBox}>
             <ActivityIndicator color={colors.apricotDark} size="large" />
+          </View>
+        ) : error ? (
+          <View style={styles.emptyWrap}>
+            <Text style={styles.errorText}>{error}</Text>
           </View>
         ) : zodiac && horoscope ? (
           <>
@@ -216,30 +206,13 @@ export default function TodayScreen() {
                       cy="50%"
                       r="50%"
                     >
-                      <Stop
-                        offset="0%"
-                        stopColor="#F0B89A"
-                        stopOpacity={0.58}
-                      />
-                      <Stop
-                        offset="45%"
-                        stopColor="#F5D98B"
-                        stopOpacity={0.3}
-                      />
-                      <Stop
-                        offset="80%"
-                        stopColor="#FAF6F0"
-                        stopOpacity={0.12}
-                      />
+                      <Stop offset="0%" stopColor="#F0B89A" stopOpacity={0.58} />
+                      <Stop offset="45%" stopColor="#F5D98B" stopOpacity={0.3} />
+                      <Stop offset="80%" stopColor="#FAF6F0" stopOpacity={0.12} />
                       <Stop offset="100%" stopColor="#FAF6F0" stopOpacity={0} />
                     </RadialGradient>
                   </Defs>
-                  <Circle
-                    cx={84}
-                    cy={84}
-                    r={84}
-                    fill="url(#todayCircleGlowGradient)"
-                  />
+                  <Circle cx={84} cy={84} r={84} fill="url(#todayCircleGlowGradient)" />
                 </Svg>
                 <View style={styles.circleDash} />
                 <View style={styles.circleBadge}>
@@ -256,21 +229,21 @@ export default function TodayScreen() {
               </View>
             </View>
 
-            {/* Fortune card — margin 22px top / 24px horizontal */}
-            <HoroscopeCard
-              advice={horoscope.advice}
-              style={styles.fortuneCard}
-            />
+            {/* Fortune card */}
+            <HoroscopeCard advice={horoscope.advice_ko ?? horoscope.advice} style={styles.fortuneCard} />
 
-            {/* Lucky + Score 2-column grid — margin 12px top / 24px horizontal */}
+            {/* 행운 아이템 카드 — 오하아사에는 해당 필드가 없어 주석 처리.
+                추후 고고별자리 연동 Phase에서 복구 예정.
             <View style={styles.infoGrid}>
               <FinalCard style={styles.gridCard}>
                 <Text style={styles.gridHeader}>행운 아이템</Text>
-                <LuckyRow label="컬러" value={horoscope.luckyColor} />
+                <LuckyRow label="컬러"   value={horoscope.luckyColor} />
                 <LuckyRow label="아이템" value={horoscope.luckyItem} />
-                <LuckyRow label="숫자" value={String(horoscope.luckyNumber)} />
+                <LuckyRow label="숫자"   value={String(horoscope.luckyNumber)} />
               </FinalCard>
 
+              오늘의 운 별점 카드 — 오하아사에는 해당 필드가 없어 주석 처리.
+              추후 고고별자리 연동 Phase에서 복구 예정.
               <FinalCard style={styles.gridCard}>
                 <Text style={styles.gridHeader}>오늘의 운 ✦</Text>
                 <StarRow label="연애" value={horoscope.love} />
@@ -279,21 +252,25 @@ export default function TodayScreen() {
                 <StarRow label="건강" value={horoscope.mood} />
               </FinalCard>
             </View>
+            */}
           </>
-        ) : !loading ? (
+        ) : (
           <View style={styles.emptyWrap}>
-            <Text style={styles.emptyText}>{COPY.noZodiac}</Text>
+            <Text style={styles.emptyText}>
+              {zodiacSign === null ? COPY.noZodiac : COPY.noData}
+            </Text>
           </View>
-        ) : null}
+        )}
 
-        {error ? <Text style={styles.errorText}>{error}</Text> : null}
         <View style={styles.spacer} />
       </ScrollView>
     </LinearGradient>
   );
 }
 
-// ─── Helper row components ────────────────────────────────────
+// ─── Helper row components (주석 처리된 카드에서 사용 예정) ──────────────────────
+// 오하아사에는 luckyColor·luckyItem·luckyNumber·love·work·money·mood 필드가 없어
+// 아래 컴포넌트들도 현재 미사용. 추후 고고별자리 연동 Phase에서 복구 예정.
 
 function LuckyRow({ label, value }: { label: string; value: string }) {
   return (
@@ -418,7 +395,9 @@ const styles = StyleSheet.create({
     marginHorizontal: 24,
   },
 
-  // ── Lucky + Score 2-column grid ───────────────────────────────
+  // ── 행운 아이템 · 오늘의 운 그리드 스타일 ────────────────────────
+  // 오하아사에는 해당 필드가 없어 주석 처리.
+  // 추후 고고별자리 연동 Phase에서 복구 예정.
   infoGrid: {
     flexDirection: "row",
     gap: 10,
@@ -476,8 +455,7 @@ const styles = StyleSheet.create({
   errorText: {
     color: colors.apricotDark,
     fontSize: 13,
-    marginTop: 8,
-    marginHorizontal: 24,
+    textAlign: "center",
   },
   spacer: {
     minHeight: 20,
