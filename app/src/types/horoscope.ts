@@ -6,6 +6,7 @@ export interface Horoscope {
   zodiac_sign: ZodiacSign;
   zodiac_name: string;  // 일본어 별자리명 (うお座 등)
   rank: number;         // 1–12
-  advice: string;       // \n 정규화된 조언 텍스트
+  advice: string;       // \n 정규화된 일본어 원문 조언 텍스트
+  advice_ko: string | null; // GPT 번역된 한국어 조언. null이면 advice(원문)로 fallback
   created_at: string;
 }

@@ -230,7 +230,7 @@ export default function TodayScreen() {
             </View>
 
             {/* Fortune card */}
-            <HoroscopeCard advice={horoscope.advice} style={styles.fortuneCard} />
+            <HoroscopeCard advice={horoscope.advice_ko ?? horoscope.advice} style={styles.fortuneCard} />
 
             {/* 행운 아이템 카드 — 오하아사에는 해당 필드가 없어 주석 처리.
                 추후 고고별자리 연동 Phase에서 복구 예정.

@@ -99,7 +99,7 @@ export function RankingRow({ horoscope, isMine = false }: RankingRowProps) {
             { color: isMine ? colors.textMid : colors.textSoft },
           ]}
         >
-          {horoscope.advice}
+          {horoscope.advice_ko ?? horoscope.advice}
         </Text>
       </View>
 
