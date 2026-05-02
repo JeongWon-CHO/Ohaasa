@@ -1,4 +1,4 @@
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import Svg, { Path, Polygon } from 'react-native-svg';
 
@@ -6,7 +6,7 @@ import { DatePill } from '@/src/components/final/DatePill';
 import { FinalHeader } from '@/src/components/final/FinalHeader';
 import { RankingRow } from '@/src/components/final/RankingRow';
 import { colors, gradients } from '@/src/constants/design';
-import { MOCK_BROADCAST_DATE, MOCK_HOROSCOPES } from '@/src/constants/mockHoroscope';
+import { useAllHoroscopes } from '@/src/hooks/useHoroscope';
 import { useZodiac } from '@/src/hooks/useZodiac';
 
 // ─── Background decoration helpers (same pattern as F3) ──────
@@ -49,16 +49,11 @@ function MoonDeco({ x, y, size, color, opacity }: DecoProps) {
   );
 }
 
-// ─── Data ─────────────────────────────────────────────────────
-
-const RANKED_HOROSCOPES = Object.values(MOCK_HOROSCOPES).sort(
-  (a, b) => a.rank - b.rank,
-);
-
 // ─── Screen ───────────────────────────────────────────────────
 
 export default function RankingsScreen() {
   const { zodiacSign } = useZodiac();
+  const { horoscopes, broadcastDate, loading, error } = useAllHoroscopes();
 
   return (
     <LinearGradient colors={gradients.screen} style={styles.fill}>
@@ -71,36 +66,49 @@ export default function RankingsScreen() {
       <StarDeco   x={28}  y={440}  size={3}   color={colors.yellow}  opacity={0.18} />
       <MoonDeco   x={286} y={174}  size={22}  color={colors.apricot} opacity={0.18} />
 
-      {/* Header — padding '20px 28px 0' per HTML spec */}
+      {/* Header */}
       <View style={styles.headerWrap}>
-        <FinalHeader subtitle="12개 별자리 오늘의 순위" />
+        <FinalHeader subtitle="12개 별자리 오하아사 순위" />
       </View>
 
-      {/* DatePill — margin '12px 28px 0' per HTML spec */}
+      {/* DatePill — 방송 기준일 표시 */}
       <View style={styles.pillWrap}>
-        <DatePill dateText={MOCK_BROADCAST_DATE} />
+        <DatePill dateText={broadcastDate ?? ''} />
       </View>
 
-      {/* Section title — margin '10px 28px 0' per HTML spec */}
+      {/* Section title */}
       <View style={styles.titleWrap}>
-        <Text style={styles.sectionTitle}>오늘의 전체 순위</Text>
+        <Text style={styles.sectionTitle}>방송 기준 전체 순위</Text>
       </View>
 
-      {/* List — padding '12px 18px 16px', gap 7 per HTML spec */}
-      <ScrollView
-        contentContainerStyle={styles.list}
-        showsVerticalScrollIndicator={false}
-        style={styles.scroll}
-      >
-        {RANKED_HOROSCOPES.map((horoscope) => (
-          <RankingRow
-            horoscope={horoscope}
-            isMine={horoscope.zodiacSign === zodiacSign}
-            key={horoscope.zodiacSign}
-          />
-        ))}
-        <View style={styles.spacer} />
-      </ScrollView>
+      {loading ? (
+        <View style={styles.loadingBox}>
+          <ActivityIndicator color={colors.apricotDark} size="large" />
+        </View>
+      ) : error ? (
+        <View style={styles.emptyWrap}>
+          <Text style={styles.errorText}>{error}</Text>
+        </View>
+      ) : horoscopes.length === 0 ? (
+        <View style={styles.emptyWrap}>
+          <Text style={styles.emptyText}>방송 데이터가 없습니다.</Text>
+        </View>
+      ) : (
+        <ScrollView
+          contentContainerStyle={styles.list}
+          showsVerticalScrollIndicator={false}
+          style={styles.scroll}
+        >
+          {horoscopes.map((horoscope) => (
+            <RankingRow
+              horoscope={horoscope}
+              isMine={horoscope.zodiac_sign === zodiacSign}
+              key={horoscope.zodiac_sign}
+            />
+          ))}
+          <View style={styles.spacer} />
+        </ScrollView>
+      )}
     </LinearGradient>
   );
 }
@@ -129,6 +137,27 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '400',
     color: colors.text,
+  },
+  loadingBox: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  emptyWrap: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 24,
+  },
+  emptyText: {
+    fontSize: 14,
+    color: colors.textMid,
+    textAlign: 'center',
+  },
+  errorText: {
+    fontSize: 13,
+    color: colors.apricotDark,
+    textAlign: 'center',
   },
   scroll: {
     flex: 1,

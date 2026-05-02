@@ -1,12 +1,12 @@
 import { StyleSheet, Text, View } from 'react-native';
 
 import { ConstellationBadge } from '@/src/components/final/ConstellationBadge';
-import type { MockHoroscope } from '@/src/constants/mockHoroscope';
 import { colors, zodiacColors } from '@/src/constants/design';
 import { ZODIAC_MAP } from '@/src/constants/zodiac';
+import type { Horoscope } from '@/src/types/horoscope';
 
 interface RankingRowProps {
-  horoscope: MockHoroscope;
+  horoscope: Horoscope;
   isMine?: boolean;
 }
 
@@ -22,8 +22,8 @@ function getRankColor(rank: number): string {
 }
 
 export function RankingRow({ horoscope, isMine = false }: RankingRowProps) {
-  const zodiac = ZODIAC_MAP[horoscope.zodiacSign];
-  const signColor = zodiacColors[horoscope.zodiacSign];
+  const zodiac = ZODIAC_MAP[horoscope.zodiac_sign];
+  const signColor = zodiacColors[horoscope.zodiac_sign];
   const isTop3 = horoscope.rank <= 3;
 
   const shadowStyle = isMine
@@ -79,7 +79,7 @@ export function RankingRow({ horoscope, isMine = false }: RankingRowProps) {
           },
         ]}
       >
-        <ConstellationBadge sign={horoscope.zodiacSign} size={32} />
+        <ConstellationBadge sign={horoscope.zodiac_sign} size={32} />
       </View>
 
       {/* Copy — name + badge + preview */}
@@ -103,7 +103,8 @@ export function RankingRow({ horoscope, isMine = false }: RankingRowProps) {
         </Text>
       </View>
 
-      {/* Lucky color — right column */}
+      {/* 행운색 열 — 오하아사에는 해당 필드가 없어 주석 처리.
+          추후 고고별자리 연동 Phase에서 복구 예정.
       <View style={styles.luckyCol}>
         <Text style={styles.luckyLabel}>행운색</Text>
         <Text
@@ -115,6 +116,7 @@ export function RankingRow({ horoscope, isMine = false }: RankingRowProps) {
           {horoscope.luckyColor}
         </Text>
       </View>
+      */}
     </View>
   );
 }
@@ -195,19 +197,20 @@ const styles = StyleSheet.create({
     // color applied inline
   },
 
-  // Lucky color right column
-  luckyCol: {
-    flexShrink: 0,
-    alignItems: 'flex-end',
-  },
-  luckyLabel: {
-    fontSize: 9,
-    color: colors.textSoft,
-    marginBottom: 1,
-  },
-  luckyValue: {
-    fontSize: 10,
-    fontWeight: '500',
-    // color applied inline
-  },
+  // 행운색 열 스타일 — 오하아사에는 해당 필드가 없어 주석 처리.
+  // 추후 고고별자리 연동 Phase에서 복구 예정.
+  // luckyCol: {
+  //   flexShrink: 0,
+  //   alignItems: 'flex-end',
+  // },
+  // luckyLabel: {
+  //   fontSize: 9,
+  //   color: colors.textSoft,
+  //   marginBottom: 1,
+  // },
+  // luckyValue: {
+  //   fontSize: 10,
+  //   fontWeight: '500',
+  //   // color applied inline
+  // },
 });
