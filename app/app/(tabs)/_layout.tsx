@@ -1,7 +1,15 @@
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { Tabs } from 'expo-router';
+import { useEffect } from 'react';
 
 import { colors } from '@/src/constants/design';
+import { requestPushToken } from '@/src/lib/notifications';
+import {
+  getOrCreateDeviceId,
+  getZodiacSign,
+  setNotificationsEnabled,
+} from '@/src/lib/storage';
+import { upsertDevice } from '@/src/lib/supabase';
 
 function TabBarIcon(props: {
   name: React.ComponentProps<typeof FontAwesome>['name'];
@@ -11,6 +19,20 @@ function TabBarIcon(props: {
 }
 
 export default function TabLayout() {
+  useEffect(() => {
+    (async () => {
+      const deviceId = await getOrCreateDeviceId();
+      const zodiac = await getZodiacSign();
+      if (!zodiac) return;
+
+      const { token, platform } = await requestPushToken();
+      const notificationsEnabled = token !== null;
+
+      await setNotificationsEnabled(notificationsEnabled);
+      await upsertDevice({ deviceId, zodiacSign: zodiac, pushToken: token, platform, notificationsEnabled });
+    })();
+  }, []);
+
   return (
     <Tabs
       screenOptions={{

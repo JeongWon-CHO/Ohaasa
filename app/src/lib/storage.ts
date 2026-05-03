@@ -6,6 +6,7 @@ import { ZODIAC_LIST, type ZodiacSign } from '@/src/constants/zodiac';
 export const STORAGE_KEYS = {
   deviceId: 'ohaasa:device_id',
   zodiacSign: 'ohaasa:zodiac_sign',
+  notificationsEnabled: 'ohaasa:notifications_enabled',
 } as const;
 
 const ZODIAC_SIGNS = new Set<ZodiacSign>(ZODIAC_LIST.map((zodiac) => zodiac.sign));
@@ -58,4 +59,13 @@ export async function setZodiacSign(zodiacSign: ZodiacSign): Promise<void> {
 
 export async function clearZodiacSign(): Promise<void> {
   await AsyncStorage.removeItem(STORAGE_KEYS.zodiacSign);
+}
+
+export async function getNotificationsEnabled(): Promise<boolean> {
+  const stored = await AsyncStorage.getItem(STORAGE_KEYS.notificationsEnabled);
+  return stored === 'true';
+}
+
+export async function setNotificationsEnabled(enabled: boolean): Promise<void> {
+  await AsyncStorage.setItem(STORAGE_KEYS.notificationsEnabled, String(enabled));
 }
