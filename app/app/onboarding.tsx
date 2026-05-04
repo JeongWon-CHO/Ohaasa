@@ -24,7 +24,13 @@ import {
 } from "@/src/constants/zodiac";
 import { colors, gradients } from "@/src/constants/design";
 import { useZodiac } from "@/src/hooks/useZodiac";
-import { getOrCreateDeviceId } from "@/src/lib/storage";
+import {
+  getOrCreateDeviceId,
+  getPushToken,
+  getPlatform,
+  getNotificationsEnabled,
+} from "@/src/lib/storage";
+import { upsertDevice } from "@/src/lib/supabase";
 
 type OnboardingStep = "intro" | "selection";
 
@@ -138,6 +144,19 @@ export default function OnboardingScreen() {
     try {
       await getOrCreateDeviceId();
       await saveZodiacSign(selectedZodiacSign);
+
+      // zodiac 선반영 — fire-and-forget
+      // 첫 진입: pushToken 아직 미캐싱(null) → _layout.tsx에서 최종 반영
+      // 별자리 변경: 기존 캐싱 토큰으로 zodiac_sign 즉시 갱신
+      const zodiacForUpsert = selectedZodiacSign;
+      (async () => {
+        const deviceId = await getOrCreateDeviceId();
+        const pushToken = await getPushToken();
+        const platform = await getPlatform();
+        const notificationsEnabled = await getNotificationsEnabled();
+        await upsertDevice({ deviceId, zodiacSign: zodiacForUpsert, pushToken, platform, notificationsEnabled });
+      })();
+
       router.replace("/(tabs)");
     } catch (startError) {
       setDeviceError(

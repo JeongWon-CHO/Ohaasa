@@ -6,6 +6,9 @@ import { ZODIAC_LIST, type ZodiacSign } from '@/src/constants/zodiac';
 export const STORAGE_KEYS = {
   deviceId: 'ohaasa:device_id',
   zodiacSign: 'ohaasa:zodiac_sign',
+  notificationsEnabled: 'ohaasa:notifications_enabled',
+  pushToken: 'ohaasa:push_token',
+  platform: 'ohaasa:platform',
 } as const;
 
 const ZODIAC_SIGNS = new Set<ZodiacSign>(ZODIAC_LIST.map((zodiac) => zodiac.sign));
@@ -58,4 +61,39 @@ export async function setZodiacSign(zodiacSign: ZodiacSign): Promise<void> {
 
 export async function clearZodiacSign(): Promise<void> {
   await AsyncStorage.removeItem(STORAGE_KEYS.zodiacSign);
+}
+
+export async function getNotificationsEnabled(): Promise<boolean> {
+  const stored = await AsyncStorage.getItem(STORAGE_KEYS.notificationsEnabled);
+  return stored === 'true';
+}
+
+export async function setNotificationsEnabled(enabled: boolean): Promise<void> {
+  await AsyncStorage.setItem(STORAGE_KEYS.notificationsEnabled, String(enabled));
+}
+
+export async function getPushToken(): Promise<string | null> {
+  return AsyncStorage.getItem(STORAGE_KEYS.pushToken);
+}
+
+export async function setPushToken(token: string | null): Promise<void> {
+  if (token === null) {
+    await AsyncStorage.removeItem(STORAGE_KEYS.pushToken);
+  } else {
+    await AsyncStorage.setItem(STORAGE_KEYS.pushToken, token);
+  }
+}
+
+export async function getPlatform(): Promise<'ios' | 'android' | null> {
+  const stored = await AsyncStorage.getItem(STORAGE_KEYS.platform);
+  if (stored === 'ios' || stored === 'android') return stored;
+  return null;
+}
+
+export async function setPlatform(platform: 'ios' | 'android' | null): Promise<void> {
+  if (platform === null) {
+    await AsyncStorage.removeItem(STORAGE_KEYS.platform);
+  } else {
+    await AsyncStorage.setItem(STORAGE_KEYS.platform, platform);
+  }
 }
