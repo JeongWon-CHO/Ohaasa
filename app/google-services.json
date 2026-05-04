@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "574404422190",
+    "project_id": "ohaasa-c2607",
+    "storage_bucket": "ohaasa-c2607.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:574404422190:android:35591e289f43b479910dbf",
+        "android_client_info": {
+          "package_name": "com.ohaasa.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA_LbeJPX9Lb_T8AMUBqhtadP7dXxGNC5k"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

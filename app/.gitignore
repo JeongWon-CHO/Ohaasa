@@ -40,5 +40,6 @@ yarn-error.*
 /ios
 /android
 
-# FCM
-google-services.json
+# Firebase — service account keys only (google-services.json은 APK에 번들되므로 커밋 대상)
+*firebase-adminsdk*.json
+*service-account*.json
