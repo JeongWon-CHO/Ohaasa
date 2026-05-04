@@ -107,7 +107,7 @@ CREATE POLICY "user_devices_anon_select" ON public.user_devices FOR SELECT  TO a
 | Phase 4-1 | fetch → parse → upsert 파이프라인                   | ✅   |
 | Phase 4-2 | Expo Push 발송 (dry-run 검증 완료)                  | ✅   |
 | Phase 5   | GitHub Actions cron 스케줄러                        | ✅   |
-| Phase 6   | React Native Expo 앱 (Step 5 완료)                  | 🔄   |
+| Phase 6   | React Native Expo 앱 (Step 6 완료)                  | ✅   |
 
 ---
 
@@ -120,15 +120,25 @@ CREATE POLICY "user_devices_anon_select" ON public.user_devices FOR SELECT  TO a
 | Step 3 | Supabase 운세 조회 · advice_ko 번역 · 전체 순위         | ✅   |
 | Step 4 | user_devices 등록 · push token 요청 · AsyncStorage 캐싱 | ✅   |
 | Step 5 | 알림 토글 동기화 · push_token 없는 환경 disabled 처리   | ✅   |
-| Step 6 | EAS dev build · 실기기 push_token 발급 · 실발송 검증    | 🔲   |
+| Step 6 | EAS dev build · FCM 설정 · 실기기 push_token 발급 · Supabase 저장 확인 | ✅   |
 
-### Step 6 다음 작업
+### Step 6 완료 내용
 
-1. `eas init` → `app.json`에 `extra.eas.projectId` 추가
-2. Android development build 생성 → 삼성 노트9 설치
-3. 실제 Expo Push Token 발급 확인
-4. `user_devices`: `push_token` · `platform = android` · `notifications_enabled = true` 저장 확인
-5. 실발송 테스트 (`backend/src/notifications/sender.ts`) 분리 검토
+- `eas init` → `app.json`에 `extra.eas.projectId` · `owner` 자동 반영
+- `android.package`: `com.ohaasa.app` · `android.googleServicesFile`: `./google-services.json`
+- Firebase Android 앱 등록 → `google-services.json` 취득 · `app/` 배치 (커밋 대상)
+- `expo-dev-client ~6.0.21` 설치 · `eas.json` development profile 생성
+- Android development build (EAS 클라우드) → 삼성 노트9 APK 설치
+- 실기기에서 `ExponentPushToken[...]` 발급 확인
+- Supabase `user_devices`: `push_token` · `platform = android` · `notifications_enabled = true` 저장 확인
+
+### 다음 작업 (실발송 테스트)
+
+```bash
+cd backend
+npx ts-node src/main.ts --dry-run   # 메시지 preview 확인
+npx ts-node src/main.ts             # 실발송
+```
 
 ---
 
@@ -147,6 +157,7 @@ CREATE POLICY "user_devices_anon_select" ON public.user_devices FOR SELECT  TO a
 - **`requestPushToken()`은 절대 throw하지 않는다**: 시뮬레이터·권한 거부·토큰 발급 실패 모두 `{ token: null, platform: null }` 반환.
 - **push_token 없는 환경**: 알림 토글 `disabled` + "알림은 개발 빌드에서 사용할 수 있어요" 표시.
 - **실제 push token 검증**: EAS development build에서만 가능.
+- **FCM 설정**: Firebase 콘솔에서 Android 앱(`com.ohaasa.app`) 등록 → `google-services.json` 취득 → `app/` 배치 → `app.json`의 `android.googleServicesFile` 참조. `google-services.json`은 APK에 번들되므로 커밋 대상 (service account 키와 다름).
 
 ### 데이터 흐름
 
