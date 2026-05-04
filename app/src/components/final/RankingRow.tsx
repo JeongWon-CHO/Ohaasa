@@ -32,14 +32,12 @@ export function RankingRow({ horoscope, isMine = false }: RankingRowProps) {
         shadowOpacity: 0.80,
         shadowRadius: 20,
         shadowOffset: { width: 0, height: 5 },
-        elevation: 5,
       }
     : {
         shadowColor: '#000' as const,
         shadowOpacity: 0.04,
         shadowRadius: 6,
         shadowOffset: { width: 0, height: 1 },
-        elevation: 1,
       };
 
   return (
