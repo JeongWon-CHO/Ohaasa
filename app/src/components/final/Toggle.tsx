@@ -5,15 +5,17 @@ import { colors } from '@/src/constants/design';
 interface ToggleProps {
   value: boolean;
   onChange: (value: boolean) => void;
+  disabled?: boolean;
 }
 
-export function Toggle({ value, onChange }: ToggleProps) {
+export function Toggle({ value, onChange, disabled = false }: ToggleProps) {
   return (
     <Pressable
       accessibilityRole="switch"
-      accessibilityState={{ checked: value }}
+      accessibilityState={{ checked: value, disabled }}
+      disabled={disabled}
       onPress={() => onChange(!value)}
-      style={[styles.track, value && styles.trackOn]}>
+      style={[styles.track, value && styles.trackOn, disabled && styles.trackDisabled]}>
       <View style={[styles.thumb, value && styles.thumbOn]} />
     </Pressable>
   );
@@ -29,6 +31,9 @@ const styles = StyleSheet.create({
   },
   trackOn: {
     backgroundColor: colors.apricotDark,
+  },
+  trackDisabled: {
+    opacity: 0.40,
   },
   thumb: {
     width: 20,

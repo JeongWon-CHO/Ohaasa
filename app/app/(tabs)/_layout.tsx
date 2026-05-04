@@ -8,6 +8,8 @@ import {
   getOrCreateDeviceId,
   getZodiacSign,
   setNotificationsEnabled,
+  setPushToken,
+  setPlatform,
 } from '@/src/lib/storage';
 import { upsertDevice } from '@/src/lib/supabase';
 
@@ -26,6 +28,8 @@ export default function TabLayout() {
       if (!zodiac) return;
 
       const { token, platform } = await requestPushToken();
+      await setPushToken(token);
+      await setPlatform(platform);
       const notificationsEnabled = token !== null;
 
       await setNotificationsEnabled(notificationsEnabled);

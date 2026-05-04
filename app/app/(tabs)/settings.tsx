@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import Svg, { Path, Polygon } from 'react-native-svg';
@@ -12,6 +12,15 @@ import { colors, gradients, zodiacColors } from '@/src/constants/design';
 import type { ZodiacSign } from '@/src/constants/zodiac';
 import { ZODIAC_MAP } from '@/src/constants/zodiac';
 import { useZodiac } from '@/src/hooks/useZodiac';
+import {
+  getNotificationsEnabled,
+  setNotificationsEnabled as saveNotificationsEnabled,
+  getOrCreateDeviceId,
+  getZodiacSign,
+  getPushToken,
+  getPlatform,
+} from '@/src/lib/storage';
+import { upsertDevice } from '@/src/lib/supabase';
 
 // ─── Background deco helpers (same pattern as F3/F4) ─────────
 
@@ -75,7 +84,32 @@ const DATE_RANGES: Record<ZodiacSign, string> = {
 export default function SettingsScreen() {
   const router = useRouter();
   const { zodiacSign } = useZodiac();
-  const [notificationsEnabled, setNotificationsEnabled] = useState(false);
+  const [notificationsEnabled, setNotificationsEnabledState] = useState(false);
+  const [storedPushToken, setStoredPushToken] = useState<string | null>(null);
+  const canNotify = storedPushToken !== null;
+
+  useEffect(() => {
+    Promise.all([getNotificationsEnabled(), getPushToken()]).then(([enabled, token]) => {
+      setNotificationsEnabledState(enabled);
+      setStoredPushToken(token);
+    });
+  }, []);
+
+  async function handleToggle(next: boolean) {
+    if (next && !storedPushToken) return; // push_token 없으면 ON 불가
+
+    setNotificationsEnabledState(next);
+    saveNotificationsEnabled(next);
+
+    const currentPushToken = storedPushToken;
+    (async () => {
+      const deviceId = await getOrCreateDeviceId();
+      const zodiac = await getZodiacSign();
+      const platform = await getPlatform();
+      if (!zodiac) return;
+      await upsertDevice({ deviceId, zodiacSign: zodiac, pushToken: currentPushToken, platform, notificationsEnabled: next });
+    })();
+  }
 
   const zodiac = zodiacSign ? ZODIAC_MAP[zodiacSign] : null;
   const signColor = zodiacSign ? zodiacColors[zodiacSign] : colors.cream2;
@@ -147,11 +181,16 @@ export default function SettingsScreen() {
         <SettingsSection label="NOTIFICATIONS" style={styles.sectionGap}>
           <SettingsRow
             title="아침 알림"
-            description="매일 아침 운세 알림 받기"
+            description={
+              canNotify
+                ? '매일 아침 운세 알림 받기'
+                : '알림은 개발 빌드에서 사용할 수 있어요'
+            }
             right={
               <Toggle
                 value={notificationsEnabled}
-                onChange={setNotificationsEnabled}
+                onChange={handleToggle}
+                disabled={!canNotify}
               />
             }
             style={[
