@@ -92,9 +92,7 @@ export const shadows = {
       shadowRadius: 14,
       shadowOffset: { width: 0, height: 2 },
     },
-    android: {
-      elevation: 2,
-    },
+    android: {},
     default: {
       shadowColor: '#000',
       shadowOpacity: 0.06,
