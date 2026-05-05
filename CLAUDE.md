@@ -123,6 +123,7 @@ CREATE POLICY "user_devices_anon_select" ON public.user_devices FOR SELECT  TO a
 | Step 6 | EAS dev build · FCM 설정 · 실기기 push_token 발급 · Supabase 저장 확인 | ✅   |
 | Step 7 | FCM V1 자격증명 등록 · dry-run payload 확인 · 실기기 알림 수신 확인   | ✅   |
 | Step 8 | GitHub Actions cron 실행 확인 · 포그라운드 알림 핸들러 구현           | ✅   |
+| Step 9 | Expo Push Receipt polling 구현 · DeviceNotRegistered 기기 비활성화    | ✅   |
 
 ### Step 7 완료 내용
 
@@ -147,9 +148,16 @@ npm run crawl:dry   # payload 미리보기 (발송 없음)
 npm run crawl       # 실발송
 ```
 
-### Phase 9 후보
+### Step 9 완료 내용
 
-- Receipt polling: Expo Push Receipt API 2단계 검증 구현
+- `sender.ts`: `disableDevices` export, `NotifyResult`에 `receiptIds` · `receiptTokenMap` 추가
+- `receipt-poller.ts` 신규: `pollReceipts()` — receipt-level DeviceNotRegistered 기기 비활성화 포함
+- `main.ts` Step 3 추가: 15분 wait → receipt polling (polling 실패는 exit(1) 안 함)
+- `POLL_DELAY_MS` 환경변수 지원: 기본 15분, 로컬 테스트 시 `POLL_DELAY_MS=0` 사용
+- `crawl-and-notify.yml` `timeout-minutes: 30`으로 변경
+
+### Phase 10 후보
+
 - 고고별자리 데이터 연동 fallback
 
 ---

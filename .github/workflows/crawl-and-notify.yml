@@ -23,7 +23,7 @@ permissions:
 jobs:
   crawl-and-notify:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 30  # 발송(~3분) + receipt polling 대기 15분 + 여유
 
     steps:
       - name: Checkout
