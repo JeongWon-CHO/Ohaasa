@@ -7,6 +7,7 @@ import { useEffect } from 'react';
 import 'react-native-reanimated';
 
 import { useColorScheme } from '@/components/useColorScheme';
+import { setupForegroundHandler } from '@/src/lib/notifications';
 
 export {
   // Catch any errors thrown by the Layout component.
@@ -46,6 +47,12 @@ export default function RootLayout() {
 
 function RootLayoutNav() {
   const colorScheme = useColorScheme();
+
+  useEffect(() => {
+    let cleanup: (() => void) | undefined;
+    setupForegroundHandler().then(fn => { cleanup = fn; });
+    return () => cleanup?.();
+  }, []);
 
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>

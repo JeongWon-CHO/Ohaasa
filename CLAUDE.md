@@ -1,4 +1,4 @@
-# CLAUDE.md — ohaasa プロジェクト
+﻿# CLAUDE.md — ohaasa プロジェクト
 
 ## 프로젝트 개요
 
@@ -41,7 +41,7 @@ app/
     ├── lib/
     │   ├── storage.ts         # AsyncStorage: device_id · zodiac · pushToken · platform · notificationsEnabled
     │   ├── supabase.ts        # anon client + upsertDevice()
-    │   └── notifications.ts   # requestPushToken() — dynamic import 방식
+    │   └── notifications.ts   # requestPushToken() · setupForegroundHandler() — dynamic import 방식
     └── components/final/Toggle.tsx  # disabled prop 지원
 backend/src/
 ├── crawler/   fetcher · parser (31 tests)
@@ -122,6 +122,7 @@ CREATE POLICY "user_devices_anon_select" ON public.user_devices FOR SELECT  TO a
 | Step 5 | 알림 토글 동기화 · push_token 없는 환경 disabled 처리   | ✅   |
 | Step 6 | EAS dev build · FCM 설정 · 실기기 push_token 발급 · Supabase 저장 확인 | ✅   |
 | Step 7 | FCM V1 자격증명 등록 · dry-run payload 확인 · 실기기 알림 수신 확인   | ✅   |
+| Step 8 | GitHub Actions cron 실행 확인 · 포그라운드 알림 핸들러 구현           | ✅   |
 
 ### Step 7 완료 내용
 
@@ -129,6 +130,14 @@ CREATE POLICY "user_devices_anon_select" ON public.user_devices FOR SELECT  TO a
 - `npm run crawl:dry` → `advice_ko` 한국어 body 확인 (`advice` 일본어 원문 fallback 버그 수정 포함)
 - `npm run crawl` → `1/1 sent` · Receipt ID 발급 · 삼성 노트9 알림 수신 확인
 - `notifications_enabled` 발송 후에도 `true` 유지 확인
+
+### Step 8 완료 내용
+
+- GitHub Actions cron 수동 실행 확인: secrets 로드 · 12개 파싱 · translation skip · upsert · 1/1 sent 전 단계 정상
+- `setupForegroundHandler()` 구현: `shouldShowBanner: true` (SDK 54 기준 — `shouldShowAlert` deprecated)
+- `addNotificationReceivedListener` 구독 + cleanup 반환 (`setNotificationHandler`는 앱 정책이므로 cleanup 제외)
+- `app/_layout.tsx` `RootLayoutNav`에 `useEffect`로 마운트 시 설정, unmount 시 subscription 해제
+- 실기기 포그라운드 배너 수신 확인 · Metro 로그 `[notifications] foreground notification received` 확인
 
 ### 수동 테스트 방법
 
@@ -138,10 +147,9 @@ npm run crawl:dry   # payload 미리보기 (발송 없음)
 npm run crawl       # 실발송
 ```
 
-### Phase 7 후보
+### Phase 9 후보
 
 - Receipt polling: Expo Push Receipt API 2단계 검증 구현
-- 앱 포그라운드 알림 핸들러 추가 (현재 포그라운드에서 배너 미표시)
 - 고고별자리 데이터 연동 fallback
 
 ---
