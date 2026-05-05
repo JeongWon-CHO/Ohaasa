@@ -121,24 +121,28 @@ CREATE POLICY "user_devices_anon_select" ON public.user_devices FOR SELECT  TO a
 | Step 4 | user_devices 등록 · push token 요청 · AsyncStorage 캐싱 | ✅   |
 | Step 5 | 알림 토글 동기화 · push_token 없는 환경 disabled 처리   | ✅   |
 | Step 6 | EAS dev build · FCM 설정 · 실기기 push_token 발급 · Supabase 저장 확인 | ✅   |
+| Step 7 | FCM V1 자격증명 등록 · dry-run payload 확인 · 실기기 알림 수신 확인   | ✅   |
 
-### Step 6 완료 내용
+### Step 7 완료 내용
 
-- `eas init` → `app.json`에 `extra.eas.projectId` · `owner` 자동 반영
-- `android.package`: `com.ohaasa.app` · `android.googleServicesFile`: `./google-services.json`
-- Firebase Android 앱 등록 → `google-services.json` 취득 · `app/` 배치 (커밋 대상)
-- `expo-dev-client ~6.0.21` 설치 · `eas.json` development profile 생성
-- Android development build (EAS 클라우드) → 삼성 노트9 APK 설치
-- 실기기에서 `ExponentPushToken[...]` 발급 확인
-- Supabase `user_devices`: `push_token` · `platform = android` · `notifications_enabled = true` 저장 확인
+- `eas credentials` → Android `com.ohaasa.app` → FCM V1 Google Service Account Key 업로드
+- `npm run crawl:dry` → `advice_ko` 한국어 body 확인 (`advice` 일본어 원문 fallback 버그 수정 포함)
+- `npm run crawl` → `1/1 sent` · Receipt ID 발급 · 삼성 노트9 알림 수신 확인
+- `notifications_enabled` 발송 후에도 `true` 유지 확인
 
-### 다음 작업 (실발송 테스트)
+### 수동 테스트 방법
 
 ```bash
 cd backend
-npx ts-node src/main.ts --dry-run   # 메시지 preview 확인
-npx ts-node src/main.ts             # 실발송
+npm run crawl:dry   # payload 미리보기 (발송 없음)
+npm run crawl       # 실발송
 ```
+
+### Phase 7 후보
+
+- Receipt polling: Expo Push Receipt API 2단계 검증 구현
+- 앱 포그라운드 알림 핸들러 추가 (현재 포그라운드에서 배너 미표시)
+- 고고별자리 데이터 연동 fallback
 
 ---
 
@@ -158,6 +162,7 @@ npx ts-node src/main.ts             # 실발송
 - **push_token 없는 환경**: 알림 토글 `disabled` + "알림은 개발 빌드에서 사용할 수 있어요" 표시.
 - **실제 push token 검증**: EAS development build에서만 가능.
 - **FCM 설정**: Firebase 콘솔에서 Android 앱(`com.ohaasa.app`) 등록 → `google-services.json` 취득 → `app/` 배치 → `app.json`의 `android.googleServicesFile` 참조. `google-services.json`은 APK에 번들되므로 커밋 대상 (service account 키와 다름).
+- **FCM V1 발송 자격증명**: `eas credentials` → Android → FCM V1 Google Service Account Key 등록. `google-services.json`(앱 수신용)과 별개. service account JSON은 절대 커밋 금지 (`.gitignore` 적용됨).
 
 ### 데이터 흐름
 
