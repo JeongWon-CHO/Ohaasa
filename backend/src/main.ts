@@ -6,6 +6,7 @@ import { fetchJson } from "./crawler/fetcher";
 import { parse, type HoroscopeEntry } from "./crawler/parser";
 import { createAdminClient } from "./db/supabase";
 import { sendNotifications } from "./notifications/sender";
+import { pollReceipts } from "./notifications/receipt-poller";
 import { translateAdvice } from "./translator/translate";
 
 // ============================================================
@@ -143,6 +144,14 @@ async function crawlAndSave(
 // Main
 // ============================================================
 
+// POLL_DELAY_MS 환경변수로 대기 시간을 조정한다.
+// 기본값: 15분 (Expo 권장). 로컬 테스트 시 POLL_DELAY_MS=0 으로 단축 가능.
+const POLL_DELAY_MS = Number(process.env.POLL_DELAY_MS ?? 15 * 60 * 1000);
+
+async function sleep(ms: number): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
 async function main(): Promise<void> {
   const isDryRun = process.argv.includes("--dry-run");
 
@@ -170,17 +179,41 @@ async function main(): Promise<void> {
   // Step 2: Send notifications
   // ----------------------------------------------------------
   let notifyFailed = false;
+  let receiptIds:      string[]           = [];
+  let receiptTokenMap: Record<string, string> = {};
+
   try {
     const result = await sendNotifications(supabase, isDryRun);
     console.log(
       `[main] ✓ Notifications: ${result.succeeded}/${result.total} sent` +
       `  date=${result.date}  failed=${result.failed}  disabled=${result.disabled}`
     );
+    receiptIds      = result.receiptIds;
+    receiptTokenMap = result.receiptTokenMap;
   } catch (err) {
     console.error(
       `[main] Notification failed: ${err instanceof Error ? err.message : String(err)}`
     );
     notifyFailed = true;
+  }
+
+  // ----------------------------------------------------------
+  // Step 3: Poll push receipts
+  // dry-run 또는 발송 실패 시에는 skip. receipt polling 실패는 exit(1) 하지 않는다.
+  // ----------------------------------------------------------
+  if (!isDryRun && !notifyFailed && receiptIds.length > 0) {
+    if (POLL_DELAY_MS > 0) {
+      const mins = Math.round(POLL_DELAY_MS / 60000);
+      console.log(`[main] Waiting ${mins} min for Expo to process receipts...`);
+      await sleep(POLL_DELAY_MS);
+    }
+    try {
+      await pollReceipts(supabase, receiptIds, receiptTokenMap);
+    } catch (err) {
+      console.warn(
+        `[main] Receipt polling error: ${err instanceof Error ? err.message : String(err)}`
+      );
+    }
   }
 
   // ----------------------------------------------------------

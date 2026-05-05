@@ -44,6 +44,10 @@ export interface NotifyResult {
   succeeded: number;
   failed: number;
   disabled: number;
+  receiptIds: string[];
+  // receipt polling 시 DeviceNotRegistered 처리를 위해 receiptId → pushToken 매핑을 같이 반환한다.
+  // Expo Receipt API 응답에는 token이 포함되지 않으므로, sender 단계에서 미리 구성해 전달한다.
+  receiptTokenMap: Record<string, string>;
 }
 
 // ============================================================
@@ -185,7 +189,7 @@ function buildMessages(
  * DeviceNotRegistered 처리와 invalid token 처리 양쪽에서 호출된다.
  * 실패해도 throw하지 않는다 — cleanup 작업이므로 메인 파이프라인을 멈추지 않는다.
  */
-async function disableDevices(
+export async function disableDevices(
   supabase: SupabaseClient,
   pushTokens: string[]
 ): Promise<void> {
@@ -223,7 +227,7 @@ export async function sendNotifications(
 
   if (devices.length === 0) {
     console.log("[sender] No active devices to notify.");
-    return { date, total: 0, succeeded: 0, failed: 0, disabled: 0 };
+    return { date, total: 0, succeeded: 0, failed: 0, disabled: 0, receiptIds: [], receiptTokenMap: {} };
   }
 
   const { messages, invalidTokens, skippedZodiac } = buildMessages(devices, horoscopeMap);
@@ -251,10 +255,12 @@ export async function sendNotifications(
     }
     return {
       date,
-      total:     messages.length,
-      succeeded: 0,
-      failed:    0,
-      disabled:  invalidTokens.length,
+      total:           messages.length,
+      succeeded:       0,
+      failed:          0,
+      disabled:        invalidTokens.length,
+      receiptIds:      [],
+      receiptTokenMap: {},
     };
   }
 
@@ -265,7 +271,7 @@ export async function sendNotifications(
 
   if (messages.length === 0) {
     console.log("[sender] No valid messages to send after filtering.");
-    return { date, total: 0, succeeded: 0, failed: 0, disabled: invalidTokens.length };
+    return { date, total: 0, succeeded: 0, failed: 0, disabled: invalidTokens.length, receiptIds: [], receiptTokenMap: {} };
   }
 
   const expo   = new Expo();
@@ -273,8 +279,9 @@ export async function sendNotifications(
 
   let succeeded = 0;
   let failed    = 0;
-  const tokensToDisable: string[] = [];
-  const receiptIds: string[]      = [];
+  const tokensToDisable:  string[]           = [];
+  const receiptIds:       string[]           = [];
+  const receiptTokenMap:  Record<string, string> = {};
 
   for (let ci = 0; ci < chunks.length; ci++) {
     const chunk = chunks[ci];
@@ -298,6 +305,9 @@ export async function sendNotifications(
       if (ticket.status === "ok") {
         succeeded++;
         receiptIds.push(ticket.id);
+        // Expo Receipt API 응답에 token이 없으므로 receipt polling에서 DeviceNotRegistered 처리를
+        // 위해 receiptId → token 매핑을 sender 단계에서 미리 구성한다.
+        receiptTokenMap[ticket.id] = token;
       } else {
         failed++;
         const errCode = ticket.details?.error;
@@ -316,18 +326,15 @@ export async function sendNotifications(
   // DeviceNotRegistered 기기 비활성화
   await disableDevices(supabase, tokensToDisable);
 
-  // receipt ID 로그 — Phase 5 이후 receipt polling 추가 시 이 ID를 사용한다
-  if (receiptIds.length > 0) {
-    const sample = receiptIds.slice(0, 5).join(", ");
-    const extra  = receiptIds.length > 5 ? ` (+${receiptIds.length - 5} more)` : "";
-    console.log(`[sender] Receipt IDs (${receiptIds.length} total): ${sample}${extra}`);
-  }
+  console.log(`[sender] Receipt IDs collected: ${receiptIds.length}`);
 
   return {
     date,
-    total:     messages.length,
+    total:      messages.length,
     succeeded,
     failed,
-    disabled:  invalidTokens.length + tokensToDisable.length,
+    disabled:   invalidTokens.length + tokensToDisable.length,
+    receiptIds,
+    receiptTokenMap,
   };
 }
