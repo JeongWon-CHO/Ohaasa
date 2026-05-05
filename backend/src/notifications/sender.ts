@@ -35,6 +35,7 @@ interface HoroscopeRow {
   zodiac_name: string;
   rank: number;
   advice: string;
+  advice_ko: string | null;
 }
 
 export interface NotifyResult {
@@ -83,7 +84,7 @@ async function fetchLatestHoroscopes(
   // Step 2: 해당 date의 전체 row 조회
   const { data: rows, error: rowsError } = await supabase
     .from("horoscopes")
-    .select("date, zodiac_sign, zodiac_name, rank, advice")
+    .select("date, zodiac_sign, zodiac_name, rank, advice, advice_ko")
     .eq("date", latestDate);
 
   if (rowsError) {
@@ -166,7 +167,7 @@ function buildMessages(
     messages.push({
       to:    device.push_token,
       title: `${koreanName} 오늘의 운세`,
-      body:  firstLine(horoscope.advice, 150),
+      body:  firstLine(horoscope.advice_ko ?? horoscope.advice, 150),
       data:  { zodiac_sign: device.zodiac_sign, date: horoscope.date },
       sound: "default",
     });

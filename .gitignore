@@ -4,3 +4,8 @@ Thumbs.db
 .env
 .env.local
 supabase/
+
+# Firebase service account keys (push 발송용 — 절대 커밋 금지)
+# google-services.json은 APK 번들용이므로 커밋 대상 (별도 처리)
+*firebase-adminsdk*.json
+*service-account*.json
