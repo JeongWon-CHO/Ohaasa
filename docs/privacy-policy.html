@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>개인정보처리방침 — 오하아사</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Noto Sans KR', 'Apple SD Gothic Neo', sans-serif;
+      font-size: 15px;
+      line-height: 1.8;
+      color: #333;
+      background: #fff;
+      padding: 32px 20px 80px;
+      max-width: 720px;
+      margin: 0 auto;
+    }
+    h1 { font-size: 22px; font-weight: 700; margin-bottom: 8px; color: #1a1a1a; }
+    .updated { font-size: 13px; color: #888; margin-bottom: 40px; }
+    h2 { font-size: 16px; font-weight: 700; margin: 32px 0 10px; color: #1a1a1a; border-left: 3px solid #f90; padding-left: 10px; }
+    p { margin-bottom: 12px; }
+    ul { padding-left: 20px; margin-bottom: 12px; }
+    li { margin-bottom: 6px; }
+    table { width: 100%; border-collapse: collapse; margin-bottom: 16px; font-size: 14px; }
+    th, td { border: 1px solid #ddd; padding: 8px 12px; text-align: left; vertical-align: top; }
+    th { background: #fafafa; font-weight: 600; }
+    a { color: #e6820e; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    .note { background: #fffbe6; border: 1px solid #ffe58f; border-radius: 6px; padding: 12px 16px; font-size: 14px; }
+  </style>
+</head>
+<body>
+
+<h1>개인정보처리방침</h1>
+<p class="updated">최종 수정일: 2026년 5월 7일</p>
+
+<p>
+  <strong>오하아사</strong>(이하 "앱")는 이용자의 개인정보를 소중히 여깁니다.
+  본 방침은 앱이 수집하는 정보와 그 사용 방식을 설명합니다.
+</p>
+
+<h2>1. 수집하는 정보</h2>
+<p>앱은 별자리 운세 표시와 푸시 알림 발송을 위해 다음 정보를 수집합니다.</p>
+
+<table>
+  <thead>
+    <tr><th>항목</th><th>내용</th><th>목적</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>기기 식별자 (device_id)</td>
+      <td>앱 설치 시 기기에서 무작위 생성되는 UUID</td>
+      <td>기기 등록 및 알림 대상 식별</td>
+    </tr>
+    <tr>
+      <td>별자리 (zodiac_sign)</td>
+      <td>이용자가 직접 선택한 별자리</td>
+      <td>맞춤 운세 조회 및 표시</td>
+    </tr>
+    <tr>
+      <td>푸시 토큰 (push_token)</td>
+      <td>Expo 알림 서비스가 발급하는 기기 토큰</td>
+      <td>푸시 알림 발송</td>
+    </tr>
+    <tr>
+      <td>플랫폼 (platform)</td>
+      <td>Android / iOS 구분</td>
+      <td>알림 발송 방식 결정</td>
+    </tr>
+    <tr>
+      <td>알림 동의 여부 (notifications_enabled)</td>
+      <td>이용자가 설정한 알림 수신 동의 상태</td>
+      <td>알림 발송 대상 필터링</td>
+    </tr>
+  </tbody>
+</table>
+
+<div class="note">
+  앱은 이름, 이메일, 전화번호, 위치정보 등 개인을 직접 식별할 수 있는 정보를 수집하지 않습니다.
+  로그인 기능이 없으며, 계정이 생성되지 않습니다.
+</div>
+
+<h2>2. 정보의 이용 목적</h2>
+<ul>
+  <li>매일 아침 방송 기준 별자리 운세를 조회·표시하기 위해</li>
+  <li>이용자가 동의한 경우 푸시 알림을 발송하기 위해</li>
+  <li>알림 비활성화 요청 시 해당 기기의 발송을 중단하기 위해</li>
+</ul>
+
+<h2>3. 정보의 보관 및 삭제</h2>
+<p>
+  수집된 정보는 Supabase(미국)의 데이터베이스에 저장됩니다.
+  이용자가 앱을 삭제하면 로컬 데이터(AsyncStorage)는 즉시 제거됩니다.
+  서버에 저장된 기기 정보의 삭제를 원하시면 아래 연락처로 문의해 주세요.
+</p>
+
+<h2>4. 제3자 서비스</h2>
+<p>앱은 다음 외부 서비스를 사용합니다. 각 서비스의 개인정보처리방침을 참고하세요.</p>
+<ul>
+  <li>
+    <strong>Supabase</strong> — 기기 정보 저장 ·
+    <a href="https://supabase.com/privacy" target="_blank" rel="noopener">개인정보처리방침</a>
+  </li>
+  <li>
+    <strong>Expo (Expo Push Notification Service)</strong> — 푸시 알림 발송 ·
+    <a href="https://expo.dev/privacy" target="_blank" rel="noopener">개인정보처리방침</a>
+  </li>
+  <li>
+    <strong>Google Firebase Cloud Messaging (FCM)</strong> — Android 알림 전달 ·
+    <a href="https://firebase.google.com/support/privacy" target="_blank" rel="noopener">개인정보처리방침</a>
+  </li>
+</ul>
+
+<h2>5. 이용자의 권리</h2>
+<p>이용자는 언제든지 다음을 요청할 수 있습니다.</p>
+<ul>
+  <li>앱 내 설정 → 알림 끄기로 푸시 알림 수신 중단</li>
+  <li>서버에 저장된 기기 정보 조회 및 삭제 요청 (아래 이메일 문의)</li>
+</ul>
+
+<h2>6. 아동 개인정보 보호</h2>
+<p>
+  앱은 만 14세 미만 아동을 대상으로 하지 않으며,
+  해당 연령의 개인정보를 의도적으로 수집하지 않습니다.
+</p>
+
+<h2>7. 방침 변경</h2>
+<p>
+  본 방침이 변경되는 경우 앱 업데이트 또는 이 페이지를 통해 안내합니다.
+  지속적인 앱 이용은 변경된 방침에 동의한 것으로 간주합니다.
+</p>
+
+<h2>8. 문의</h2>
+<p>
+  개인정보 관련 문의는 아래 이메일로 연락해 주세요.<br>
+  <a href="mailto:i98232737@gmail.com">i98232737@gmail.com</a>
+</p>
+
+</body>
+</html>
