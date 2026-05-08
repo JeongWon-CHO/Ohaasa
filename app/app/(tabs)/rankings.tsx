@@ -1,5 +1,6 @@
 import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useRouter } from 'expo-router';
 import Svg, { Path, Polygon } from 'react-native-svg';
 
 import { DatePill } from '@/src/components/final/DatePill';
@@ -52,6 +53,7 @@ function MoonDeco({ x, y, size, color, opacity }: DecoProps) {
 // ─── Screen ───────────────────────────────────────────────────
 
 export default function RankingsScreen() {
+  const router = useRouter();
   const { zodiacSign } = useZodiac();
   const { horoscopes, broadcastDate, loading, error } = useAllHoroscopes();
 
@@ -102,6 +104,7 @@ export default function RankingsScreen() {
               horoscope={horoscope}
               isMine={horoscope.zodiac_sign === zodiacSign}
               key={horoscope.zodiac_sign}
+              onPress={() => router.push({ pathname: '/zodiac/[sign]', params: { sign: horoscope.zodiac_sign } })}
             />
           ))}
           <View style={styles.spacer} />
