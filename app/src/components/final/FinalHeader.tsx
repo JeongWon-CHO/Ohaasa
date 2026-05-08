@@ -1,4 +1,5 @@
 import { StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 // import Svg, { Circle, Path } from 'react-native-svg';
 
 import { colors } from '@/src/constants/design';
@@ -12,8 +13,9 @@ export function FinalHeader({
   subtitle = '오늘도 좋은 하루 되세요 ☀️',
   // onAvatarPress,
 }: FinalHeaderProps) {
+  const insets = useSafeAreaInsets();
   return (
-    <View style={styles.header}>
+    <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
       <View style={styles.copy}>
         <Text style={styles.title}>ohaasa</Text>
         {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
@@ -38,6 +40,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    paddingHorizontal: 28,
   },
   copy: {
     flex: 1,
