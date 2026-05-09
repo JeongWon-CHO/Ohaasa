@@ -1,24 +1,26 @@
 import { StyleSheet, Text, View } from 'react-native';
-import Svg, { Circle, Path } from 'react-native-svg';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+// import Svg, { Circle, Path } from 'react-native-svg';
 
 import { colors } from '@/src/constants/design';
 
 interface FinalHeaderProps {
   subtitle?: string;
-  onAvatarPress?: () => void;
+  // onAvatarPress?: () => void;
 }
 
 export function FinalHeader({
   subtitle = '오늘도 좋은 하루 되세요 ☀️',
-  onAvatarPress,
+  // onAvatarPress,
 }: FinalHeaderProps) {
+  const insets = useSafeAreaInsets();
   return (
-    <View style={styles.header}>
+    <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
       <View style={styles.copy}>
         <Text style={styles.title}>ohaasa</Text>
         {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
       </View>
-      <View style={styles.avatar}>
+      {/* <View style={styles.avatar}>
         <Svg width={14} height={14} viewBox="0 0 24 24" fill="none">
           <Circle cx="12" cy="8" r="4" stroke={colors.textMid} strokeWidth="2" />
           <Path
@@ -28,7 +30,7 @@ export function FinalHeader({
             strokeLinecap="round"
           />
         </Svg>
-      </View>
+      </View> */}
     </View>
   );
 }
@@ -38,6 +40,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    paddingHorizontal: 28,
   },
   copy: {
     flex: 1,
@@ -53,16 +56,16 @@ const styles = StyleSheet.create({
     color: colors.textSoft,
     marginTop: 2,
   },
-  avatar: {
-    width: 34,
-    height: 34,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 17,
-    backgroundColor: 'rgba(255,253,249,0.85)',
-    shadowColor: '#000',
-    shadowOpacity: 0.07,
-    shadowRadius: 5,
-    shadowOffset: { width: 0, height: 2 },
-  },
+  // avatar: {
+  //   width: 34,
+  //   height: 34,
+  //   alignItems: 'center',
+  //   justifyContent: 'center',
+  //   borderRadius: 17,
+  //   backgroundColor: 'rgba(255,253,249,0.85)',
+  //   shadowColor: '#000',
+  //   shadowOpacity: 0.07,
+  //   shadowRadius: 5,
+  //   shadowOffset: { width: 0, height: 2 },
+  // },
 });

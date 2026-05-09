@@ -15,6 +15,14 @@
         "buildType": "apk"
       }
     },
+    "verify": {
+      "developmentClient": false,
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk",
+        "credentialsSource": "remote"
+      }
+    },
     "production": {
       "developmentClient": false,
       "distribution": "store",

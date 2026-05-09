@@ -1,5 +1,6 @@
 import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useRouter } from 'expo-router';
 import Svg, { Path, Polygon } from 'react-native-svg';
 
 import { DatePill } from '@/src/components/final/DatePill';
@@ -52,6 +53,7 @@ function MoonDeco({ x, y, size, color, opacity }: DecoProps) {
 // ─── Screen ───────────────────────────────────────────────────
 
 export default function RankingsScreen() {
+  const router = useRouter();
   const { zodiacSign } = useZodiac();
   const { horoscopes, broadcastDate, loading, error } = useAllHoroscopes();
 
@@ -67,9 +69,7 @@ export default function RankingsScreen() {
       <MoonDeco   x={286} y={174}  size={22}  color={colors.apricot} opacity={0.18} />
 
       {/* Header */}
-      <View style={styles.headerWrap}>
-        <FinalHeader subtitle="12개 별자리 오하아사 순위" />
-      </View>
+      <FinalHeader subtitle="12개 별자리 오하아사 순위" />
 
       {/* DatePill — 방송 기준일 표시 */}
       <View style={styles.pillWrap}>
@@ -104,6 +104,7 @@ export default function RankingsScreen() {
               horoscope={horoscope}
               isMine={horoscope.zodiac_sign === zodiacSign}
               key={horoscope.zodiac_sign}
+              onPress={() => router.push({ pathname: '/zodiac/[sign]', params: { sign: horoscope.zodiac_sign } })}
             />
           ))}
           <View style={styles.spacer} />
@@ -117,11 +118,6 @@ const styles = StyleSheet.create({
   fill: {
     flex: 1,
     overflow: 'hidden',
-  },
-  headerWrap: {
-    paddingTop: 20,
-    paddingHorizontal: 28,
-    zIndex: 1,
   },
   pillWrap: {
     marginTop: 12,

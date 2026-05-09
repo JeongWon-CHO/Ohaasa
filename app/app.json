@@ -31,7 +31,7 @@
       "output": "static",
       "favicon": "./assets/images/favicon.png"
     },
-    "plugins": ["expo-router", "expo-notifications", "expo-dev-client"],
+    "plugins": ["expo-router", "expo-notifications", "expo-dev-client", "./plugins/withAndroidRegistration"],
     "experiments": {
       "typedRoutes": true
     },

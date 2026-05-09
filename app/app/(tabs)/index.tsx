@@ -159,9 +159,7 @@ export default function TodayScreen() {
         style={styles.scroll}
       >
         {/* Header */}
-        <View style={styles.headerWrap}>
-          <FinalHeader subtitle={COPY.headerSubtitle} />
-        </View>
+        <FinalHeader subtitle={COPY.headerSubtitle} />
 
         {/* DatePill — 오하아사 방송 기준일 표시 */}
         <View style={styles.pillWrap}>
@@ -314,10 +312,6 @@ const styles = StyleSheet.create({
   },
 
   // ── Positioning wrappers ──────────────────────────────────────
-  headerWrap: {
-    paddingTop: 20,
-    paddingHorizontal: 28,
-  },
   pillWrap: {
     marginTop: 12,
     marginHorizontal: 28,

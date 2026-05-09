@@ -1,4 +1,4 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { ConstellationBadge } from '@/src/components/final/ConstellationBadge';
 import { colors, zodiacColors } from '@/src/constants/design';
@@ -8,6 +8,7 @@ import type { Horoscope } from '@/src/types/horoscope';
 interface RankingRowProps {
   horoscope: Horoscope;
   isMine?: boolean;
+  onPress?: () => void;
 }
 
 // 1위 금, 2위 은, 3위 동 — HTML rankColor spec
@@ -21,7 +22,7 @@ function getRankColor(rank: number): string {
   return RANK_COLORS[rank] ?? colors.textSoft;
 }
 
-export function RankingRow({ horoscope, isMine = false }: RankingRowProps) {
+export function RankingRow({ horoscope, isMine = false, onPress }: RankingRowProps) {
   const zodiac = ZODIAC_MAP[horoscope.zodiac_sign];
   const signColor = zodiacColors[horoscope.zodiac_sign];
   const isTop3 = horoscope.rank <= 3;
@@ -41,13 +42,15 @@ export function RankingRow({ horoscope, isMine = false }: RankingRowProps) {
       };
 
   return (
-    <View
-      style={[
+    <Pressable
+      onPress={onPress}
+      style={({ pressed }) => [
         styles.row,
         isMine
           ? [styles.myRow, { backgroundColor: signColor }]
           : styles.normalRow,
         shadowStyle,
+        onPress && pressed && { opacity: 0.75 },
       ]}
     >
       {/* Rank number — plain text, no box. top3: 16px/700, else: 13px/500 */}
@@ -115,7 +118,7 @@ export function RankingRow({ horoscope, isMine = false }: RankingRowProps) {
         </Text>
       </View>
       */}
-    </View>
+    </Pressable>
   );
 }
 

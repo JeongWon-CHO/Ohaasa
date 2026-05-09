@@ -5,6 +5,7 @@ import Svg, { Path, Polygon } from 'react-native-svg';
 import { useRouter } from 'expo-router';
 
 import { ConstellationBadge } from '@/src/components/final/ConstellationBadge';
+import { FinalHeader } from '@/src/components/final/FinalHeader';
 import { SettingsRow } from '@/src/components/final/SettingsRow';
 import { SettingsSection } from '@/src/components/final/SettingsSection';
 import { Toggle } from '@/src/components/final/Toggle';
@@ -126,11 +127,8 @@ export default function SettingsScreen() {
       <StarDeco   x={293} y={108}  size={4}   color={colors.apricot} opacity={0.20} />
       <MoonDeco   x={284} y={172}  size={22}  color={colors.apricot} opacity={0.17} />
 
-      {/* Header — padding '20px 28px 0', outside scroll per HTML spec */}
-      <View style={styles.headerWrap}>
-        <Text style={styles.headerLogo}>ohaasa</Text>
-        <Text style={styles.headerTitle}>설정</Text>
-      </View>
+      {/* Header */}
+      <FinalHeader subtitle="설정" />
 
       {/* Scroll — padding '18px 20px 16px' → paddingBottom 96 for tab bar */}
       <ScrollView
@@ -260,24 +258,6 @@ const styles = StyleSheet.create({
     zIndex: 1,
   },
 
-  // ── Header ────────────────────────────────────────────────────
-  headerWrap: {
-    paddingTop: 20,
-    paddingHorizontal: 28,
-    zIndex: 1,
-  },
-  headerLogo: {
-    fontSize: 20,
-    fontWeight: '300',
-    color: colors.text,
-    letterSpacing: 2,
-  },
-  headerTitle: {
-    fontSize: 22,
-    fontWeight: '400',
-    color: colors.text,
-    marginTop: 6,
-  },
 
   // ── Scroll content ────────────────────────────────────────────
   content: {
