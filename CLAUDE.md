@@ -156,7 +156,36 @@ npm run crawl       # 실발송
 - `POLL_DELAY_MS` 환경변수 지원: 기본 15분, 로컬 테스트 시 `POLL_DELAY_MS=0` 사용
 - `crawl-and-notify.yml` `timeout-minutes: 30`으로 변경
 
-### Phase 10 후보
+---
+
+## Phase 10 Android 릴리즈 준비
+
+| Step   | 내용                                                              | 상태 |
+| ------ | ----------------------------------------------------------------- | ---- |
+| Step 1 | eas.json profile 분리 (development / preview / production)        | ✅   |
+| Step 2 | 앱 표시명 "오하아사" 적용 (`expo.name`)                           | ✅   |
+| Step 3 | icon · adaptive-icon · splash 에셋 교체 + backgroundColor 보정   | ✅   |
+| Step 4 | EAS env 등록 · preview APK 빌드 · 실기기 아이콘 확인             | ✅   |
+| Step 5 | 개인정보처리방침 작성 및 URL 확보                                 | ✅   |
+| Step 6 | Play Console 내부 테스트 트랙 업로드 준비                         | ⬜   |
+
+### Step 5 완료 내용
+
+- `docs/privacy-policy.html` 작성 → GitHub Pages 배포
+- 개인정보처리방침 URL: `https://jeongwon-cho.github.io/Ohaasa/privacy-policy.html`
+
+### Step 1~4 완료 내용
+
+- `eas.json`: `appVersionSource: remote` · preview(APK/internal) · production(AAB/store/autoIncrement) 추가
+- `app.json`: `expo.name` → `"오하아사"`, `splash.backgroundColor` → `#FFF3E6`, `android.adaptiveIcon.backgroundColor` → `#FAD4C0`
+- `android.versionCode`는 `app.json`에 추가하지 않음 — EAS remote autoIncrement에 위임
+- `EXPO_PUBLIC_SUPABASE_URL` · `EXPO_PUBLIC_SUPABASE_ANON_KEY` → EAS env (development · preview · production 전체) 등록
+  - `.env.local`은 Metro 로컬 개발 전용, EAS 클라우드 빌드는 읽지 않음
+  - `.env`는 gitignore 적용 대상이라 EAS 빌드에 전달되지 않음
+  - 앱 번들에는 anon/publishable key만 포함 가능, `service_role` key 절대 금지
+- `google-services.json`: 커밋 대상 (앱 수신용 public config) · Firebase service account JSON은 커밋 금지
+
+### Phase 10 후보 (이후)
 
 - 고고별자리 데이터 연동 fallback
 
