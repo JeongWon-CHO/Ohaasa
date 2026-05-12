@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import Svg, { Path, Polygon } from 'react-native-svg';
 import { useRouter } from 'expo-router';
@@ -199,12 +199,7 @@ export default function SettingsScreen() {
           {notificationsEnabled && (
             <SettingsRow
               title="알림 시각"
-              description="업데이트 직후 알림"
-              right={
-                <View style={styles.timePill}>
-                  <Text style={styles.timePillText}>07:30</Text>
-                </View>
-              }
+              description="매일 아침 07:30, 업데이트 직후"
               style={styles.notifRow}
             />
           )}
@@ -216,17 +211,18 @@ export default function SettingsScreen() {
             title="데이터 소스"
             description="일본 TV 아침 별자리 운세"
             showChevron
+            onPress={() => Linking.openURL('https://www.asahi.co.jp/ohaasa/week/horoscope/')}
             style={[styles.aboutRow, styles.rowBorder]}
           />
           <SettingsRow
             title="버전"
             description="1.0.0"
-            showChevron
             style={[styles.aboutRow, styles.rowBorder]}
           />
           <SettingsRow
             title="개인정보 처리방침"
             showChevron
+            onPress={() => Linking.openURL('https://jeongwon-cho.github.io/Ohaasa/privacy-policy.html')}
             style={styles.aboutRow}
           />
         </SettingsSection>
@@ -332,19 +328,6 @@ const styles = StyleSheet.create({
   rowBorder: {
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(237,227,214,0.6)',
-  },
-
-  // ── Time pill ─────────────────────────────────────────────────
-  timePill: {
-    backgroundColor: 'rgba(240,184,154,0.30)',
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 7,
-  },
-  timePillText: {
-    fontSize: 13,
-    fontWeight: '500',
-    color: colors.textMid,
   },
 
   // ── Footer ────────────────────────────────────────────────────
