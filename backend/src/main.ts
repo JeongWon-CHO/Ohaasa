@@ -8,6 +8,8 @@ import { createAdminClient } from "./db/supabase";
 import { sendNotifications } from "./notifications/sender";
 import { pollReceipts } from "./notifications/receipt-poller";
 import { translateAdvice } from "./translator/translate";
+import { fetchHtml as fetchGogoHtml } from "./gogo/fetcher";
+import { parse as parseGogo, type GogoEntry } from "./gogo/parser";
 
 // ============================================================
 // Types
@@ -16,7 +18,13 @@ import { translateAdvice } from "./translator/translate";
 type SupabaseClient = ReturnType<typeof createAdminClient>;
 
 interface HoroscopeUpsertRow extends HoroscopeEntry {
-  advice_ko: string | null;
+  advice_ko:    string | null;
+  lucky_color:  string | null;
+  lucky_item:   string | null;
+  money_score:  number | null;
+  love_score:   number | null;
+  work_score:   number | null;
+  health_score: number | null;
 }
 
 // ============================================================
@@ -27,7 +35,7 @@ interface HoroscopeUpsertRow extends HoroscopeEntry {
  * DB에서 기존 번역을 조회해 재번역 방지 로직을 적용한 후 각 entry에
  * advice_ko를 붙여 반환한다.
  *
- * 재번역 skip 조건 (둘 다 만족해야 함):
+ * 재번역 skip 조건 (모두 만족해야 함):
  *   1. 동일 (date, zodiac_sign) row가 이미 존재
  *   2. 기존 advice === 새 advice (원문이 바뀌지 않음)
  *   3. 기존 advice_ko IS NOT NULL (이미 번역 완료)
@@ -40,7 +48,6 @@ async function attachTranslations(
 ): Promise<HoroscopeUpsertRow[]> {
   const date = entries[0].date;
 
-  // 오늘 날짜의 기존 row 조회
   const { data: existingRows, error: queryError } = await supabase
     .from("horoscopes")
     .select("zodiac_sign, advice, advice_ko")
@@ -68,7 +75,16 @@ async function attachTranslations(
 
     if (canSkip) {
       console.log(`[translator] ${entry.zodiac_sign}: skip (same advice, already translated)`);
-      results.push({ ...entry, advice_ko: existing.advice_ko });
+      results.push({
+        ...entry,
+        advice_ko:    existing.advice_ko,
+        lucky_color:  null,
+        lucky_item:   null,
+        money_score:  null,
+        love_score:   null,
+        work_score:   null,
+        health_score: null,
+      });
       continue;
     }
 
@@ -81,10 +97,104 @@ async function attachTranslations(
     if (advice_ko === null) {
       console.warn(`[translator] ${entry.zodiac_sign}: translation failed, advice_ko=null`);
     }
-    results.push({ ...entry, advice_ko });
+    results.push({
+      ...entry,
+      advice_ko,
+      lucky_color:  null,
+      lucky_item:   null,
+      money_score:  null,
+      love_score:   null,
+      work_score:   null,
+      health_score: null,
+    });
   }
 
   return results;
+}
+
+// ============================================================
+// Gogo step
+// ============================================================
+
+/**
+ * 고고별자리 HTML을 fetch/parse하고 ohaasa 날짜와 일치하는 경우에만 entries를 반환한다.
+ * 실패 또는 날짜 불일치 시 null을 반환하며, 파이프라인을 중단하지 않는다.
+ */
+async function fetchGogoEntries(ohaasaDate: string): Promise<GogoEntry[] | null> {
+  try {
+    const html   = await fetchGogoHtml();
+    const result = parseGogo(html);
+
+    if (result.date !== ohaasaDate) {
+      console.warn(
+        `[gogo] Date mismatch: gogo=${result.date}, ohaasa=${ohaasaDate}.` +
+        ` Skipping gogo merge.`
+      );
+      return null;
+    }
+
+    console.log(`[gogo] Parsed ${result.entries.length} entries  date=${result.date}`);
+    return result.entries;
+  } catch (err) {
+    console.warn(
+      `[gogo] Failed: ${err instanceof Error ? err.message : String(err)}.` +
+      ` gogo fields will be null.`
+    );
+    return null;
+  }
+}
+
+/**
+ * 번역이 붙은 ohaasa rows에 gogo 필드를 병합한다.
+ * gogoEntries가 null이거나 해당 zodiac_sign이 없으면 gogo 필드는 null로 채운다.
+ */
+function mergeGogo(
+  rows: HoroscopeUpsertRow[],
+  gogoEntries: GogoEntry[] | null
+): HoroscopeUpsertRow[] {
+  const gogoMap = gogoEntries
+    ? new Map(gogoEntries.map((e) => [e.zodiac_sign, e]))
+    : null;
+
+  return rows.map((row) => {
+    const gogo = gogoMap?.get(row.zodiac_sign) ?? null;
+    return {
+      ...row,
+      lucky_color:  gogo?.lucky_color  ?? null,
+      lucky_item:   gogo?.lucky_item   ?? null,
+      money_score:  gogo?.money_score  ?? null,
+      love_score:   gogo?.love_score   ?? null,
+      work_score:   gogo?.work_score   ?? null,
+      health_score: gogo?.health_score ?? null,
+    };
+  });
+}
+
+/**
+ * dry-run 전용: ohaasa rank 순서로 gogo merge 결과를 출력한다.
+ */
+function printGogoPreview(
+  sorted: HoroscopeEntry[],
+  gogoEntries: GogoEntry[] | null
+): void {
+  console.log("[crawl] dry-run gogo merge preview:");
+  const gogoMap = gogoEntries
+    ? new Map(gogoEntries.map((e) => [e.zodiac_sign, e]))
+    : null;
+
+  for (const e of sorted) {
+    const g = gogoMap?.get(e.zodiac_sign);
+    if (g) {
+      console.log(
+        `  ${e.zodiac_sign.padEnd(12)}` +
+        `  color=${g.lucky_color}  item=${g.lucky_item}` +
+        `  money=${g.money_score} love=${g.love_score}` +
+        `  work=${g.work_score} health=${g.health_score}`
+      );
+    } else {
+      console.log(`  ${e.zodiac_sign.padEnd(12)}  (gogo: null)`);
+    }
+  }
 }
 
 // ============================================================
@@ -95,6 +205,7 @@ async function crawlAndSave(
   supabase: SupabaseClient,
   isDryRun: boolean
 ): Promise<void> {
+  // ── Step 1: ohaasa fetch + parse ────────────────────────────
   const data    = await fetchJson();
   const entries = parse(data);
 
@@ -118,14 +229,23 @@ async function crawlAndSave(
     );
   }
 
+  // ── Step 2: gogo fetch + parse (best-effort, dry-run 포함) ──
+  const gogoEntries = await fetchGogoEntries(date);
+
   if (isDryRun) {
+    printGogoPreview(sorted, gogoEntries);
     console.log("[crawl] dry-run: translation and upsert skipped");
     return;
   }
 
-  // Translation step — 실패해도 파이프라인은 계속 진행 (advice_ko=null로 upsert)
-  const rows = await attachTranslations(supabase, entries);
+  // ── Step 3: translation ─────────────────────────────────────
+  // 실패해도 파이프라인은 계속 진행 (advice_ko=null로 upsert)
+  const translatedRows = await attachTranslations(supabase, entries);
 
+  // ── Step 4: gogo merge ──────────────────────────────────────
+  const rows = mergeGogo(translatedRows, gogoEntries);
+
+  // ── Step 5: upsert ──────────────────────────────────────────
   const { error } = await supabase
     .from("horoscopes")
     .upsert(rows, { onConflict: "date,zodiac_sign" });
@@ -134,9 +254,11 @@ async function crawlAndSave(
     throw new Error(`[upsert] ${error.message}`);
   }
 
-  const translated = rows.filter((r) => r.advice_ko !== null).length;
+  const translated = rows.filter((r) => r.advice_ko    !== null).length;
+  const withGogo   = rows.filter((r) => r.lucky_color  !== null).length;
   console.log(
-    `[main] ✓ Upserted ${rows.length} rows  date=${date}  translated=${translated}/${rows.length}`
+    `[main] ✓ Upserted ${rows.length} rows  date=${date}` +
+    `  translated=${translated}/${rows.length}  gogo=${withGogo}/${rows.length}`
   );
 }
 
@@ -179,7 +301,7 @@ async function main(): Promise<void> {
   // Step 2: Send notifications
   // ----------------------------------------------------------
   let notifyFailed = false;
-  let receiptIds:      string[]           = [];
+  let receiptIds:      string[]               = [];
   let receiptTokenMap: Record<string, string> = {};
 
   try {
