@@ -40,15 +40,42 @@ function getModel(): string {
 }
 
 // ============================================================
+// Validation
+// ============================================================
+
+/**
+ * 번역 결과에 히라가나·가타카나·CJK 한자가 포함되어 있으면 true를 반환한다.
+ * - 히라가나 ぀-ゟ / 가타카나 ゠-ヿ
+ * - CJK 한자  㐀-䶿, 一-鿿
+ */
+export function containsJapanese(text: string): boolean {
+  return /[぀-ヿ㐀-䶿一-鿿]/.test(text);
+}
+
+/** containsJapanese(text) 가 true일 때 매칭된 문자들을 반환한다. */
+function extractJapaneseChars(text: string): string {
+  const matches = text.match(/[぀-ヿ㐀-䶿一-鿿]+/g);
+  return matches ? matches.join("") : "";
+}
+
+// ============================================================
 // Public API
 // ============================================================
 
 /**
  * 일본어 운세 문장을 한국어로 번역한다.
+ * 번역 결과에 일본어/한자가 남아 있으면 1회 재번역한다.
+ * 재번역 후에도 오염이 남으면 warning 로그를 남기고 retried 결과를 반환한다.
  * 실패하거나 OPENAI_API_KEY가 없으면 null을 반환한다.
  * 파이프라인을 중단하는 예외는 throw하지 않는다.
+ *
+ * @param adviceJa  번역할 일본어 원문
+ * @param label     로그 식별자 (zodiac_sign 등). 생략 시 "unknown"
  */
-export async function translateAdvice(adviceJa: string): Promise<string | null> {
+export async function translateAdvice(
+  adviceJa: string,
+  label = "unknown",
+): Promise<string | null> {
   const client = getClient();
 
   if (!client) {
@@ -57,6 +84,8 @@ export async function translateAdvice(adviceJa: string): Promise<string | null> 
 
   const model = getModel();
 
+  // ── 1차 번역 ─────────────────────────────────────────────────
+  let translated: string | null;
   try {
     const response = await client.chat.completions.create({
       model,
@@ -73,14 +102,65 @@ export async function translateAdvice(adviceJa: string): Promise<string | null> 
 
     const text = response.choices[0]?.message?.content?.trim() ?? "";
     if (!text) {
-      console.warn("[translator] GPT returned empty response");
+      console.warn(`[translator] ${label}: GPT returned empty response`);
       return null;
     }
-    return text;
+    translated = text;
   } catch (err) {
     console.warn(
-      `[translator] GPT call failed: ${err instanceof Error ? err.message : String(err)}`
+      `[translator] ${label}: GPT call failed: ${err instanceof Error ? err.message : String(err)}`
     );
     return null;
   }
+
+  // 1차 결과 검증 — 이상 없으면 바로 반환
+  if (!containsJapanese(translated)) {
+    return translated;
+  }
+
+  // ── 재번역 (1회) ──────────────────────────────────────────────
+  console.warn(
+    `[translator] ${label}: Japanese characters detected, retrying — "${extractJapaneseChars(translated)}"`
+  );
+
+  let retried: string | null;
+  try {
+    const response = await client.chat.completions.create({
+      model,
+      temperature: 0,
+      max_tokens: 300,
+      messages: [
+        { role: "system", content: SYSTEM_PROMPT },
+        {
+          role: "user",
+          content:
+            `이전 번역에 일본어/한자 문자가 남아 있습니다. ` +
+            `모든 한자·일본어 표현을 한국어 한글 표현으로 바꿔 다시 번역하세요.\n\n` +
+            `원문:\n${adviceJa}\n\n` +
+            `이전 번역 (수정 필요):\n${translated}`,
+        },
+      ],
+    });
+
+    const text = response.choices[0]?.message?.content?.trim() ?? "";
+    if (!text) {
+      console.warn(`[translator] ${label}: retry GPT returned empty response`);
+      return translated; // 원래 결과라도 반환
+    }
+    retried = text;
+  } catch (err) {
+    console.warn(
+      `[translator] ${label}: retry GPT call failed: ${err instanceof Error ? err.message : String(err)}`
+    );
+    return translated; // 원래 결과라도 반환
+  }
+
+  // 재번역 결과 검증
+  if (containsJapanese(retried)) {
+    console.warn(
+      `[translator] ${label}: non-Korean characters remained after retry — "${extractJapaneseChars(retried)}"`
+    );
+  }
+
+  return retried;
 }
