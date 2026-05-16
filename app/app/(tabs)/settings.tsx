@@ -208,10 +208,17 @@ export default function SettingsScreen() {
         {/* ABOUT */}
         <SettingsSection label="ABOUT" style={styles.aboutSection}>
           <SettingsRow
-            title="데이터 소스"
-            description="일본 TV 아침 별자리 운세"
+            title="오하아사 별자리"
+            description="평일 메인 운세"
             showChevron
             onPress={() => Linking.openURL('https://www.asahi.co.jp/ohaasa/week/horoscope/')}
+            style={[styles.aboutRow, styles.rowBorder]}
+          />
+          <SettingsRow
+            title="고고별자리"
+            description="주말 운세 · 행운 색상/아이템 보강"
+            showChevron
+            onPress={() => Linking.openURL('https://www.tv-asahi.co.jp/goodmorning/uranai/')}
             style={[styles.aboutRow, styles.rowBorder]}
           />
           <SettingsRow
