@@ -6,13 +6,15 @@ import type { AnyNode } from "domhandler";
 // ============================================================
 
 export interface GogoEntry {
-  zodiac_sign:   string;
-  lucky_color:   string;
-  lucky_item:    string;
-  money_score:   number; // 1-5
-  love_score:    number; // 1-5
-  work_score:    number; // 1-5
-  health_score:  number; // 1-5
+  zodiac_sign:  string;
+  rank:         number; // 1-12
+  advice:       string;
+  lucky_color:  string;
+  lucky_item:   string;
+  money_score:  number; // 1-6
+  love_score:   number; // 1-6
+  work_score:   number; // 1-6
+  health_score: number; // 1-6
 }
 
 export interface GogoParseResult {
@@ -42,6 +44,29 @@ const GOGO_ID_MAP: Record<string, string> = {
 // ============================================================
 // Internal helpers
 // ============================================================
+
+/**
+ * .rank-area .rank-box の <li> リストから gogoId → rank 番号 の Map を返す。
+ * rank-N.png の N を抽出する。
+ */
+function parseRankMap($: cheerio.CheerioAPI): Map<string, number> {
+  const rankMap = new Map<string, number>();
+  $(".rank-area .rank-box li").each((_i, el) => {
+    const a      = $(el).find("a[data-label]");
+    const gogoId = a.attr("data-label");
+    const src    = a.find("img.rank").attr("src") ?? "";
+    const m      = src.match(/rank-(\d+)/);
+    if (gogoId && m) {
+      rankMap.set(gogoId, Number(m[1]));
+    }
+  });
+  if (rankMap.size !== 12) {
+    throw new Error(
+      `[gogo-parser] Expected 12 entries in rank-box, got ${rankMap.size}`
+    );
+  }
+  return rankMap;
+}
 
 /**
  * .rank-area .ttl-area 텍스트 ("5月15日（Fri）の占い") 에서
@@ -74,7 +99,7 @@ function extractSpanSuffix(html: string, cls: string, label: string): string {
 }
 
 /**
- * .number-one-box 내 특정 카테고리의 아이콘 개수(1-5)를 반환한다.
+ * .number-one-box 내 특정 카테고리의 아이콘 개수(1-6)를 반환한다.
  * 개수가 범위를 벗어나면 에러를 던진다.
  */
 function countIcons(
@@ -83,9 +108,9 @@ function countIcons(
   gogoId: string,
 ): number {
   const n = box.find(`.lucky-${category} .lucky-box img.icon-${category}`).length;
-  if (n < 1 || n > 5) {
+  if (n < 1 || n > 6) {
     throw new Error(
-      `[gogo-parser] Invalid ${category} score for #${gogoId}: ${n} (expected 1-5)`
+      `[gogo-parser] Invalid ${category} score for #${gogoId}: ${n} (expected 1-6)`
     );
   }
   return n;
@@ -106,13 +131,24 @@ function countIcons(
 export function parse(html: string, referenceYear = new Date().getFullYear()): GogoParseResult {
   const $ = cheerio.load(html);
 
-  const date = parsePageDate($, referenceYear);
+  const date    = parsePageDate($, referenceYear);
+  const rankMap = parseRankMap($);
   const entries: GogoEntry[] = [];
 
   for (const [gogoId, zodiacSign] of Object.entries(GOGO_ID_MAP)) {
     const seizaBox = $(`#${gogoId}`);
     if (!seizaBox.length) {
       throw new Error(`[gogo-parser] Missing seiza-box: #${gogoId}`);
+    }
+
+    const rank = rankMap.get(gogoId);
+    if (rank === undefined) {
+      throw new Error(`[gogo-parser] No rank found for #${gogoId}`);
+    }
+
+    const advice = seizaBox.find(".read-area p.read").text().trim();
+    if (!advice) {
+      throw new Error(`[gogo-parser] Missing advice in #${gogoId}`);
     }
 
     const readAreaHtml = seizaBox.find(".read-area").html();
@@ -130,6 +166,8 @@ export function parse(html: string, referenceYear = new Date().getFullYear()): G
 
     entries.push({
       zodiac_sign:  zodiacSign,
+      rank,
+      advice,
       lucky_color,
       lucky_item,
       money_score:  countIcons(box, "money",  gogoId),

@@ -18,9 +18,7 @@ import Svg, {
 
 import { ConstellationBadge } from "@/src/components/final/ConstellationBadge";
 import { DatePill } from "@/src/components/final/DatePill";
-// 행운 아이템·오늘의 운 카드에서 사용. 오하아사에는 해당 필드가 없어 주석 처리.
-// 추후 고고별자리 연동 Phase에서 복구 예정.
-// import { FinalCard } from "@/src/components/final/FinalCard";
+import { FinalCard } from "@/src/components/final/FinalCard";
 import { FinalHeader } from "@/src/components/final/FinalHeader";
 import { HoroscopeCard } from "@/src/components/HoroscopeCard";
 import { colors, gradients } from "@/src/constants/design";
@@ -142,6 +140,15 @@ export default function TodayScreen() {
     ? (horoscopes.find((h) => h.zodiac_sign === zodiacSign) ?? null)
     : null;
 
+  const hasGogoData =
+    horoscope !== null &&
+    (horoscope.lucky_color  !== null ||
+     horoscope.lucky_item   !== null ||
+     horoscope.money_score  !== null ||
+     horoscope.love_score   !== null ||
+     horoscope.work_score   !== null ||
+     horoscope.health_score !== null);
+
   return (
     <LinearGradient colors={gradients.screen} style={styles.fill}>
       {/* FinalMainRevised background decorations */}
@@ -230,27 +237,24 @@ export default function TodayScreen() {
             {/* Fortune card */}
             <HoroscopeCard advice={horoscope.advice_ko ?? horoscope.advice} style={styles.fortuneCard} />
 
-            {/* 행운 아이템 카드 — 오하아사에는 해당 필드가 없어 주석 처리.
-                추후 고고별자리 연동 Phase에서 복구 예정.
-            <View style={styles.infoGrid}>
-              <FinalCard style={styles.gridCard}>
-                <Text style={styles.gridHeader}>행운 아이템</Text>
-                <LuckyRow label="컬러"   value={horoscope.luckyColor} />
-                <LuckyRow label="아이템" value={horoscope.luckyItem} />
-                <LuckyRow label="숫자"   value={String(horoscope.luckyNumber)} />
-              </FinalCard>
+            {/* 고고별자리 행운 정보 — 하나라도 유효한 값이 있을 때만 렌더링 */}
+            {hasGogoData && (
+              <View style={styles.infoGrid}>
+                <FinalCard style={styles.gridCard}>
+                  <Text style={styles.gridHeader}>행운 아이템</Text>
+                  <LuckyRow label="컬러"   value={horoscope.lucky_color_ko ?? horoscope.lucky_color} />
+                  <LuckyRow label="아이템" value={horoscope.lucky_item_ko  ?? horoscope.lucky_item} />
+                </FinalCard>
 
-              오늘의 운 별점 카드 — 오하아사에는 해당 필드가 없어 주석 처리.
-              추후 고고별자리 연동 Phase에서 복구 예정.
-              <FinalCard style={styles.gridCard}>
-                <Text style={styles.gridHeader}>오늘의 운 ✦</Text>
-                <StarRow label="연애" value={horoscope.love} />
-                <StarRow label="직장" value={horoscope.work} />
-                <StarRow label="금운" value={horoscope.money} />
-                <StarRow label="건강" value={horoscope.mood} />
-              </FinalCard>
-            </View>
-            */}
+                <FinalCard style={styles.gridCard}>
+                  <Text style={styles.gridHeader}>오늘의 운 ✦</Text>
+                  <StarRow label="연애" value={horoscope.love_score} />
+                  <StarRow label="직장" value={horoscope.work_score} />
+                  <StarRow label="금운" value={horoscope.money_score} />
+                  <StarRow label="건강" value={horoscope.health_score} />
+                </FinalCard>
+              </View>
+            )}
           </>
         ) : (
           <View style={styles.emptyWrap}>
@@ -266,11 +270,11 @@ export default function TodayScreen() {
   );
 }
 
-// ─── Helper row components (주석 처리된 카드에서 사용 예정) ──────────────────────
-// 오하아사에는 luckyColor·luckyItem·luckyNumber·love·work·money·mood 필드가 없어
-// 아래 컴포넌트들도 현재 미사용. 추후 고고별자리 연동 Phase에서 복구 예정.
+// ─── Helper row components ────────────────────────────────────
+// value가 null이면 해당 줄을 렌더링하지 않는다.
 
-function LuckyRow({ label, value }: { label: string; value: string }) {
+function LuckyRow({ label, value }: { label: string; value: string | null }) {
+  if (value === null) return null;
   return (
     <View style={styles.luckyRow}>
       <Text style={styles.rowLabel}>{label}</Text>
@@ -279,7 +283,8 @@ function LuckyRow({ label, value }: { label: string; value: string }) {
   );
 }
 
-function StarRow({ label, value }: { label: string; value: number }) {
+function StarRow({ label, value }: { label: string; value: number | null }) {
+  if (value === null) return null;
   return (
     <View style={styles.starRow}>
       <Text style={[styles.rowLabel, styles.starLabel]}>{label}</Text>
