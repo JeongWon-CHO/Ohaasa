@@ -7,6 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ConstellationBadge } from '@/src/components/final/ConstellationBadge';
 import { DatePill } from '@/src/components/final/DatePill';
+import { GogoInfoGrid } from '@/src/components/final/GogoInfoGrid';
 import { HoroscopeCard } from '@/src/components/HoroscopeCard';
 import { colors, gradients } from '@/src/constants/design';
 import { ZODIAC_MAP, type ZodiacSign } from '@/src/constants/zodiac';
@@ -190,6 +191,9 @@ export default function ZodiacDetailScreen() {
               advice={horoscope.advice_ko ?? horoscope.advice}
               style={styles.fortuneCard}
             />
+
+            {/* 고고별자리 행운 아이템 · 오늘의 운 */}
+            <GogoInfoGrid horoscope={horoscope} style={styles.infoGrid} />
           </>
         )}
 
@@ -304,6 +308,12 @@ const styles = StyleSheet.create({
   // ── Fortune card ─────────────────────────────────────────────
   fortuneCard: {
     marginTop: 22,
+    marginHorizontal: 24,
+  },
+
+  // ── 고고별자리 행운 아이템 · 오늘의 운 ────────────────────────────
+  infoGrid: {
+    marginTop: 12,
     marginHorizontal: 24,
   },
 

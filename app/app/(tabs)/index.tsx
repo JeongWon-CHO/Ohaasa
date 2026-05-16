@@ -6,7 +6,6 @@ import {
   View,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
-import FontAwesome from "@expo/vector-icons/FontAwesome";
 import Svg, {
   Circle,
   Defs,
@@ -18,8 +17,8 @@ import Svg, {
 
 import { ConstellationBadge } from "@/src/components/final/ConstellationBadge";
 import { DatePill } from "@/src/components/final/DatePill";
-import { FinalCard } from "@/src/components/final/FinalCard";
 import { FinalHeader } from "@/src/components/final/FinalHeader";
+import { GogoInfoGrid } from "@/src/components/final/GogoInfoGrid";
 import { HoroscopeCard } from "@/src/components/HoroscopeCard";
 import { colors, gradients } from "@/src/constants/design";
 import { ZODIAC_MAP, type ZodiacSign } from "@/src/constants/zodiac";
@@ -125,7 +124,11 @@ function MoonDeco({ x, y, size, color, opacity }: DecoProps) {
 // ─── Main screen ─────────────────────────────────────────────
 
 export default function TodayScreen() {
-  const { zodiacSign, loading: zodiacLoading, error: zodiacError } = useZodiac();
+  const {
+    zodiacSign,
+    loading: zodiacLoading,
+    error: zodiacError,
+  } = useZodiac();
   const {
     horoscopes,
     broadcastDate,
@@ -140,25 +143,40 @@ export default function TodayScreen() {
     ? (horoscopes.find((h) => h.zodiac_sign === zodiacSign) ?? null)
     : null;
 
-  const hasGogoData =
-    horoscope !== null &&
-    (horoscope.lucky_color  !== null ||
-     horoscope.lucky_item   !== null ||
-     horoscope.money_score  !== null ||
-     horoscope.love_score   !== null ||
-     horoscope.work_score   !== null ||
-     horoscope.health_score !== null);
-
   return (
     <LinearGradient colors={gradients.screen} style={styles.fill}>
       {/* FinalMainRevised background decorations */}
       <CircleDeco x={-50} y={50} size={170} color={colors.sky} opacity={0.11} />
-      <CircleDeco x={230} y={-30} size={160} color={colors.yellow} opacity={0.1} />
-      <CircleDeco x={200} y={590} size={160} color={colors.apricot} opacity={0.1} />
+      <CircleDeco
+        x={230}
+        y={-30}
+        size={160}
+        color={colors.yellow}
+        opacity={0.1}
+      />
+      <CircleDeco
+        x={200}
+        y={590}
+        size={160}
+        color={colors.apricot}
+        opacity={0.1}
+      />
       <StarDeco x={46} y={128} size={5} color={colors.yellow} opacity={0.26} />
-      <StarDeco x={294} y={108} size={4} color={colors.apricot} opacity={0.22} />
+      <StarDeco
+        x={294}
+        y={108}
+        size={4}
+        color={colors.apricot}
+        opacity={0.22}
+      />
       <StarDeco x={28} y={440} size={3} color={colors.yellow} opacity={0.18} />
-      <MoonDeco x={286} y={174} size={22} color={colors.apricot} opacity={0.18} />
+      <MoonDeco
+        x={286}
+        y={174}
+        size={22}
+        color={colors.apricot}
+        opacity={0.18}
+      />
 
       <ScrollView
         contentContainerStyle={styles.content}
@@ -211,13 +229,30 @@ export default function TodayScreen() {
                       cy="50%"
                       r="50%"
                     >
-                      <Stop offset="0%" stopColor="#F0B89A" stopOpacity={0.58} />
-                      <Stop offset="45%" stopColor="#F5D98B" stopOpacity={0.3} />
-                      <Stop offset="80%" stopColor="#FAF6F0" stopOpacity={0.12} />
+                      <Stop
+                        offset="0%"
+                        stopColor="#F0B89A"
+                        stopOpacity={0.58}
+                      />
+                      <Stop
+                        offset="45%"
+                        stopColor="#F5D98B"
+                        stopOpacity={0.3}
+                      />
+                      <Stop
+                        offset="80%"
+                        stopColor="#FAF6F0"
+                        stopOpacity={0.12}
+                      />
                       <Stop offset="100%" stopColor="#FAF6F0" stopOpacity={0} />
                     </RadialGradient>
                   </Defs>
-                  <Circle cx={84} cy={84} r={84} fill="url(#todayCircleGlowGradient)" />
+                  <Circle
+                    cx={84}
+                    cy={84}
+                    r={84}
+                    fill="url(#todayCircleGlowGradient)"
+                  />
                 </Svg>
                 <View style={styles.circleDash} />
                 <View style={styles.circleBadge}>
@@ -235,26 +270,12 @@ export default function TodayScreen() {
             </View>
 
             {/* Fortune card */}
-            <HoroscopeCard advice={horoscope.advice_ko ?? horoscope.advice} style={styles.fortuneCard} />
+            <HoroscopeCard
+              advice={horoscope.advice_ko ?? horoscope.advice}
+              style={styles.fortuneCard}
+            />
 
-            {/* 고고별자리 행운 정보 — 하나라도 유효한 값이 있을 때만 렌더링 */}
-            {hasGogoData && (
-              <View style={styles.infoGrid}>
-                <FinalCard style={styles.gridCard}>
-                  <Text style={styles.gridHeader}>행운 아이템</Text>
-                  <LuckyRow label="컬러"   value={horoscope.lucky_color_ko ?? horoscope.lucky_color} />
-                  <LuckyRow label="아이템" value={horoscope.lucky_item_ko  ?? horoscope.lucky_item} />
-                </FinalCard>
-
-                <FinalCard style={styles.gridCard}>
-                  <Text style={styles.gridHeader}>오늘의 운 ✦</Text>
-                  <StarRow label="연애" value={horoscope.love_score} />
-                  <StarRow label="직장" value={horoscope.work_score} />
-                  <StarRow label="금운" value={horoscope.money_score} />
-                  <StarRow label="건강" value={horoscope.health_score} />
-                </FinalCard>
-              </View>
-            )}
+            <GogoInfoGrid horoscope={horoscope} style={styles.infoGrid} />
           </>
         ) : (
           <View style={styles.emptyWrap}>
@@ -267,38 +288,6 @@ export default function TodayScreen() {
         <View style={styles.spacer} />
       </ScrollView>
     </LinearGradient>
-  );
-}
-
-// ─── Helper row components ────────────────────────────────────
-// value가 null이면 해당 줄을 렌더링하지 않는다.
-
-function LuckyRow({ label, value }: { label: string; value: string | null }) {
-  if (value === null) return null;
-  return (
-    <View style={styles.luckyRow}>
-      <Text style={styles.rowLabel}>{label}</Text>
-      <Text style={styles.rowValue}>{value}</Text>
-    </View>
-  );
-}
-
-function StarRow({ label, value }: { label: string; value: number | null }) {
-  if (value === null) return null;
-  return (
-    <View style={styles.starRow}>
-      <Text style={[styles.rowLabel, styles.starLabel]}>{label}</Text>
-      <View style={styles.stars}>
-        {Array.from({ length: 5 }).map((_, i) => (
-          <FontAwesome
-            key={i}
-            name="star"
-            size={12}
-            color={i < value ? colors.yellow : colors.cream3}
-          />
-        ))}
-      </View>
-    </View>
   );
 }
 
