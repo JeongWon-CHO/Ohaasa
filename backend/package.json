@@ -5,11 +5,13 @@
   "scripts": {
     "crawl": "tsx src/main.ts",
     "crawl:dry": "tsx src/main.ts --dry-run",
+    "crawl:save": "tsx src/main.ts --no-notify",
     "test": "vitest run",
     "test:watch": "vitest"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.0.0",
+    "cheerio": "^1.2.0",
     "dotenv": "^16.0.0",
     "expo-server-sdk": "^6.1.0",
     "openai": "^6.35.0"

@@ -6,7 +6,6 @@ import {
   View,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
-import FontAwesome from "@expo/vector-icons/FontAwesome";
 import Svg, {
   Circle,
   Defs,
@@ -18,10 +17,8 @@ import Svg, {
 
 import { ConstellationBadge } from "@/src/components/final/ConstellationBadge";
 import { DatePill } from "@/src/components/final/DatePill";
-// 행운 아이템·오늘의 운 카드에서 사용. 오하아사에는 해당 필드가 없어 주석 처리.
-// 추후 고고별자리 연동 Phase에서 복구 예정.
-// import { FinalCard } from "@/src/components/final/FinalCard";
 import { FinalHeader } from "@/src/components/final/FinalHeader";
+import { GogoInfoGrid } from "@/src/components/final/GogoInfoGrid";
 import { HoroscopeCard } from "@/src/components/HoroscopeCard";
 import { colors, gradients } from "@/src/constants/design";
 import { ZODIAC_MAP, type ZodiacSign } from "@/src/constants/zodiac";
@@ -127,7 +124,11 @@ function MoonDeco({ x, y, size, color, opacity }: DecoProps) {
 // ─── Main screen ─────────────────────────────────────────────
 
 export default function TodayScreen() {
-  const { zodiacSign, loading: zodiacLoading, error: zodiacError } = useZodiac();
+  const {
+    zodiacSign,
+    loading: zodiacLoading,
+    error: zodiacError,
+  } = useZodiac();
   const {
     horoscopes,
     broadcastDate,
@@ -146,12 +147,36 @@ export default function TodayScreen() {
     <LinearGradient colors={gradients.screen} style={styles.fill}>
       {/* FinalMainRevised background decorations */}
       <CircleDeco x={-50} y={50} size={170} color={colors.sky} opacity={0.11} />
-      <CircleDeco x={230} y={-30} size={160} color={colors.yellow} opacity={0.1} />
-      <CircleDeco x={200} y={590} size={160} color={colors.apricot} opacity={0.1} />
+      <CircleDeco
+        x={230}
+        y={-30}
+        size={160}
+        color={colors.yellow}
+        opacity={0.1}
+      />
+      <CircleDeco
+        x={200}
+        y={590}
+        size={160}
+        color={colors.apricot}
+        opacity={0.1}
+      />
       <StarDeco x={46} y={128} size={5} color={colors.yellow} opacity={0.26} />
-      <StarDeco x={294} y={108} size={4} color={colors.apricot} opacity={0.22} />
+      <StarDeco
+        x={294}
+        y={108}
+        size={4}
+        color={colors.apricot}
+        opacity={0.22}
+      />
       <StarDeco x={28} y={440} size={3} color={colors.yellow} opacity={0.18} />
-      <MoonDeco x={286} y={174} size={22} color={colors.apricot} opacity={0.18} />
+      <MoonDeco
+        x={286}
+        y={174}
+        size={22}
+        color={colors.apricot}
+        opacity={0.18}
+      />
 
       <ScrollView
         contentContainerStyle={styles.content}
@@ -204,13 +229,30 @@ export default function TodayScreen() {
                       cy="50%"
                       r="50%"
                     >
-                      <Stop offset="0%" stopColor="#F0B89A" stopOpacity={0.58} />
-                      <Stop offset="45%" stopColor="#F5D98B" stopOpacity={0.3} />
-                      <Stop offset="80%" stopColor="#FAF6F0" stopOpacity={0.12} />
+                      <Stop
+                        offset="0%"
+                        stopColor="#F0B89A"
+                        stopOpacity={0.58}
+                      />
+                      <Stop
+                        offset="45%"
+                        stopColor="#F5D98B"
+                        stopOpacity={0.3}
+                      />
+                      <Stop
+                        offset="80%"
+                        stopColor="#FAF6F0"
+                        stopOpacity={0.12}
+                      />
                       <Stop offset="100%" stopColor="#FAF6F0" stopOpacity={0} />
                     </RadialGradient>
                   </Defs>
-                  <Circle cx={84} cy={84} r={84} fill="url(#todayCircleGlowGradient)" />
+                  <Circle
+                    cx={84}
+                    cy={84}
+                    r={84}
+                    fill="url(#todayCircleGlowGradient)"
+                  />
                 </Svg>
                 <View style={styles.circleDash} />
                 <View style={styles.circleBadge}>
@@ -228,29 +270,12 @@ export default function TodayScreen() {
             </View>
 
             {/* Fortune card */}
-            <HoroscopeCard advice={horoscope.advice_ko ?? horoscope.advice} style={styles.fortuneCard} />
+            <HoroscopeCard
+              advice={horoscope.advice_ko ?? horoscope.advice}
+              style={styles.fortuneCard}
+            />
 
-            {/* 행운 아이템 카드 — 오하아사에는 해당 필드가 없어 주석 처리.
-                추후 고고별자리 연동 Phase에서 복구 예정.
-            <View style={styles.infoGrid}>
-              <FinalCard style={styles.gridCard}>
-                <Text style={styles.gridHeader}>행운 아이템</Text>
-                <LuckyRow label="컬러"   value={horoscope.luckyColor} />
-                <LuckyRow label="아이템" value={horoscope.luckyItem} />
-                <LuckyRow label="숫자"   value={String(horoscope.luckyNumber)} />
-              </FinalCard>
-
-              오늘의 운 별점 카드 — 오하아사에는 해당 필드가 없어 주석 처리.
-              추후 고고별자리 연동 Phase에서 복구 예정.
-              <FinalCard style={styles.gridCard}>
-                <Text style={styles.gridHeader}>오늘의 운 ✦</Text>
-                <StarRow label="연애" value={horoscope.love} />
-                <StarRow label="직장" value={horoscope.work} />
-                <StarRow label="금운" value={horoscope.money} />
-                <StarRow label="건강" value={horoscope.mood} />
-              </FinalCard>
-            </View>
-            */}
+            <GogoInfoGrid horoscope={horoscope} style={styles.infoGrid} />
           </>
         ) : (
           <View style={styles.emptyWrap}>
@@ -263,37 +288,6 @@ export default function TodayScreen() {
         <View style={styles.spacer} />
       </ScrollView>
     </LinearGradient>
-  );
-}
-
-// ─── Helper row components (주석 처리된 카드에서 사용 예정) ──────────────────────
-// 오하아사에는 luckyColor·luckyItem·luckyNumber·love·work·money·mood 필드가 없어
-// 아래 컴포넌트들도 현재 미사용. 추후 고고별자리 연동 Phase에서 복구 예정.
-
-function LuckyRow({ label, value }: { label: string; value: string }) {
-  return (
-    <View style={styles.luckyRow}>
-      <Text style={styles.rowLabel}>{label}</Text>
-      <Text style={styles.rowValue}>{value}</Text>
-    </View>
-  );
-}
-
-function StarRow({ label, value }: { label: string; value: number }) {
-  return (
-    <View style={styles.starRow}>
-      <Text style={[styles.rowLabel, styles.starLabel]}>{label}</Text>
-      <View style={styles.stars}>
-        {Array.from({ length: 5 }).map((_, i) => (
-          <FontAwesome
-            key={i}
-            name="star"
-            size={12}
-            color={i < value ? colors.yellow : colors.cream3}
-          />
-        ))}
-      </View>
-    </View>
   );
 }
 
