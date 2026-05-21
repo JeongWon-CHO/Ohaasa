@@ -10,6 +10,11 @@ import 'react-native-reanimated';
 import { useColorScheme } from '@/components/useColorScheme';
 import { setupForegroundHandler } from '@/src/lib/notifications';
 
+const AppLightTheme = {
+  ...DefaultTheme,
+  colors: { ...DefaultTheme.colors, background: '#FAF6F0' },
+};
+
 export {
   // Catch any errors thrown by the Layout component.
   ErrorBoundary,
@@ -56,7 +61,7 @@ function RootLayoutNav() {
   }, []);
 
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : AppLightTheme}>
       <StatusBar style="dark" />
       <Stack>
         <Stack.Screen name="index" options={{ headerShown: false }} />
