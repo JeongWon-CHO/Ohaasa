@@ -5,16 +5,17 @@ import type { Horoscope } from '@/src/types/horoscope';
 
 export interface AllHoroscopesState {
   horoscopes: Horoscope[];
-  broadcastDate: string | null; // "2026년 4월 29일 (화) 방송분"
+  broadcastDate: string | null; // "2026년 4월 29일 (화) 오하아사" | "2026년 5월 23일 (토) 고고별자리"
   loading: boolean;
   error: string | null;
 }
 
-function formatBroadcastDate(dateStr: string): string {
+function formatBroadcastDate(dateStr: string, source: 'ohaasa' | 'gogo'): string {
   const [year, month, day] = dateStr.split('-').map(Number);
   const weekdays = ['일', '월', '화', '수', '목', '금', '토'];
   const dow = weekdays[new Date(year, month - 1, day).getDay()];
-  return `${year}년 ${month}월 ${day}일 (${dow}) 방송분`;
+  const label = source === 'gogo' ? '고고별자리' : '오하아사';
+  return `${year}년 ${month}월 ${day}일 (${dow}) ${label}`;
 }
 
 function getErrorMessage(err: unknown): string {
@@ -63,7 +64,7 @@ export function useAllHoroscopes(): AllHoroscopesState {
         if (isMounted) {
           setState({
             horoscopes: (rows ?? []) as Horoscope[],
-            broadcastDate: formatBroadcastDate(dateRow.date),
+            broadcastDate: formatBroadcastDate(dateRow.date, (rows?.[0] as Horoscope | undefined)?.source ?? 'ohaasa'),
             loading: false,
             error: null,
           });
