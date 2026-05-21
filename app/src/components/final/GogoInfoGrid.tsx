@@ -103,7 +103,7 @@ const styles = StyleSheet.create({
     color: colors.textSoft,
   },
   starLabel: {
-    width: 26,
+    width: 32,
   },
   rowValue: {
     fontSize: 12,
