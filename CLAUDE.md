@@ -59,8 +59,8 @@ supabase/migrations/
 - **데이터 소스**: `https://www.asahi.co.jp/data/ohaasa2020/horoscope.json` (HTML 크롤링 폐기)
 - **horoscope_text**: 탭(`\t`) → 줄바꿈, trim, 빈 줄 제거
 - **저장 필드**: `date · zodiac_sign · zodiac_name · rank · advice · advice_ko`
-- **일요일**: 방송 없음 → cron 스킵 (`0 22 * * 0-5`)
-- **주말 데이터**: MVP에서는 fallback 없음. 데이터 없는 날은 빈 상태 표시. 고고별자리 연동은 별도 Phase.
+- **일요일**: 방송 없음이지만 고고별자리 크롤링을 위해 cron은 매일 실행 (`0 22 * * *`). 평일/주말 분기는 `isWeekendJST()`에서 코드로 처리.
+- **주말 데이터**: 고고별자리(`source=gogo`) 크롤링. 토·일 모두 고고 메인 소스.
 - **DatePill**: "오늘"이 아닌 오하아사 방송 기준일(`date` 컬럼) 표시
 
 ---

@@ -2,7 +2,7 @@ name: Crawl horoscopes and send notifications
 
 on:
   schedule:
-    - cron: '0 22 * * 0-5'  # UTC 기준. JST/KST 월~토 07:00 실행. 일요일 스킵.
+    - cron: '0 22 * * *'    # UTC 기준. JST/KST 매일 07:00 실행. 평일/주말 분기는 코드에서 처리.
   workflow_dispatch:
     inputs:
       dry_run:
