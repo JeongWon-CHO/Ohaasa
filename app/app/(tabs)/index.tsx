@@ -3,9 +3,11 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TouchableOpacity,
   View,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
+import { Feather } from "@expo/vector-icons";
 import Svg, {
   Circle,
   Defs,
@@ -20,10 +22,12 @@ import { DatePill } from "@/src/components/final/DatePill";
 import { FinalHeader } from "@/src/components/final/FinalHeader";
 import { GogoInfoGrid } from "@/src/components/final/GogoInfoGrid";
 import { HoroscopeCard } from "@/src/components/HoroscopeCard";
+import { ShareCard } from "@/src/components/share/ShareCard";
 import { colors, gradients } from "@/src/constants/design";
 import { ZODIAC_MAP, type ZodiacSign } from "@/src/constants/zodiac";
 import { useAllHoroscopes } from "@/src/hooks/useHoroscope";
 import { useScreenSize } from "@/src/hooks/useScreenSize";
+import { useShareHoroscope } from "@/src/hooks/useShareHoroscope";
 import { useZodiac } from "@/src/hooks/useZodiac";
 
 const SCREEN_CONFIG = {
@@ -150,6 +154,8 @@ function MoonDeco({ x, y, size, color, opacity }: DecoProps) {
 export default function TodayScreen() {
   const screenSize = useScreenSize();
   const cfg = SCREEN_CONFIG[screenSize];
+
+  const { cardRef, share, sharing } = useShareHoroscope();
 
   const {
     zodiacSign,
@@ -303,6 +309,20 @@ export default function TodayScreen() {
             />
 
             <GogoInfoGrid horoscope={horoscope} style={styles.infoGrid} />
+
+            {/* 공유 버튼 */}
+            <TouchableOpacity
+              onPress={share}
+              disabled={sharing}
+              style={styles.shareButton}
+            >
+              {sharing ? (
+                <ActivityIndicator size="small" color={colors.apricotDark} />
+              ) : (
+                <Feather name="share-2" size={15} color={colors.apricotDark} />
+              )}
+              <Text style={styles.shareText}>공유하기</Text>
+            </TouchableOpacity>
           </>
         ) : (
           <View style={styles.emptyWrap}>
@@ -314,6 +334,13 @@ export default function TodayScreen() {
 
         <View style={styles.spacer} />
       </ScrollView>
+
+      {/* 오프스크린 캡처용 ShareCard */}
+      {zodiac && horoscope && (
+        <View style={styles.offscreen} pointerEvents="none">
+          <ShareCard ref={cardRef} horoscope={horoscope} zodiac={zodiac} />
+        </View>
+      )}
     </LinearGradient>
   );
 }
@@ -472,5 +499,34 @@ const styles = StyleSheet.create({
   },
   spacer: {
     minHeight: 20,
+  },
+
+  // ── 공유 버튼 ─────────────────────────────────────────────────
+  shareButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 7,
+    alignSelf: 'center',
+    marginTop: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 24,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: colors.apricot,
+    backgroundColor: 'rgba(255,253,249,0.6)',
+  },
+  shareText: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: colors.apricotDark,
+    letterSpacing: 0.3,
+  },
+
+  // ── 오프스크린 캡처 영역 ──────────────────────────────────────
+  offscreen: {
+    position: 'absolute',
+    left: -9999,
+    top: 0,
   },
 });
