@@ -13,6 +13,7 @@ import { colors, gradients, zodiacColors } from '@/src/constants/design';
 import type { ZodiacSign } from '@/src/constants/zodiac';
 import { ZODIAC_MAP } from '@/src/constants/zodiac';
 import { useZodiac } from '@/src/hooks/useZodiac';
+import { checkPermissionStatus, type NotifPermissionStatus } from '@/src/lib/notifications';
 import {
   getNotificationsEnabled,
   setNotificationsEnabled as saveNotificationsEnabled,
@@ -87,13 +88,20 @@ export default function SettingsScreen() {
   const { zodiacSign } = useZodiac();
   const [notificationsEnabled, setNotificationsEnabledState] = useState(false);
   const [storedPushToken, setStoredPushToken] = useState<string | null>(null);
+  const [permStatus, setPermStatus] = useState<NotifPermissionStatus | null>(null);
+
   const canNotify = storedPushToken !== null;
+  const isPermanentlyDenied =
+    permStatus?.available === true && !permStatus.granted && !permStatus.canAskAgain;
 
   useEffect(() => {
-    Promise.all([getNotificationsEnabled(), getPushToken()]).then(([enabled, token]) => {
-      setNotificationsEnabledState(enabled);
-      setStoredPushToken(token);
-    });
+    Promise.all([getNotificationsEnabled(), getPushToken(), checkPermissionStatus()]).then(
+      ([enabled, token, perm]) => {
+        setNotificationsEnabledState(enabled);
+        setStoredPushToken(token);
+        setPermStatus(perm);
+      },
+    );
   }, []);
 
   async function handleToggle(next: boolean) {
@@ -182,7 +190,9 @@ export default function SettingsScreen() {
             description={
               canNotify
                 ? '매일 아침 운세 알림 받기'
-                : '알림은 개발 빌드에서 사용할 수 있어요'
+                : isPermanentlyDenied
+                  ? '시스템 설정에서 알림을 허용해주세요'
+                  : '알림은 개발 빌드에서 사용할 수 있어요'
             }
             right={
               <Toggle
@@ -193,9 +203,18 @@ export default function SettingsScreen() {
             }
             style={[
               styles.notifRow,
-              notificationsEnabled && styles.rowBorder,
+              (notificationsEnabled || isPermanentlyDenied) && styles.rowBorder,
             ]}
           />
+          {isPermanentlyDenied && (
+            <Pressable
+              accessibilityRole="button"
+              onPress={() => Linking.openSettings()}
+              style={({ pressed }) => [styles.openSettingsRow, pressed && styles.pressed]}
+            >
+              <Text style={styles.openSettingsText}>설정 열기</Text>
+            </Pressable>
+          )}
           {notificationsEnabled && (
             <SettingsRow
               title="알림 시각"
@@ -328,6 +347,16 @@ const styles = StyleSheet.create({
   // ── Row styles ────────────────────────────────────────────────
   notifRow: {
     paddingVertical: 15,
+  },
+  openSettingsRow: {
+    paddingVertical: 13,
+    paddingHorizontal: 4,
+    alignSelf: 'flex-start',
+  },
+  openSettingsText: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: colors.apricotDark,
   },
   aboutRow: {
     paddingVertical: 14,

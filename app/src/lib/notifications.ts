@@ -6,6 +6,10 @@ export type PushTokenResult =
   | { token: string; platform: 'ios' | 'android' }
   | { token: null; platform: null };
 
+export type NotifPermissionStatus =
+  | { available: false }
+  | { available: true; granted: boolean; canAskAgain: boolean };
+
 const NULL_RESULT: PushTokenResult = { token: null, platform: null };
 const NOOP_CLEANUP = () => {};
 
@@ -47,6 +51,19 @@ export async function setupForegroundHandler(): Promise<() => void> {
   } catch (err) {
     console.warn('[notifications] setupForegroundHandler failed:', err);
     return NOOP_CLEANUP;
+  }
+}
+
+export async function checkPermissionStatus(): Promise<NotifPermissionStatus> {
+  if (isExpoGoAndroid() || !Device.isDevice) return { available: false };
+  if (Platform.OS !== 'ios' && Platform.OS !== 'android') return { available: false };
+
+  try {
+    const Notifications = await import('expo-notifications');
+    const { status, canAskAgain } = await Notifications.getPermissionsAsync();
+    return { available: true, granted: status === 'granted', canAskAgain: canAskAgain ?? true };
+  } catch {
+    return { available: false };
   }
 }
 
