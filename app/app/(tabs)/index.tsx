@@ -32,24 +32,24 @@ import { useZodiac } from "@/src/hooks/useZodiac";
 
 const SCREEN_CONFIG = {
   compact: {
-    circleSize:      116,
-    badgeSize:       88,
-    glowSize:        148,
-    glowCenter:      74,
-    dashRadius:      66,
-    heroMarginTop:   20,
-    zodiacFontSize:  16,
-    cardMarginTop:   16,
+    circleSize: 116,
+    badgeSize: 88,
+    glowSize: 148,
+    glowCenter: 74,
+    dashRadius: 66,
+    heroMarginTop: 20,
+    zodiacFontSize: 16,
+    cardMarginTop: 16,
   },
   regular: {
-    circleSize:      136,
-    badgeSize:       106,
-    glowSize:        168,
-    glowCenter:      84,
-    dashRadius:      76,
-    heroMarginTop:   28,
-    zodiacFontSize:  19,
-    cardMarginTop:   22,
+    circleSize: 136,
+    badgeSize: 106,
+    glowSize: 168,
+    glowCenter: 84,
+    dashRadius: 76,
+    heroMarginTop: 28,
+    zodiacFontSize: 19,
+    cardMarginTop: 22,
   },
 } as const;
 
@@ -249,7 +249,12 @@ export default function TodayScreen() {
               </LinearGradient>
 
               {/* Constellation circle: glow + dashed ring + badge */}
-              <View style={[styles.circleOuter, { width: cfg.circleSize, height: cfg.circleSize }]}>
+              <View
+                style={[
+                  styles.circleOuter,
+                  { width: cfg.circleSize, height: cfg.circleSize },
+                ]}
+              >
                 <Svg
                   width={cfg.glowSize}
                   height={cfg.glowSize}
@@ -287,7 +292,9 @@ export default function TodayScreen() {
                     fill="url(#todayCircleGlowGradient)"
                   />
                 </Svg>
-                <View style={[styles.circleDash, { borderRadius: cfg.dashRadius }]} />
+                <View
+                  style={[styles.circleDash, { borderRadius: cfg.dashRadius }]}
+                />
                 <View style={styles.circleBadge}>
                   <ConstellationBadge sign={zodiac.sign} size={cfg.badgeSize} />
                 </View>
@@ -295,7 +302,11 @@ export default function TodayScreen() {
 
               {/* Zodiac name + English sub */}
               <View style={styles.zodiacText}>
-                <Text style={[styles.zodiacName, { fontSize: cfg.zodiacFontSize }]}>{zodiac.ko}</Text>
+                <Text
+                  style={[styles.zodiacName, { fontSize: cfg.zodiacFontSize }]}
+                >
+                  {zodiac.ko}
+                </Text>
                 <Text style={styles.zodiacSub}>
                   {EN_NAMES[zodiac.sign]} · {DATE_RANGES[zodiac.sign]}
                 </Text>
@@ -316,11 +327,17 @@ export default function TodayScreen() {
               disabled={sharing}
               style={styles.shareButton}
             >
-              {sharing ? (
-                <ActivityIndicator size="small" color={colors.apricotDark} />
-              ) : (
-                <Feather name="share-2" size={15} color={colors.apricotDark} />
-              )}
+              <View style={styles.shareIconWrap}>
+                {sharing ? (
+                  <ActivityIndicator size="small" color={colors.apricotDark} />
+                ) : (
+                  <Feather
+                    name="share-2"
+                    size={15}
+                    color={colors.apricotDark}
+                  />
+                )}
+              </View>
               <Text style={styles.shareText}>공유하기</Text>
             </TouchableOpacity>
           </>
@@ -337,7 +354,7 @@ export default function TodayScreen() {
 
       {/* 오프스크린 캡처용 ShareCard */}
       {zodiac && horoscope && (
-        <View style={styles.offscreen} pointerEvents="none">
+        <View style={styles.offscreen} pointerEvents="none" collapsable={false}>
           <ShareCard ref={cardRef} horoscope={horoscope} zodiac={zodiac} />
         </View>
       )}
@@ -503,29 +520,35 @@ const styles = StyleSheet.create({
 
   // ── 공유 버튼 ─────────────────────────────────────────────────
   shareButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
     gap: 7,
-    alignSelf: 'center',
-    marginTop: 8,
+    alignSelf: "center",
+    marginTop: 24,
     paddingVertical: 10,
     paddingHorizontal: 24,
     borderRadius: 20,
     borderWidth: 1,
     borderColor: colors.apricot,
-    backgroundColor: 'rgba(255,253,249,0.6)',
+    backgroundColor: "rgba(255,253,249,0.6)",
+  },
+  shareIconWrap: {
+    width: 18,
+    height: 18,
+    alignItems: "center",
+    justifyContent: "center",
   },
   shareText: {
     fontSize: 13,
-    fontWeight: '500',
+    fontWeight: "500",
     color: colors.apricotDark,
     letterSpacing: 0.3,
   },
 
   // ── 오프스크린 캡처 영역 ──────────────────────────────────────
   offscreen: {
-    position: 'absolute',
+    position: "absolute",
     left: -9999,
     top: 0,
   },
