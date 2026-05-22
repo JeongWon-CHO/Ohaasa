@@ -3,11 +3,9 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  TouchableOpacity,
   View,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
-import { Feather } from "@expo/vector-icons";
 import Svg, {
   Circle,
   Defs,
@@ -217,7 +215,11 @@ export default function TodayScreen() {
         style={styles.scroll}
       >
         {/* Header */}
-        <FinalHeader subtitle={COPY.headerSubtitle} />
+        <FinalHeader
+          subtitle={COPY.headerSubtitle}
+          onSharePress={horoscope ? share : undefined}
+          sharing={sharing}
+        />
 
         {/* DatePill — 오하아사 방송 기준일 표시 */}
         <View style={styles.pillWrap}>
@@ -320,26 +322,6 @@ export default function TodayScreen() {
             />
 
             <GogoInfoGrid horoscope={horoscope} style={styles.infoGrid} />
-
-            {/* 공유 버튼 */}
-            <TouchableOpacity
-              onPress={share}
-              disabled={sharing}
-              style={styles.shareButton}
-            >
-              <View style={styles.shareIconWrap}>
-                {sharing ? (
-                  <ActivityIndicator size="small" color={colors.apricotDark} />
-                ) : (
-                  <Feather
-                    name="share-2"
-                    size={15}
-                    color={colors.apricotDark}
-                  />
-                )}
-              </View>
-              <Text style={styles.shareText}>공유하기</Text>
-            </TouchableOpacity>
           </>
         ) : (
           <View style={styles.emptyWrap}>
@@ -516,34 +498,6 @@ const styles = StyleSheet.create({
   },
   spacer: {
     minHeight: 20,
-  },
-
-  // ── 공유 버튼 ─────────────────────────────────────────────────
-  shareButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 7,
-    alignSelf: "center",
-    marginTop: 24,
-    paddingVertical: 10,
-    paddingHorizontal: 24,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: colors.apricot,
-    backgroundColor: "rgba(255,253,249,0.6)",
-  },
-  shareIconWrap: {
-    width: 18,
-    height: 18,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  shareText: {
-    fontSize: 13,
-    fontWeight: "500",
-    color: colors.apricotDark,
-    letterSpacing: 0.3,
   },
 
   // ── 오프스크린 캡처 영역 ──────────────────────────────────────
