@@ -1,6 +1,7 @@
 import { forwardRef } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
+import FontAwesome from "@expo/vector-icons/FontAwesome";
 import Svg, { Circle, Defs, RadialGradient, Stop } from "react-native-svg";
 
 import { ConstellationBadge } from "@/src/components/final/ConstellationBadge";
@@ -9,13 +10,14 @@ import type { ZodiacInfo } from "@/src/constants/zodiac";
 import type { Horoscope } from "@/src/types/horoscope";
 
 export const CARD_WIDTH = 360;
-export const CARD_HEIGHT = 640;
+export const CARD_HEIGHT = 600;
 
-const BADGE_SIZE = 90;
-const CIRCLE_SIZE = 110;
+const BADGE_SIZE = 80;
+const CIRCLE_SIZE = 100;
 const GLOW_SIZE = CIRCLE_SIZE + 32;
 const GLOW_CENTER = GLOW_SIZE / 2;
 const DASH_RADIUS = CIRCLE_SIZE / 2 + 8;
+const MAX_STARS = 6;
 
 interface ShareCardProps {
   horoscope: Horoscope;
@@ -28,6 +30,71 @@ function formatShareDate(dateStr: string, source: "ohaasa" | "gogo"): string {
   return `${month}월 ${day}일 ${label}`;
 }
 
+function ShareInfoGrid({ horoscope }: { horoscope: Horoscope }) {
+  const hasLucky =
+    horoscope.lucky_color !== null || horoscope.lucky_item !== null;
+  const hasScore =
+    (horoscope.love_score !== null && horoscope.love_score > 0) ||
+    (horoscope.work_score !== null && horoscope.work_score > 0) ||
+    (horoscope.money_score !== null && horoscope.money_score > 0) ||
+    (horoscope.health_score !== null && horoscope.health_score > 0);
+
+  if (!hasLucky && !hasScore) return null;
+
+  const scoreRows = [
+    { label: "연애", value: horoscope.love_score },
+    { label: "직장", value: horoscope.work_score },
+    { label: "금운", value: horoscope.money_score },
+    { label: "건강", value: horoscope.health_score },
+  ].filter((r) => r.value !== null && r.value > 0);
+
+  return (
+    <View style={infoStyles.grid}>
+      {hasLucky && (
+        <View style={infoStyles.card}>
+          <Text style={infoStyles.cardHeader}>행운 아이템</Text>
+          {horoscope.lucky_color !== null && (
+            <View style={infoStyles.row}>
+              <Text style={infoStyles.rowLabel}>컬러</Text>
+              <Text style={infoStyles.rowValue} numberOfLines={2}>
+                {horoscope.lucky_color_ko ?? horoscope.lucky_color}
+              </Text>
+            </View>
+          )}
+          {horoscope.lucky_item !== null && (
+            <View style={infoStyles.row}>
+              <Text style={infoStyles.rowLabel}>아이템</Text>
+              <Text style={infoStyles.rowValue} numberOfLines={2}>
+                {horoscope.lucky_item_ko ?? horoscope.lucky_item}
+              </Text>
+            </View>
+          )}
+        </View>
+      )}
+      {hasScore && (
+        <View style={infoStyles.card}>
+          <Text style={infoStyles.cardHeader}>오늘의 운 ✦</Text>
+          {scoreRows.map(({ label, value }) => (
+            <View key={label} style={infoStyles.starRow}>
+              <Text style={infoStyles.starLabel}>{label}</Text>
+              <View style={infoStyles.stars}>
+                {Array.from({ length: MAX_STARS }).map((_, i) => (
+                  <FontAwesome
+                    key={i}
+                    name="star"
+                    size={9}
+                    color={i < value! ? colors.yellow : colors.cream3}
+                  />
+                ))}
+              </View>
+            </View>
+          ))}
+        </View>
+      )}
+    </View>
+  );
+}
+
 export const ShareCard = forwardRef<View, ShareCardProps>(
   ({ horoscope, zodiac }, ref) => {
     const dateLabel = formatShareDate(horoscope.date, horoscope.source);
@@ -36,11 +103,10 @@ export const ShareCard = forwardRef<View, ShareCardProps>(
     return (
       <View ref={ref} style={styles.wrapper} collapsable={false}>
         <LinearGradient colors={gradients.screen} style={styles.card}>
-          {/* 헤더 — 상단 고정 */}
-          <Text style={styles.header}>✦ {dateLabel} ✦</Text>
-
-          {/* 나머지 콘텐츠 — 중앙 정렬 */}
           <View style={styles.content}>
+            {/* 날짜 */}
+            <Text style={styles.header}>✦ {dateLabel} ✦</Text>
+
             {/* 순위 pill */}
             <LinearGradient
               colors={[colors.yellow, colors.apricot]}
@@ -83,12 +149,15 @@ export const ShareCard = forwardRef<View, ShareCardProps>(
               </View>
             </View>
 
-            {/* 별자리 이름 */}
-            <Text style={styles.zodiacName}>{zodiac.ko}</Text>
+            {/* 별자리 이름 · 조언 · 행운 아이템 — 묶어서 간격 통일 */}
+            <View style={styles.bottomGroup}>
+              <Text style={styles.zodiacName}>{zodiac.ko}</Text>
 
-            {/* 운세 텍스트 */}
-            <View style={styles.adviceBox}>
-              <Text style={styles.advice}>{advice}</Text>
+              <View style={styles.adviceBox}>
+                <Text style={styles.advice}>{advice}</Text>
+              </View>
+
+              <ShareInfoGrid horoscope={horoscope} />
             </View>
           </View>
         </LinearGradient>
@@ -104,9 +173,13 @@ const styles = StyleSheet.create({
   },
   card: {
     flex: 1,
-    paddingHorizontal: 36,
-    paddingTop: 60,
-    paddingBottom: 36,
+    paddingHorizontal: 32,
+    paddingVertical: 40,
+  },
+  content: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "space-between",
   },
   header: {
     fontSize: 9,
@@ -115,20 +188,13 @@ const styles = StyleSheet.create({
     letterSpacing: 1.2,
     textAlign: "center",
   },
-  content: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 20,
-  },
   rankPill: {
     borderRadius: 20,
     paddingVertical: 5,
     paddingHorizontal: 18,
-    marginBottom: 8,
   },
   rankText: {
-    fontSize: 9,
+    fontSize: 8,
     fontWeight: "600",
     color: "#FFFDF9",
     letterSpacing: 0.6,
@@ -157,7 +223,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   zodiacName: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: "300",
     color: colors.text,
     letterSpacing: 0.5,
@@ -167,15 +233,75 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     borderRadius: 16,
     backgroundColor: "rgba(255,253,249,0.75)",
-    paddingHorizontal: 24,
-    paddingVertical: 20,
+    paddingHorizontal: 20,
+    paddingVertical: 16,
     width: "100%",
   },
   advice: {
-    fontSize: 10,
+    fontSize: 9,
     fontWeight: "300",
     color: colors.text,
-    lineHeight: 18,
+    lineHeight: 15,
     textAlign: "center",
+  },
+  bottomGroup: {
+    alignItems: "center",
+    gap: 10,
+    width: "100%",
+  },
+});
+
+const infoStyles = StyleSheet.create({
+  grid: {
+    flexDirection: "row",
+    gap: 8,
+    width: "100%",
+  },
+  card: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 12,
+    backgroundColor: "rgba(255,253,249,0.75)",
+    padding: 12,
+  },
+  cardHeader: {
+    fontSize: 8,
+    color: colors.textSoft,
+    letterSpacing: 1,
+    marginBottom: 8,
+  },
+  row: {
+    flexDirection: "row",
+    gap: 6,
+    marginBottom: 5,
+  },
+  rowLabel: {
+    fontSize: 8,
+    color: colors.textSoft,
+    flexShrink: 0,
+  },
+  rowValue: {
+    flex: 1,
+    fontSize: 8,
+    fontWeight: "400",
+    color: colors.text,
+    flexWrap: "wrap",
+    textAlign: "right",
+  },
+  starRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    marginBottom: 5,
+  },
+  starLabel: {
+    fontSize: 8,
+    color: colors.textSoft,
+    width: 28,
+  },
+  stars: {
+    flexDirection: "row",
+    gap: 2,
   },
 });
