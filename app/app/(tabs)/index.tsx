@@ -72,21 +72,6 @@ const EN_NAMES: Record<ZodiacSign, string> = {
   pisces: "Pisces",
 };
 
-const DATE_RANGES: Record<ZodiacSign, string> = {
-  aries: "3/21–4/19",
-  taurus: "4/20–5/20",
-  gemini: "5/21–6/21",
-  cancer: "6/22–7/22",
-  leo: "7/23–8/22",
-  virgo: "8/23–9/23",
-  libra: "9/24–10/22",
-  scorpio: "10/23–11/22",
-  sagittarius: "11/23–12/21",
-  capricorn: "12/22–1/19",
-  aquarius: "1/20–2/18",
-  pisces: "2/19–3/20",
-};
-
 // ─── Background decoration helpers ───────────────────────────
 
 type DecoProps = {
@@ -310,7 +295,7 @@ export default function TodayScreen() {
                   {zodiac.ko}
                 </Text>
                 <Text style={styles.zodiacSub}>
-                  {EN_NAMES[zodiac.sign]} · {DATE_RANGES[zodiac.sign]}
+                  {EN_NAMES[zodiac.sign]} · {zodiac.dateRange}
                 </Text>
               </View>
             </View>
