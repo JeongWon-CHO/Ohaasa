@@ -10,7 +10,7 @@ import type { ZodiacInfo } from "@/src/constants/zodiac";
 import type { Horoscope } from "@/src/types/horoscope";
 
 export const CARD_WIDTH = 360;
-export const CARD_HEIGHT = 600;
+export const CARD_HEIGHT = 640;
 
 const BADGE_SIZE = 80;
 const CIRCLE_SIZE = 100;
@@ -238,7 +238,7 @@ const styles = StyleSheet.create({
     width: "100%",
   },
   advice: {
-    fontSize: 9,
+    fontSize: 8,
     fontWeight: "300",
     color: colors.text,
     lineHeight: 15,
