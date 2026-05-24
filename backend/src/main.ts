@@ -159,17 +159,23 @@ async function attachTranslations(
  * 고고별자리 HTML을 fetch/parse하고 오늘 날짜(JST)와 일치하는 경우에만 entries를 반환한다.
  * 실패 또는 날짜 불일치 시 null을 반환하며, 파이프라인을 중단하지 않는다.
  */
-async function fetchGogoEntries(today: string): Promise<GogoEntry[] | null> {
+async function fetchGogoEntries(today: string, force = false): Promise<GogoEntry[] | null> {
   try {
     const html   = await fetchGogoHtml();
     const result = parseGogo(html);
 
     if (result.date !== today) {
+      if (!force) {
+        console.warn(
+          `[gogo] Date mismatch: gogo=${result.date}, today=${today}.` +
+          ` Skipping gogo.`
+        );
+        return null;
+      }
       console.warn(
-        `[gogo] Date mismatch: gogo=${result.date}, today=${today}.` +
-        ` Skipping gogo.`
+        `[gogo] Date mismatch (force): gogo=${result.date}, today=${today}.` +
+        ` Proceeding anyway.`
       );
-      return null;
     }
 
     console.log(`[gogo] Parsed ${result.entries.length} entries  date=${result.date}`);
@@ -395,7 +401,8 @@ function printWeekendPreview(
  */
 async function crawlAndSave(
   supabase: SupabaseClient,
-  isDryRun: boolean
+  isDryRun: boolean,
+  isForce: boolean,
 ): Promise<boolean> {
   const today   = getTodayJST();
   const weekend = isWeekendJST(today);
@@ -404,7 +411,7 @@ async function crawlAndSave(
   if (weekend) {
     console.log(`[main] Weekend mode  today=${today}`);
 
-    const gogoEntries = await fetchGogoEntries(today);
+    const gogoEntries = await fetchGogoEntries(today, isForce);
     if (!gogoEntries) {
       console.warn(
         `[main] Weekend: no fresh gogo data for today=${today}.` +
@@ -464,15 +471,21 @@ async function crawlAndSave(
   }
 
   if (ohaasaDate !== today) {
+    if (!isForce) {
+      console.warn(
+        `[main] Weekday but ohaasa date stale (ohaasa=${ohaasaDate}, today=${today}).` +
+        ` Skipping upsert/notification.`
+      );
+      return false;
+    }
     console.warn(
-      `[main] Weekday but ohaasa date stale (ohaasa=${ohaasaDate}, today=${today}).` +
-      ` Skipping upsert/notification.`
+      `[main] Weekday ohaasa date stale (force): ohaasa=${ohaasaDate}, today=${today}.` +
+      ` Proceeding anyway.`
     );
-    return false;
   }
 
   // ── Step 2: gogo fetch (best-effort) ──────────────────────────
-  const gogoEntries = await fetchGogoEntries(today);
+  const gogoEntries = await fetchGogoEntries(today, isForce);
   const gogoKoMap   = await fetchGogoKo(gogoEntries);
 
   if (isDryRun) {
@@ -519,11 +532,15 @@ async function sleep(ms: number): Promise<void> {
 }
 
 async function main(): Promise<void> {
-  const isDryRun  = process.argv.includes("--dry-run");
+  const isDryRun   = process.argv.includes("--dry-run");
   const isNoNotify = process.argv.includes("--no-notify");
+  const isForce    = process.argv.includes("--force");
 
   if (isDryRun) {
     console.log("[main] ========== DRY RUN ==========");
+  }
+  if (isForce) {
+    console.log("[main] ========== FORCE MODE ==========");
   }
 
   const supabase = createAdminClient();
@@ -537,7 +554,7 @@ async function main(): Promise<void> {
   let crawlFailed  = false;
   let crawlSkipped = false;
   try {
-    const upserted = await crawlAndSave(supabase, isDryRun);
+    const upserted = await crawlAndSave(supabase, isDryRun, isForce);
     if (!upserted) crawlSkipped = true;
   } catch (err) {
     console.error(
