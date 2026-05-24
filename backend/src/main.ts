@@ -69,8 +69,8 @@ function getTodayJST(): string {
  * 평일/주말 판단은 오하아사 업데이트 여부가 아닌 JST 요일 기준으로 한다.
  */
 function isWeekendJST(today: string): boolean {
-  const d = new Date(`${today}T00:00:00+09:00`);
-  const day = d.getDay(); // 0=일, 6=토
+  const [y, m, d] = today.split("-").map(Number);
+  const day = new Date(Date.UTC(y, m - 1, d)).getUTCDay(); // 0=일, 6=토
   return day === 0 || day === 6;
 }
 
