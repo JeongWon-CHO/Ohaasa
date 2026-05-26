@@ -1,9 +1,15 @@
-import { StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
-import FontAwesome from '@expo/vector-icons/FontAwesome';
+import {
+  StyleSheet,
+  Text,
+  View,
+  type StyleProp,
+  type ViewStyle,
+} from "react-native";
+import FontAwesome from "@expo/vector-icons/FontAwesome";
 
-import { colors } from '@/src/constants/design';
-import type { Horoscope } from '@/src/types/horoscope';
-import { FinalCard } from './FinalCard';
+import { colors } from "@/src/constants/design";
+import type { Horoscope } from "@/src/types/horoscope";
+import { FinalCard } from "./FinalCard";
 
 interface GogoInfoGridProps {
   horoscope: Horoscope;
@@ -57,8 +63,14 @@ export function GogoInfoGrid({ horoscope, style }: GogoInfoGridProps) {
     <View style={[styles.infoGrid, style]}>
       <FinalCard style={styles.gridCard}>
         <Text style={styles.gridHeader}>행운 아이템</Text>
-        <LuckyRow label="컬러" value={horoscope.lucky_color_ko ?? horoscope.lucky_color} />
-        <LuckyRow label="아이템" value={horoscope.lucky_item_ko ?? horoscope.lucky_item} />
+        <LuckyRow
+          label="컬러"
+          value={horoscope.lucky_color_ko ?? horoscope.lucky_color}
+        />
+        <LuckyRow
+          label="아이템"
+          value={horoscope.lucky_item_ko ?? horoscope.lucky_item}
+        />
       </FinalCard>
 
       <FinalCard style={styles.gridCard}>
@@ -74,7 +86,7 @@ export function GogoInfoGrid({ horoscope, style }: GogoInfoGridProps) {
 
 const styles = StyleSheet.create({
   infoGrid: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 10,
   },
   gridCard: {
@@ -88,30 +100,34 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   luckyRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    gap: 8,
     marginBottom: 8,
   },
   starRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 6,
     marginBottom: 8,
   },
   rowLabel: {
     fontSize: 11,
     color: colors.textSoft,
+    flexShrink: 0,
   },
   starLabel: {
     width: 32,
   },
   rowValue: {
+    flex: 1,
     fontSize: 12,
-    fontWeight: '500',
+    fontWeight: "500",
     color: colors.text,
+    flexWrap: "wrap",
+    textAlign: "right",
   },
   stars: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 2,
   },
 });

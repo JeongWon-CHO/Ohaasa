@@ -20,32 +20,34 @@ import { DatePill } from "@/src/components/final/DatePill";
 import { FinalHeader } from "@/src/components/final/FinalHeader";
 import { GogoInfoGrid } from "@/src/components/final/GogoInfoGrid";
 import { HoroscopeCard } from "@/src/components/HoroscopeCard";
+import { ShareCard } from "@/src/components/share/ShareCard";
 import { colors, gradients } from "@/src/constants/design";
 import { ZODIAC_MAP, type ZodiacSign } from "@/src/constants/zodiac";
 import { useAllHoroscopes } from "@/src/hooks/useHoroscope";
 import { useScreenSize } from "@/src/hooks/useScreenSize";
+import { useShareHoroscope } from "@/src/hooks/useShareHoroscope";
 import { useZodiac } from "@/src/hooks/useZodiac";
 
 const SCREEN_CONFIG = {
   compact: {
-    circleSize:      116,
-    badgeSize:       88,
-    glowSize:        148,
-    glowCenter:      74,
-    dashRadius:      66,
-    heroMarginTop:   20,
-    zodiacFontSize:  16,
-    cardMarginTop:   16,
+    circleSize: 116,
+    badgeSize: 88,
+    glowSize: 148,
+    glowCenter: 74,
+    dashRadius: 66,
+    heroMarginTop: 20,
+    zodiacFontSize: 16,
+    cardMarginTop: 16,
   },
   regular: {
-    circleSize:      136,
-    badgeSize:       106,
-    glowSize:        168,
-    glowCenter:      84,
-    dashRadius:      76,
-    heroMarginTop:   28,
-    zodiacFontSize:  19,
-    cardMarginTop:   22,
+    circleSize: 136,
+    badgeSize: 106,
+    glowSize: 168,
+    glowCenter: 84,
+    dashRadius: 76,
+    heroMarginTop: 28,
+    zodiacFontSize: 19,
+    cardMarginTop: 22,
   },
 } as const;
 
@@ -68,21 +70,6 @@ const EN_NAMES: Record<ZodiacSign, string> = {
   capricorn: "Capricorn",
   aquarius: "Aquarius",
   pisces: "Pisces",
-};
-
-const DATE_RANGES: Record<ZodiacSign, string> = {
-  aries: "3/21–4/19",
-  taurus: "4/20–5/20",
-  gemini: "5/21–6/21",
-  cancer: "6/22–7/22",
-  leo: "7/23–8/22",
-  virgo: "8/23–9/23",
-  libra: "9/24–10/22",
-  scorpio: "10/23–11/22",
-  sagittarius: "11/23–12/21",
-  capricorn: "12/22–1/19",
-  aquarius: "1/20–2/18",
-  pisces: "2/19–3/20",
 };
 
 // ─── Background decoration helpers ───────────────────────────
@@ -151,6 +138,8 @@ export default function TodayScreen() {
   const screenSize = useScreenSize();
   const cfg = SCREEN_CONFIG[screenSize];
 
+  const { cardRef, share, sharing } = useShareHoroscope();
+
   const {
     zodiacSign,
     loading: zodiacLoading,
@@ -211,7 +200,11 @@ export default function TodayScreen() {
         style={styles.scroll}
       >
         {/* Header */}
-        <FinalHeader subtitle={COPY.headerSubtitle} />
+        <FinalHeader
+          subtitle={COPY.headerSubtitle}
+          onSharePress={horoscope ? share : undefined}
+          sharing={sharing}
+        />
 
         {/* DatePill — 오하아사 방송 기준일 표시 */}
         <View style={styles.pillWrap}>
@@ -243,7 +236,12 @@ export default function TodayScreen() {
               </LinearGradient>
 
               {/* Constellation circle: glow + dashed ring + badge */}
-              <View style={[styles.circleOuter, { width: cfg.circleSize, height: cfg.circleSize }]}>
+              <View
+                style={[
+                  styles.circleOuter,
+                  { width: cfg.circleSize, height: cfg.circleSize },
+                ]}
+              >
                 <Svg
                   width={cfg.glowSize}
                   height={cfg.glowSize}
@@ -281,7 +279,9 @@ export default function TodayScreen() {
                     fill="url(#todayCircleGlowGradient)"
                   />
                 </Svg>
-                <View style={[styles.circleDash, { borderRadius: cfg.dashRadius }]} />
+                <View
+                  style={[styles.circleDash, { borderRadius: cfg.dashRadius }]}
+                />
                 <View style={styles.circleBadge}>
                   <ConstellationBadge sign={zodiac.sign} size={cfg.badgeSize} />
                 </View>
@@ -289,9 +289,13 @@ export default function TodayScreen() {
 
               {/* Zodiac name + English sub */}
               <View style={styles.zodiacText}>
-                <Text style={[styles.zodiacName, { fontSize: cfg.zodiacFontSize }]}>{zodiac.ko}</Text>
+                <Text
+                  style={[styles.zodiacName, { fontSize: cfg.zodiacFontSize }]}
+                >
+                  {zodiac.ko}
+                </Text>
                 <Text style={styles.zodiacSub}>
-                  {EN_NAMES[zodiac.sign]} · {DATE_RANGES[zodiac.sign]}
+                  {EN_NAMES[zodiac.sign]} · {zodiac.dateRange}
                 </Text>
               </View>
             </View>
@@ -314,6 +318,13 @@ export default function TodayScreen() {
 
         <View style={styles.spacer} />
       </ScrollView>
+
+      {/* 오프스크린 캡처용 ShareCard */}
+      {zodiac && horoscope && (
+        <View style={styles.offscreen} pointerEvents="none" collapsable={false}>
+          <ShareCard ref={cardRef} horoscope={horoscope} zodiac={zodiac} />
+        </View>
+      )}
     </LinearGradient>
   );
 }
@@ -472,5 +483,12 @@ const styles = StyleSheet.create({
   },
   spacer: {
     minHeight: 20,
+  },
+
+  // ── 오프스크린 캡처 영역 ──────────────────────────────────────
+  offscreen: {
+    position: "absolute",
+    left: -9999,
+    top: 0,
   },
 });

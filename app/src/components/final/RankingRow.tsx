@@ -91,7 +91,9 @@ export function RankingRow({ horoscope, isMine = false, onPress }: RankingRowPro
             <View style={styles.mineBadge}>
               <Text style={styles.mineBadgeText}>내 별자리</Text>
             </View>
-          ) : null}
+          ) : (
+            <Text style={styles.dateRange}>{zodiac.dateRange}</Text>
+          )}
         </View>
         <Text
           numberOfLines={1}
@@ -192,6 +194,10 @@ const styles = StyleSheet.create({
     fontSize: 9,
     fontWeight: '700',
     letterSpacing: 0.54,
+  },
+  dateRange: {
+    fontSize: 9,
+    color: colors.textSoft,
   },
   preview: {
     fontSize: 10.5,
