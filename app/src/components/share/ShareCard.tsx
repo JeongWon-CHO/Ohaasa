@@ -107,52 +107,65 @@ export const ShareCard = forwardRef<View, ShareCardProps>(
             {/* 날짜 */}
             <Text style={styles.header}>✦ {dateLabel} ✦</Text>
 
-            {/* 순위 pill */}
-            <LinearGradient
-              colors={[colors.yellow, colors.apricot]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={styles.rankPill}
-            >
-              <Text style={styles.rankText}>
-                오늘의 운세 {horoscope.rank}위
-              </Text>
-            </LinearGradient>
-
-            {/* 별자리 뱃지 + 글로우 */}
-            <View style={styles.circleOuter}>
-              <Svg
-                width={GLOW_SIZE}
-                height={GLOW_SIZE}
-                style={{ position: "absolute", top: -16, left: -16 }}
+            {/* 순위 pill · 별자리 뱃지 · 별자리 이름 — 묶어서 간격 통일 */}
+            <View style={styles.topGroup}>
+              <LinearGradient
+                colors={[colors.yellow, colors.apricot]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.rankPill}
               >
-                <Defs>
-                  <RadialGradient id="shareGlow" cx="50%" cy="50%" r="50%">
-                    <Stop offset="0%" stopColor="#F0B89A" stopOpacity={0.58} />
-                    <Stop offset="45%" stopColor="#F5D98B" stopOpacity={0.3} />
-                    <Stop offset="80%" stopColor="#FAF6F0" stopOpacity={0.12} />
-                    <Stop offset="100%" stopColor="#FAF6F0" stopOpacity={0} />
-                  </RadialGradient>
-                </Defs>
-                <Circle
-                  cx={GLOW_CENTER}
-                  cy={GLOW_CENTER}
-                  r={GLOW_CENTER}
-                  fill="url(#shareGlow)"
+                <Text style={styles.rankText}>
+                  오늘의 운세 {horoscope.rank}위
+                </Text>
+              </LinearGradient>
+
+              <View style={styles.circleOuter}>
+                <Svg
+                  width={GLOW_SIZE}
+                  height={GLOW_SIZE}
+                  style={{ position: "absolute", top: -16, left: -16 }}
+                >
+                  <Defs>
+                    <RadialGradient id="shareGlow" cx="50%" cy="50%" r="50%">
+                      <Stop
+                        offset="0%"
+                        stopColor="#F0B89A"
+                        stopOpacity={0.58}
+                      />
+                      <Stop
+                        offset="45%"
+                        stopColor="#F5D98B"
+                        stopOpacity={0.3}
+                      />
+                      <Stop
+                        offset="80%"
+                        stopColor="#FAF6F0"
+                        stopOpacity={0.12}
+                      />
+                      <Stop offset="100%" stopColor="#FAF6F0" stopOpacity={0} />
+                    </RadialGradient>
+                  </Defs>
+                  <Circle
+                    cx={GLOW_CENTER}
+                    cy={GLOW_CENTER}
+                    r={GLOW_CENTER}
+                    fill="url(#shareGlow)"
+                  />
+                </Svg>
+                <View
+                  style={[styles.circleDash, { borderRadius: DASH_RADIUS }]}
                 />
-              </Svg>
-              <View
-                style={[styles.circleDash, { borderRadius: DASH_RADIUS }]}
-              />
-              <View style={styles.circleBadge}>
-                <ConstellationBadge sign={zodiac.sign} size={BADGE_SIZE} />
+                <View style={styles.circleBadge}>
+                  <ConstellationBadge sign={zodiac.sign} size={BADGE_SIZE} />
+                </View>
               </View>
+
+              <Text style={styles.zodiacName}>{zodiac.ko}</Text>
             </View>
 
-            {/* 별자리 이름 · 조언 · 행운 아이템 — 묶어서 간격 통일 */}
+            {/* 조언 · 행운 아이템 */}
             <View style={styles.bottomGroup}>
-              <Text style={styles.zodiacName}>{zodiac.ko}</Text>
-
               <View style={styles.adviceBox}>
                 <Text style={styles.advice}>{advice}</Text>
               </View>
@@ -174,12 +187,13 @@ const styles = StyleSheet.create({
   card: {
     flex: 1,
     paddingHorizontal: 32,
-    paddingVertical: 40,
+    paddingVertical: 88,
   },
   content: {
     flex: 1,
     alignItems: "center",
-    justifyContent: "space-between",
+    justifyContent: "center",
+    gap: 24,
   },
   header: {
     fontSize: 9,
@@ -243,6 +257,10 @@ const styles = StyleSheet.create({
     color: colors.text,
     lineHeight: 15,
     textAlign: "center",
+  },
+  topGroup: {
+    alignItems: "center",
+    gap: 30,
   },
   bottomGroup: {
     alignItems: "center",
