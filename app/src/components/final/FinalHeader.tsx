@@ -8,12 +8,16 @@ interface FinalHeaderProps {
   subtitle?: string;
   onSharePress?: () => void;
   sharing?: boolean;
+  onSavePress?: () => void;
+  saving?: boolean;
 }
 
 export function FinalHeader({
   subtitle = '오늘도 좋은 하루 되세요 ☀️',
   onSharePress,
   sharing = false,
+  onSavePress,
+  saving = false,
 }: FinalHeaderProps) {
   const insets = useSafeAreaInsets();
   return (
@@ -22,21 +26,38 @@ export function FinalHeader({
         <Text style={styles.title}>ohaasa</Text>
         {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
       </View>
-      {onSharePress && (
-        <TouchableOpacity
-          onPress={onSharePress}
-          disabled={sharing}
-          style={styles.shareButton}
-        >
-          <View style={styles.shareIconWrap}>
-            {sharing ? (
-              <ActivityIndicator size="small" color={colors.apricotDark} />
-            ) : (
-              <Feather name="share-2" size={18} color={colors.apricotDark} />
-            )}
-          </View>
-        </TouchableOpacity>
-      )}
+      <View style={styles.actions}>
+        {onSavePress && (
+          <TouchableOpacity
+            onPress={onSavePress}
+            disabled={saving || sharing}
+            style={styles.iconButton}
+          >
+            <View style={styles.iconWrap}>
+              {saving ? (
+                <ActivityIndicator size="small" color={colors.apricotDark} />
+              ) : (
+                <Feather name="download" size={18} color={colors.apricotDark} />
+              )}
+            </View>
+          </TouchableOpacity>
+        )}
+        {onSharePress && (
+          <TouchableOpacity
+            onPress={onSharePress}
+            disabled={sharing || saving}
+            style={styles.iconButton}
+          >
+            <View style={styles.iconWrap}>
+              {sharing ? (
+                <ActivityIndicator size="small" color={colors.apricotDark} />
+              ) : (
+                <Feather name="share-2" size={18} color={colors.apricotDark} />
+              )}
+            </View>
+          </TouchableOpacity>
+        )}
+      </View>
     </View>
   );
 }
@@ -62,10 +83,14 @@ const styles = StyleSheet.create({
     color: colors.textSoft,
     marginTop: 2,
   },
-  shareButton: {
+  actions: {
+    flexDirection: 'row',
+    gap: 4,
+  },
+  iconButton: {
     padding: 6,
   },
-  shareIconWrap: {
+  iconWrap: {
     width: 18,
     height: 18,
     alignItems: 'center',

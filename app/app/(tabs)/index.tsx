@@ -138,7 +138,7 @@ export default function TodayScreen() {
   const screenSize = useScreenSize();
   const cfg = SCREEN_CONFIG[screenSize];
 
-  const { cardRef, share, sharing } = useShareHoroscope();
+  const { cardRef, share, sharing, saveImage, saving } = useShareHoroscope();
 
   const {
     zodiacSign,
@@ -204,6 +204,8 @@ export default function TodayScreen() {
           subtitle={COPY.headerSubtitle}
           onSharePress={horoscope ? share : undefined}
           sharing={sharing}
+          onSavePress={horoscope ? saveImage : undefined}
+          saving={saving}
         />
 
         {/* DatePill — 오하아사 방송 기준일 표시 */}
