@@ -2,7 +2,6 @@ import { useCallback, useRef, useState } from 'react';
 import { Alert, View } from 'react-native';
 import { captureRef } from 'react-native-view-shot';
 import * as Sharing from 'expo-sharing';
-import * as MediaLibrary from 'expo-media-library';
 
 export function useShareHoroscope() {
   const cardRef = useRef<View>(null);
@@ -26,6 +25,7 @@ export function useShareHoroscope() {
     if (!cardRef.current) return;
     setSaving(true);
     try {
+      const MediaLibrary = await import('expo-media-library');
       const { status } = await MediaLibrary.requestPermissionsAsync();
       if (status !== 'granted') {
         Alert.alert('권한 필요', '이미지를 저장하려면 갤러리 접근 권한이 필요해요.');
