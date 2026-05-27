@@ -66,7 +66,7 @@ function getClient(): OpenAI | null {
 }
 
 function getModel(): string {
-  return process.env.OPENAI_MODEL ?? "gpt-4o-mini";
+  return process.env.OPENAI_MODEL ?? "gpt-4o";
 }
 
 // ============================================================
@@ -138,9 +138,9 @@ async function translateItem(item: string): Promise<string | null> {
 // ============================================================
 
 export interface GogoKoEntry {
-  zodiac_sign:    string;
+  zodiac_sign: string;
   lucky_color_ko: string | null;
-  lucky_item_ko:  string | null;
+  lucky_item_ko: string | null;
 }
 
 /**
@@ -156,9 +156,9 @@ export async function translateGogoEntries(
   entries: GogoEntry[],
 ): Promise<Map<string, GogoKoEntry>> {
   const uniqueColors = [...new Set(entries.map((e) => e.lucky_color))];
-  const uniqueItems  = [...new Set(entries.map((e) => e.lucky_item))];
+  const uniqueItems = [...new Set(entries.map((e) => e.lucky_item))];
 
-  const mappedCount   = uniqueColors.filter((c) => Object.prototype.hasOwnProperty.call(COLOR_MAP, c)).length;
+  const mappedCount = uniqueColors.filter((c) => Object.prototype.hasOwnProperty.call(COLOR_MAP, c)).length;
   const gptColorCount = uniqueColors.length - mappedCount;
   console.log(
     `[gogo-ko] ${uniqueColors.length} unique colors` +
@@ -182,9 +182,9 @@ export async function translateGogoEntries(
     entries.map((e) => [
       e.zodiac_sign,
       {
-        zodiac_sign:    e.zodiac_sign,
+        zodiac_sign: e.zodiac_sign,
         lucky_color_ko: colorKoMap.get(e.lucky_color) ?? null,
-        lucky_item_ko:  itemKoMap.get(e.lucky_item)   ?? null,
+        lucky_item_ko: itemKoMap.get(e.lucky_item) ?? null,
       },
     ])
   );
