@@ -1,17 +1,29 @@
-import { StyleSheet, Text, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-// import Svg, { Circle, Path } from 'react-native-svg';
+import {
+  ActivityIndicator,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { Feather } from "@expo/vector-icons";
 
-import { colors } from '@/src/constants/design';
+import { colors } from "@/src/constants/design";
 
 interface FinalHeaderProps {
   subtitle?: string;
-  // onAvatarPress?: () => void;
+  onSharePress?: () => void;
+  sharing?: boolean;
+  onSavePress?: () => void;
+  saving?: boolean;
 }
 
 export function FinalHeader({
-  subtitle = '오늘도 좋은 하루 되세요 ☀️',
-  // onAvatarPress,
+  subtitle = "오늘도 좋은 하루 되세요 ☀️",
+  onSharePress,
+  sharing = false,
+  onSavePress,
+  saving = false,
 }: FinalHeaderProps) {
   const insets = useSafeAreaInsets();
   return (
@@ -20,26 +32,47 @@ export function FinalHeader({
         <Text style={styles.title}>ohaasa</Text>
         {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
       </View>
-      {/* <View style={styles.avatar}>
-        <Svg width={14} height={14} viewBox="0 0 24 24" fill="none">
-          <Circle cx="12" cy="8" r="4" stroke={colors.textMid} strokeWidth="2" />
-          <Path
-            d="M4 20c0-4 3.6-7 8-7s8 3 8 7"
-            stroke={colors.textMid}
-            strokeWidth="2"
-            strokeLinecap="round"
-          />
-        </Svg>
-      </View> */}
+      <View style={styles.actions}>
+        {onSavePress && (
+          <TouchableOpacity
+            onPress={onSavePress}
+            disabled={saving || sharing}
+            style={styles.iconButton}
+          >
+            <View style={styles.iconWrap}>
+              {saving ? (
+                <ActivityIndicator size="small" color={colors.apricotDark} />
+              ) : (
+                <Feather name="download" size={18} color={colors.apricotDark} />
+              )}
+            </View>
+          </TouchableOpacity>
+        )}
+        {onSharePress && (
+          <TouchableOpacity
+            onPress={onSharePress}
+            disabled={sharing || saving}
+            style={styles.iconButton}
+          >
+            <View style={styles.iconWrap}>
+              {sharing ? (
+                <ActivityIndicator size="small" color={colors.apricotDark} />
+              ) : (
+                <Feather name="share-2" size={18} color={colors.apricotDark} />
+              )}
+            </View>
+          </TouchableOpacity>
+        )}
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     paddingHorizontal: 28,
   },
   copy: {
@@ -47,7 +80,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 20,
-    fontWeight: '300',
+    fontWeight: "300",
     color: colors.text,
     letterSpacing: 2,
   },
@@ -56,16 +89,17 @@ const styles = StyleSheet.create({
     color: colors.textSoft,
     marginTop: 2,
   },
-  // avatar: {
-  //   width: 34,
-  //   height: 34,
-  //   alignItems: 'center',
-  //   justifyContent: 'center',
-  //   borderRadius: 17,
-  //   backgroundColor: 'rgba(255,253,249,0.85)',
-  //   shadowColor: '#000',
-  //   shadowOpacity: 0.07,
-  //   shadowRadius: 5,
-  //   shadowOffset: { width: 0, height: 2 },
-  // },
+  actions: {
+    flexDirection: "row",
+    gap: 20,
+  },
+  iconButton: {
+    padding: 6,
+  },
+  iconWrap: {
+    width: 18,
+    height: 18,
+    alignItems: "center",
+    justifyContent: "center",
+  },
 });

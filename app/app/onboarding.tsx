@@ -8,7 +8,7 @@ import {
   View,
 } from "react-native";
 import { useRouter } from "expo-router";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import Svg, { Circle, Line, Path, Polygon } from "react-native-svg";
 
@@ -247,7 +247,7 @@ export default function OnboardingScreen() {
           color={colors.skyDark}
           opacity={0.25}
         />
-        <SafeAreaView style={styles.safeArea}>
+        <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
           <OnboardingIntro onStart={() => setStep("selection")} />
         </SafeAreaView>
       </LinearGradient>
@@ -278,7 +278,7 @@ export default function OnboardingScreen() {
       {/* Moon */}
       <MoonDeco x={268} y={58} size={22} color={colors.apricot} opacity={0.2} />
 
-      <SafeAreaView style={styles.safeArea}>
+      <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
         <View style={styles.selectionScreen}>
           {/* Fixed header */}
           <View style={styles.selectionHeader}>
@@ -494,8 +494,9 @@ function SelectedZodiacBar({
   saving,
   selectedZodiac,
 }: SelectedZodiacBarProps) {
+  const insets = useSafeAreaInsets();
   return (
-    <View style={styles.ctaFooter}>
+    <View style={[styles.ctaFooter, { paddingBottom: 20 + insets.bottom }]}>
       {selectedZodiac ? (
         <View style={styles.ctaPreview}>
           <View

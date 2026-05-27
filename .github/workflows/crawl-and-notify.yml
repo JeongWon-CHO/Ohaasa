@@ -2,15 +2,15 @@ name: Crawl horoscopes and send notifications
 
 on:
   schedule:
-    - cron: '0 22 * * 0-5'  # UTC 기준. JST/KST 월~토 07:00 실행. 일요일 스킵.
+    - cron: "0 22 * * *" # UTC 기준. JST/KST 매일 07:00 실행. 평일/주말 분기는 코드에서 처리.
   workflow_dispatch:
     inputs:
       dry_run:
-        description: 'dry-run 모드 (DB 쓰기 없음, 푸시 발송 없음)'
+        description: "dry-run 모드 (DB 쓰기 없음, 푸시 발송 없음)"
         type: boolean
         default: false
       force:
-        description: '날짜 체크 무시하고 강제 크롤링'
+        description: "날짜 체크 무시하고 강제 크롤링"
         type: boolean
         default: false
 
@@ -27,7 +27,7 @@ permissions:
 jobs:
   crawl-and-notify:
     runs-on: ubuntu-latest
-    timeout-minutes: 30  # 발송(~3분) + receipt polling 대기 15분 + 여유
+    timeout-minutes: 30 # 발송(~3분) + receipt polling 대기 15분 + 여유
 
     steps:
       - name: Checkout
@@ -36,7 +36,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version: "22"
 
       - name: Install dependencies
         working-directory: backend
@@ -48,7 +48,7 @@ jobs:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          OPENAI_MODEL: gpt-4o-mini
+          OPENAI_MODEL: gpt-4o
         run: |
           ARGS=""
           if [ "${{ github.event.inputs.dry_run }}" = "true" ]; then
