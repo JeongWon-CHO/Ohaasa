@@ -16,8 +16,15 @@ const SYSTEM_PROMPT = `당신은 일본어 별자리 운세 문장을 한국어 
 3. 직역투를 피하고 한국어 운세 앱에서 자연스럽게 읽히는 부드러운 문체로 다듬어 주세요.
 4. 원문에 줄바꿈이 있으면 그대로 유지하세요.
 5. 번역 결과 텍스트만 출력하고, 설명이나 주석을 붙이지 마세요.
-6. 한자(漢字)를 포함한 일본어·중국어 문자는 절대 사용하지 마세요. 한국어 단어로 완전히 대체하세요.
+6. 출력에는 한글과 영어(규칙 7 범위 내)만 허용됩니다. 한자·히라가나·가타카나·중국어 문자는 단 한 글자도 절대 출력하지 마세요. 한국어에서도 쓰이는 한자(困·愛·怒 등)라도 예외 없이 한글 단어로만 표현하세요.
 7. 영어는 흐름상 자연스럽게 어울리는 감탄·표현(예: "So Good!", "Lucky!")에 한해 최소한으로만 허용합니다. 영어가 없어도 자연스러운 문장에는 영어를 억지로 넣지 마세요.`;
+
+// 3차 시도용: 문체보다 한글 출력 보장을 최우선으로 하는 간소화 프롬프트
+const SYSTEM_PROMPT_STRICT = `일본어 문장을 한국어로 번역하세요.
+출력 규칙:
+- 한글과 영어(감탄 표현 한정)만 출력 가능합니다.
+- 한자·히라가나·가타카나는 단 한 글자도 허용되지 않습니다. 한국어 한자(困·愛·怒 등)도 예외 없이 한글 단어로만 쓰세요.
+- 번역 결과 텍스트만 출력하세요.`;
 
 // ============================================================
 // Client (lazy init)
@@ -36,25 +43,25 @@ function getClient(): OpenAI | null {
 }
 
 function getModel(): string {
-  return process.env.OPENAI_MODEL ?? "gpt-4o-mini";
+  return process.env.OPENAI_MODEL ?? "gpt-4o";
 }
 
 // ============================================================
 // Validation
 // ============================================================
 
-/**
- * 번역 결과에 히라가나·가타카나·CJK 한자가 포함되어 있으면 true를 반환한다.
- * - 히라가나 ぀-ゟ / 가타카나 ゠-ヿ
- * - CJK 한자  㐀-䶿, 一-鿿
- */
+const DISALLOWED_JA_HAN_REGEX =
+  /[\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Han}々〆〇〻ー]/u;
+
 export function containsJapanese(text: string): boolean {
-  return /[぀-ヿ㐀-䶿一-鿿]/.test(text);
+  return DISALLOWED_JA_HAN_REGEX.test(text);
 }
 
 /** containsJapanese(text) 가 true일 때 매칭된 문자들을 반환한다. */
 function extractJapaneseChars(text: string): string {
-  const matches = text.match(/[぀-ヿ㐀-䶿一-鿿]+/g);
+  const matches = text.match(
+    /[\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Han}々〆〇〻ー]+/gu,
+  );
   return matches ? matches.join("") : "";
 }
 
@@ -62,105 +69,99 @@ function extractJapaneseChars(text: string): string {
 // Public API
 // ============================================================
 
+async function callGPT(
+  client: OpenAI,
+  model: string,
+  messages: OpenAI.Chat.ChatCompletionMessageParam[],
+  label: string,
+): Promise<string | null> {
+  try {
+    const response = await client.chat.completions.create({
+      model,
+      temperature: 0,
+      max_tokens: 300,
+      messages,
+    });
+    const text = response.choices[0]?.message?.content?.trim() ?? "";
+    if (!text) {
+      console.warn(`[translator] ${label}: GPT returned empty response`);
+      return null;
+    }
+    return text;
+  } catch (err) {
+    console.warn(
+      `[translator] ${label}: GPT call failed: ${err instanceof Error ? err.message : String(err)}`,
+    );
+    return null;
+  }
+}
+
 /**
  * 일본어 운세 문장을 한국어로 번역한다.
- * 번역 결과에 일본어/한자가 남아 있으면 1회 재번역한다.
- * 재번역 후에도 오염이 남으면 warning 로그를 남기고 retried 결과를 반환한다.
- * 실패하거나 OPENAI_API_KEY가 없으면 null을 반환한다.
- * 파이프라인을 중단하는 예외는 throw하지 않는다.
- *
- * @param adviceJa  번역할 일본어 원문
- * @param label     로그 식별자 (zodiac_sign 등). 생략 시 "unknown"
+ * 번역 결과에 일본어/한자가 남아 있으면 최대 3회까지 재시도한다.
+ * - 2차: 이전 결과를 포함해 재번역 요청
+ * - 3차: 한글 출력만 허용하는 간소화 프롬프트로 재시도
+ * 3회 모두 실패해도 마지막 결과를 반환한다.
+ * OPENAI_API_KEY가 없거나 GPT 호출 자체가 실패하면 null을 반환한다.
  */
 export async function translateAdvice(
   adviceJa: string,
   label = "unknown",
 ): Promise<string | null> {
   const client = getClient();
-
-  if (!client) {
-    return null;
-  }
+  if (!client) return null;
 
   const model = getModel();
 
-  // ── 1차 번역 ─────────────────────────────────────────────────
-  let translated: string | null;
-  try {
-    const response = await client.chat.completions.create({
-      model,
-      temperature: 0,
-      max_tokens: 300,
-      messages: [
-        { role: "system", content: SYSTEM_PROMPT },
-        {
-          role: "user",
-          content: `다음 일본어 별자리 운세 문장을 한국어로 번역해주세요:\n\n${adviceJa}`,
-        },
-      ],
-    });
-
-    const text = response.choices[0]?.message?.content?.trim() ?? "";
-    if (!text) {
-      console.warn(`[translator] ${label}: GPT returned empty response`);
-      return null;
-    }
-    translated = text;
-  } catch (err) {
-    console.warn(
-      `[translator] ${label}: GPT call failed: ${err instanceof Error ? err.message : String(err)}`
-    );
-    return null;
-  }
-
-  // 1차 결과 검증 — 이상 없으면 바로 반환
-  if (!containsJapanese(translated)) {
-    return translated;
-  }
-
-  // ── 재번역 (1회) ──────────────────────────────────────────────
-  console.warn(
-    `[translator] ${label}: Japanese characters detected, retrying — "${extractJapaneseChars(translated)}"`
+  // ── 1차 번역 ──────────────────────────────────────────────────
+  const first = await callGPT(
+    client, model,
+    [
+      { role: "system", content: SYSTEM_PROMPT },
+      { role: "user", content: `다음 일본어 별자리 운세 문장을 한국어로 번역해주세요:\n\n${adviceJa}` },
+    ],
+    label,
   );
+  if (!first) return null;
+  if (!containsJapanese(first)) return first;
 
-  let retried: string | null;
-  try {
-    const response = await client.chat.completions.create({
-      model,
-      temperature: 0,
-      max_tokens: 300,
-      messages: [
-        { role: "system", content: SYSTEM_PROMPT },
-        {
-          role: "user",
-          content:
-            `이전 번역에 일본어/한자 문자가 남아 있습니다. ` +
-            `모든 한자·일본어 표현을 한국어 한글 표현으로 바꿔 다시 번역하세요.\n\n` +
-            `원문:\n${adviceJa}\n\n` +
-            `이전 번역 (수정 필요):\n${translated}`,
-        },
-      ],
-    });
+  // ── 2차 번역 ──────────────────────────────────────────────────
+  console.warn(`[translator] ${label}: attempt 1 — Japanese chars detected: "${extractJapaneseChars(first)}"`);
 
-    const text = response.choices[0]?.message?.content?.trim() ?? "";
-    if (!text) {
-      console.warn(`[translator] ${label}: retry GPT returned empty response`);
-      return translated; // 원래 결과라도 반환
-    }
-    retried = text;
-  } catch (err) {
-    console.warn(
-      `[translator] ${label}: retry GPT call failed: ${err instanceof Error ? err.message : String(err)}`
-    );
-    return translated; // 원래 결과라도 반환
+  const second = await callGPT(
+    client, model,
+    [
+      { role: "system", content: SYSTEM_PROMPT },
+      {
+        role: "user",
+        content:
+          `이전 번역에 일본어/한자 문자가 남아 있습니다. ` +
+          `모든 한자·일본어 표현을 한국어 한글 표현으로 바꿔 다시 번역하세요.\n\n` +
+          `원문:\n${adviceJa}\n\n` +
+          `이전 번역 (수정 필요):\n${first}`,
+      },
+    ],
+    label,
+  );
+  if (!second) return first;
+  if (!containsJapanese(second)) return second;
+
+  // ── 3차 번역 (간소화 프롬프트) ────────────────────────────────
+  console.warn(`[translator] ${label}: attempt 2 — Japanese chars detected: "${extractJapaneseChars(second)}"`);
+
+  const third = await callGPT(
+    client, model,
+    [
+      { role: "system", content: SYSTEM_PROMPT_STRICT },
+      { role: "user", content: adviceJa },
+    ],
+    label,
+  );
+  if (!third) return second;
+
+  if (containsJapanese(third)) {
+    console.warn(`[translator] ${label}: attempt 3 — Japanese chars still remain: "${extractJapaneseChars(third)}"`);
   }
 
-  // 재번역 결과 검증
-  if (containsJapanese(retried)) {
-    console.warn(
-      `[translator] ${label}: non-Korean characters remained after retry — "${extractJapaneseChars(retried)}"`
-    );
-  }
-
-  return retried;
+  return third;
 }

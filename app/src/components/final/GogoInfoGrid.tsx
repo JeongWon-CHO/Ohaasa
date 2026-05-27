@@ -120,9 +120,8 @@ const styles = StyleSheet.create({
   },
   rowValue: {
     flex: 1,
-    fontSize: 12,
-    fontWeight: "500",
-    color: colors.text,
+    fontSize: 11,
+    color: colors.textMid,
     flexWrap: "wrap",
     textAlign: "right",
   },

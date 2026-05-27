@@ -46,6 +46,14 @@ module.exports = {
       'expo-notifications',
       'expo-dev-client',
       './plugins/withAndroidRegistration',
+      [
+        'expo-media-library',
+        {
+          photosPermission: '갤러리에 이미지를 저장하기 위해 접근 권한이 필요해요.',
+          savePhotosPermission: '갤러리에 이미지를 저장하기 위해 접근 권한이 필요해요.',
+          isAccessMediaLocationEnabled: true,
+        },
+      ],
     ],
     experiments: {
       typedRoutes: true,
