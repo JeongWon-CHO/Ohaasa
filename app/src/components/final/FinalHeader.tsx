@@ -1,8 +1,14 @@
-import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Feather } from '@expo/vector-icons';
+import {
+  ActivityIndicator,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { Feather } from "@expo/vector-icons";
 
-import { colors } from '@/src/constants/design';
+import { colors } from "@/src/constants/design";
 
 interface FinalHeaderProps {
   subtitle?: string;
@@ -13,7 +19,7 @@ interface FinalHeaderProps {
 }
 
 export function FinalHeader({
-  subtitle = '오늘도 좋은 하루 되세요 ☀️',
+  subtitle = "오늘도 좋은 하루 되세요 ☀️",
   onSharePress,
   sharing = false,
   onSavePress,
@@ -64,9 +70,9 @@ export function FinalHeader({
 
 const styles = StyleSheet.create({
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     paddingHorizontal: 28,
   },
   copy: {
@@ -74,7 +80,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 20,
-    fontWeight: '300',
+    fontWeight: "300",
     color: colors.text,
     letterSpacing: 2,
   },
@@ -84,8 +90,8 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   actions: {
-    flexDirection: 'row',
-    gap: 4,
+    flexDirection: "row",
+    gap: 20,
   },
   iconButton: {
     padding: 6,
@@ -93,7 +99,7 @@ const styles = StyleSheet.create({
   iconWrap: {
     width: 18,
     height: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
 });
