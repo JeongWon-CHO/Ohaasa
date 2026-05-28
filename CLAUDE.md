@@ -209,6 +209,22 @@ npm run crawl       # 실발송
 - **FCM 설정**: Firebase 콘솔에서 Android 앱(`com.ohaasa.app`) 등록 → `google-services.json` 취득 → `app/` 배치 → `app.json`의 `android.googleServicesFile` 참조. `google-services.json`은 APK에 번들되므로 커밋 대상 (service account 키와 다름).
 - **FCM V1 발송 자격증명**: `eas credentials` → Android → FCM V1 Google Service Account Key 등록. `google-services.json`(앱 수신용)과 별개. service account JSON은 절대 커밋 금지 (`.gitignore` 적용됨).
 
+### 이미지 저장 (갤러리 저장)
+
+- **라이브러리**: `expo-media-library` + `react-native-view-shot`
+- **저장 전용 원칙**: `saveToLibraryAsync()`만 사용하므로 READ 권한 불필요. `requestPermissionsAsync(true)` (writeOnly 모드) 사용.
+- **READ 권한 제거 필수**: `expo-media-library` 플러그인은 `READ_MEDIA_IMAGES` / `READ_MEDIA_VIDEO`를 manifest에 자동 추가함. `plugins/withWriteOnlyMediaLibrary.js` 커스텀 플러그인으로 빌드 후 제거.
+- **`isAccessMediaLocationEnabled: false`**: `app.config.js`에서 반드시 false로 설정. true이면 불필요한 위치 권한까지 추가됨.
+- **Play Console 경고**: READ 권한이 manifest에 있으면 "선언되지 않은 사진 및 동영상 권한" 경고 발생 → 위 조치로 해결.
+- **동적 import**: `await import('expo-media-library')` — push notification과 동일하게 static import 금지.
+
+### SNS 공유 (시스템 공유 시트)
+
+- **라이브러리**: `expo-sharing` + `react-native-view-shot`
+- **추가 권한 없음**: `shareAsync()`는 OS 시스템 공유 시트를 띄우는 것이므로 미디어 READ/WRITE 권한 불필요.
+- **흐름**: `captureRef()` → 임시 파일 URI 생성 → `shareAsync(uri, { mimeType: 'image/png' })` → 시스템 공유 시트.
+- **구현 위치**: `src/hooks/useShareHoroscope.ts` — `share()`(공유)와 `saveImage()`(저장) 함께 관리.
+
 ### 데이터 흐름
 
 - 별자리 선택: AsyncStorage 우선 저장 → Supabase background upsert (네트워크 실패 허용)
