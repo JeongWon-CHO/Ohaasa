@@ -107,20 +107,21 @@ const styles = StyleSheet.create({
   starRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
+    gap: 12,
+    // justifyContent: "space-between",
     marginBottom: 8,
   },
   rowLabel: {
-    fontSize: 11,
+    fontSize: 12,
     color: colors.textSoft,
     flexShrink: 0,
   },
   starLabel: {
-    width: 32,
+    minWidth: 34,
   },
   rowValue: {
     flex: 1,
-    fontSize: 11,
+    fontSize: 12,
     color: colors.textMid,
     flexWrap: "wrap",
     textAlign: "right",
