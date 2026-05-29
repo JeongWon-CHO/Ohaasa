@@ -181,7 +181,11 @@ export default function ZodiacDetailScreen() {
           hitSlop={12}
           style={styles.backBtn}
         >
-          <FontAwesome name="angle-left" size={16} color={colors.apricotDark} />
+          <FontAwesome
+            name="chevron-left"
+            size={16}
+            color={colors.apricotDark}
+          />
         </TouchableOpacity>
         {horoscope && zodiac && (
           <TouchableOpacity
@@ -325,7 +329,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     paddingHorizontal: 20,
-    paddingBottom: 4,
+    paddingBottom: 8,
     zIndex: 1,
   },
   backBtn: {
