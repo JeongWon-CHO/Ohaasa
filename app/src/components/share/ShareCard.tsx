@@ -252,10 +252,10 @@ const styles = StyleSheet.create({
     width: "100%",
   },
   advice: {
-    fontSize: 8,
+    fontSize: 9,
     fontWeight: "300",
     color: colors.text,
-    lineHeight: 15,
+    lineHeight: 14,
     textAlign: "center",
   },
   topGroup: {
@@ -284,7 +284,7 @@ const infoStyles = StyleSheet.create({
     padding: 12,
   },
   cardHeader: {
-    fontSize: 8,
+    fontSize: 6,
     color: colors.textSoft,
     letterSpacing: 1,
     marginBottom: 8,
@@ -302,15 +302,14 @@ const infoStyles = StyleSheet.create({
   rowValue: {
     flex: 1,
     fontSize: 8,
-    fontWeight: "400",
-    color: colors.text,
+    color: colors.textMid,
     flexWrap: "wrap",
     textAlign: "right",
   },
   starRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 5,
+    gap: 8,
     marginBottom: 5,
   },
   starLabel: {

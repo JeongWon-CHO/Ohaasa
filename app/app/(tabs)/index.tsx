@@ -363,7 +363,7 @@ const styles = StyleSheet.create({
   },
   rankPill: {
     borderRadius: 20,
-    paddingVertical: 4,
+    paddingVertical: 5,
     paddingHorizontal: 18,
     marginBottom: 18,
     shadowColor: colors.apricot,
@@ -379,6 +379,7 @@ const styles = StyleSheet.create({
   },
   circleOuter: {
     // width/height는 cfg.circleSize로 인라인 override
+    marginVertical: 10,
   },
   circleDash: {
     position: "absolute",

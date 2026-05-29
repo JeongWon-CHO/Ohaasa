@@ -26,7 +26,7 @@ export function useShareHoroscope() {
     setSaving(true);
     try {
       const MediaLibrary = await import('expo-media-library');
-      const { status } = await MediaLibrary.requestPermissionsAsync();
+      const { status } = await MediaLibrary.requestPermissionsAsync(true);
       if (status !== 'granted') {
         Alert.alert('권한 필요', '이미지를 저장하려면 갤러리 접근 권한이 필요해요.');
         return;
