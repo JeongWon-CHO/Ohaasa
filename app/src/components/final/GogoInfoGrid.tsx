@@ -94,7 +94,7 @@ const styles = StyleSheet.create({
     padding: 16,
   },
   gridHeader: {
-    fontSize: 9,
+    fontSize: 10,
     color: colors.textSoft,
     letterSpacing: 1.08,
     marginBottom: 12,
@@ -112,7 +112,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   rowLabel: {
-    fontSize: 12,
+    fontSize: 13,
     color: colors.textSoft,
     flexShrink: 0,
   },
@@ -121,7 +121,7 @@ const styles = StyleSheet.create({
   },
   rowValue: {
     flex: 1,
-    fontSize: 12,
+    fontSize: 13,
     color: colors.textMid,
     flexWrap: "wrap",
     textAlign: "right",

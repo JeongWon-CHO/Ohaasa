@@ -386,14 +386,15 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
   },
   rankPillText: {
-    fontSize: 11,
-    fontWeight: "600",
+    fontSize: 12,
+    fontWeight: "500",
     color: "#FFFDF9",
     letterSpacing: 0.66,
   },
   circleOuter: {
     width: 136,
     height: 136,
+    marginVertical: 20,
   },
   circleDash: {
     position: "absolute",
@@ -420,7 +421,7 @@ const styles = StyleSheet.create({
     marginTop: 16,
   },
   zodiacName: {
-    fontSize: 19,
+    fontSize: 20,
     fontWeight: "400",
     color: colors.text,
   },
