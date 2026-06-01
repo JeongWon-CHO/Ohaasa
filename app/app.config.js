@@ -25,6 +25,7 @@ module.exports = {
     },
     ios: {
       supportsTablet: true,
+      bundleIdentifier: packageName,
     },
     android: {
       adaptiveIcon: {
