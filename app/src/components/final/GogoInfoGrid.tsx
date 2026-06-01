@@ -1,4 +1,5 @@
 import {
+  Platform,
   StyleSheet,
   Text,
   View,
@@ -102,14 +103,13 @@ const styles = StyleSheet.create({
   luckyRow: {
     flexDirection: "row",
     gap: 8,
-    marginBottom: 8,
+    marginBottom: Platform.OS === "ios" ? 12 : 8,
   },
   starRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
-    // justifyContent: "space-between",
-    marginBottom: 8,
+    marginBottom: Platform.OS === "ios" ? 12 : 8,
   },
   rowLabel: {
     fontSize: 13,

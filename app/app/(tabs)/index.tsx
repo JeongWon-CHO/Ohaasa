@@ -31,24 +31,24 @@ import { useToast } from "@/src/hooks/useToast";
 import { useZodiac } from "@/src/hooks/useZodiac";
 
 const SCREEN_CONFIG = {
-  compact: {
-    circleSize: 116,
-    badgeSize: 88,
-    glowSize: 148,
-    glowCenter: 74,
-    dashRadius: 66,
-    heroMarginTop: 20,
-    zodiacFontSize: 16,
-    cardMarginTop: 16,
-  },
-  regular: {
+  android: {
     circleSize: 136,
     badgeSize: 106,
     glowSize: 168,
     glowCenter: 84,
     dashRadius: 76,
     heroMarginTop: 28,
-    zodiacFontSize: 19,
+    zodiacFontSize: 20,
+    cardMarginTop: 20,
+  },
+  ios: {
+    circleSize: 136,
+    badgeSize: 106,
+    glowSize: 168,
+    glowCenter: 84,
+    dashRadius: 76,
+    heroMarginTop: 28,
+    zodiacFontSize: 20,
     cardMarginTop: 22,
   },
 } as const;
@@ -377,10 +377,9 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
   },
   rankPillText: {
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: "600",
     color: "#FFFDF9",
-    letterSpacing: 0.66,
   },
   circleOuter: {
     // width/height는 cfg.circleSize로 인라인 override
@@ -416,9 +415,9 @@ const styles = StyleSheet.create({
     color: colors.text,
   },
   zodiacSub: {
-    fontSize: 11,
+    fontSize: 12,
     color: colors.textSoft,
-    marginTop: 3,
+    marginTop: 6,
   },
 
   // ── Fortune card ─────────────────────────────────────────────

@@ -5,8 +5,8 @@ import { typography } from "@/src/constants/design";
 import { useScreenSize } from "@/src/hooks/useScreenSize";
 
 const ADVICE_CONFIG = {
-  compact: { fontSize: 12, lineHeight: 22, padding: 14 },
-  regular: { fontSize: 14, lineHeight: 27, padding: 18 },
+  android: { fontSize: 14, lineHeight: 27, padding: 18 },
+  ios: { fontSize: 14, lineHeight: 27, padding: 18 },
 } as const;
 
 interface HoroscopeCardProps {

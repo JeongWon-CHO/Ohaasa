@@ -5,8 +5,8 @@ import { colors } from "@/src/constants/design";
 import { useScreenSize } from "@/src/hooks/useScreenSize";
 
 const PILL_CONFIG = {
-  compact: { fontSize: 8 },
-  regular: { fontSize: 10 },
+  android: { fontSize: 10 },
+  ios: { fontSize: 11 },
 } as const;
 
 interface DatePillProps {
