@@ -261,7 +261,7 @@ export default function SettingsScreen() {
             <Text style={styles.footerLogo}>ohaasa ✦</Text>
           </View>
           <Text style={styles.footerJa}>おはあさ</Text>
-          <Text style={styles.footerCaption}>매일 아침 7:30, 당신의 별자리 운세</Text>
+          <Text style={styles.footerCaption}>매일 아침 7:30, 당신의 별자리 운세를 알려드려요</Text>
         </View>
 
         <View style={styles.spacer} />
@@ -321,11 +321,16 @@ const styles = StyleSheet.create({
   },
   zodiacName: {
     fontSize: 15,
-    fontWeight: '400',
+    lineHeight: 20,
+    fontFamily: 'NotoSansKR_400Regular',
+    includeFontPadding: false,
     color: colors.text,
   },
   zodiacSub: {
     fontSize: 11,
+    lineHeight: 16,
+    fontFamily: 'NotoSansKR_400Regular',
+    includeFontPadding: false,
     color: colors.textSoft,
     marginTop: 2,
   },
@@ -337,7 +342,9 @@ const styles = StyleSheet.create({
   },
   changeButtonText: {
     fontSize: 12,
-    fontWeight: '500',
+    lineHeight: 16,
+    fontFamily: 'NotoSansKR_500Medium',
+    includeFontPadding: false,
     color: colors.apricotDark,
   },
   pressed: {
@@ -355,7 +362,9 @@ const styles = StyleSheet.create({
   },
   openSettingsText: {
     fontSize: 12,
-    fontWeight: '500',
+    lineHeight: 16,
+    fontFamily: 'NotoSansKR_500Medium',
+    includeFontPadding: false,
     color: colors.apricotDark,
   },
   aboutRow: {
@@ -376,20 +385,28 @@ const styles = StyleSheet.create({
   },
   footerLogo: {
     fontSize: 20,
-    fontWeight: '300',
+    lineHeight: 26,
+    fontFamily: 'NotoSansKR_300Light',
+    includeFontPadding: false,
     color: colors.textSoft,
     letterSpacing: 2.8,
   },
   footerJa: {
     fontSize: 11,
+    lineHeight: 16,
+    fontFamily: 'NotoSansKR_400Regular',
+    includeFontPadding: false,
     color: colors.apricot,
     marginTop: 4,
     letterSpacing: 2,
   },
   footerCaption: {
     fontSize: 10,
-    color: colors.cream3,
-    marginTop: 4,
+    lineHeight: 14,
+    fontFamily: 'NotoSansKR_400Regular',
+    includeFontPadding: false,
+    color: colors.textSoft,
+    marginTop: 12,
   },
 
   spacer: {

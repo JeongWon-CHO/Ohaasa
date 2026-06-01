@@ -74,11 +74,16 @@ const styles = StyleSheet.create({
   title: {
     color: colors.text,
     fontSize: 14,
-    fontWeight: '400',
+    lineHeight: 20,
+    fontFamily: 'NotoSansKR_400Regular',
+    includeFontPadding: false,
   },
   description: {
     color: colors.textSoft,
     fontSize: 11,
+    lineHeight: 16,
+    fontFamily: 'NotoSansKR_400Regular',
+    includeFontPadding: false,
     marginTop: 2,
   },
   right: {

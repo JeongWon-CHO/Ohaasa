@@ -43,6 +43,6 @@ const styles = StyleSheet.create({
   text: {
     color: "#FFFDF9",
     fontSize: 13,
-    fontWeight: "500",
+    fontFamily: "NotoSansKR_500Medium",
   },
 });

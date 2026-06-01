@@ -623,21 +623,23 @@ const styles = StyleSheet.create({
   },
   introLogo: {
     fontSize: 40,
-    fontWeight: "300",
+    lineHeight: 50,
+    fontFamily: "NotoSansKR_300Light",
+    includeFontPadding: false,
     color: colors.text,
     letterSpacing: 4.8,
     marginBottom: 6,
   },
   introSubtext: {
     fontSize: 11,
-    fontWeight: "400",
+    fontFamily: "NotoSansKR_400Regular",
     color: colors.textSoft,
     letterSpacing: 2.42,
     marginBottom: 16,
   },
   introBody: {
     fontSize: 14,
-    fontWeight: "300",
+    fontFamily: "NotoSansKR_300Light",
     color: colors.textMid,
     textAlign: "center",
     lineHeight: 25.2,
@@ -654,7 +656,9 @@ const styles = StyleSheet.create({
   },
   introButtonText: {
     fontSize: 15,
-    fontWeight: "500",
+    lineHeight: 20,
+    fontFamily: "NotoSansKR_500Medium",
+    includeFontPadding: false,
     color: colors.cream,
     letterSpacing: 0.9,
   },
@@ -683,7 +687,7 @@ const styles = StyleSheet.create({
   },
   selectionTitle: {
     fontSize: 22,
-    fontWeight: "400",
+    fontFamily: "NotoSansKR_400Regular",
     color: colors.text,
     lineHeight: 31,
   },
@@ -731,11 +735,16 @@ const styles = StyleSheet.create({
   },
   ctaName: {
     fontSize: 13,
-    fontWeight: "500",
+    lineHeight: 18,
+    fontFamily: "NotoSansKR_500Medium",
+    includeFontPadding: false,
     color: colors.text,
   },
   ctaEn: {
     fontSize: 10,
+    lineHeight: 14,
+    fontFamily: "NotoSansKR_400Regular",
+    includeFontPadding: false,
     color: colors.textSoft,
   },
   ctaButton: {
@@ -751,7 +760,9 @@ const styles = StyleSheet.create({
   },
   ctaButtonText: {
     fontSize: 15,
-    fontWeight: "500",
+    lineHeight: 20,
+    fontFamily: "NotoSansKR_500Medium",
+    includeFontPadding: false,
     color: colors.cream,
     letterSpacing: 0.75,
   },
@@ -764,7 +775,9 @@ const styles = StyleSheet.create({
   errorText: {
     color: colors.apricotDark,
     fontSize: 13,
-    lineHeight: 19,
+    lineHeight: 18,
+    fontFamily: "NotoSansKR_400Regular",
+    includeFontPadding: false,
     marginTop: 12,
   },
 });

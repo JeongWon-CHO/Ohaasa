@@ -24,6 +24,9 @@ export function SettingsSection({ label, children, style, cardStyle }: SettingsS
 const styles = StyleSheet.create({
   label: {
     fontSize: 10,
+    lineHeight: 14,
+    fontFamily: 'NotoSansKR_400Regular',
+    includeFontPadding: false,
     color: colors.textSoft,
     letterSpacing: 1.8,
     marginBottom: 8,

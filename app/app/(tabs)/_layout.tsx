@@ -55,7 +55,7 @@ export default function TabLayout() {
         tabBarInactiveTintColor: colors.textSoft,
         tabBarLabelStyle: {
           fontSize: 11,
-          fontWeight: "600",
+          fontFamily: "NotoSansKR_600SemiBold",
         },
         tabBarStyle: {
           height: (Platform.OS === "ios" ? 54 : 74) + insets.bottom,

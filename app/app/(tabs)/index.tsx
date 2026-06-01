@@ -378,7 +378,10 @@ const styles = StyleSheet.create({
   },
   rankPillText: {
     fontSize: 11,
-    fontWeight: "600",
+    lineHeight: 14,
+    paddingVertical: 2,
+    fontFamily: "NotoSansKR_600SemiBold",
+    // includeFontPadding: false,
     color: "#FFFDF9",
   },
   circleOuter: {
@@ -407,17 +410,19 @@ const styles = StyleSheet.create({
   },
   zodiacText: {
     alignItems: "center",
-    marginTop: 16,
+    marginTop: 10,
   },
   zodiacName: {
     // fontSize는 cfg.zodiacFontSize로 인라인 override
-    fontWeight: "400",
+    fontFamily: "NotoSansKR_400Regular",
+    lineHeight: 28,
     color: colors.text,
   },
   zodiacSub: {
     fontSize: 12,
+    lineHeight: 18,
     color: colors.textSoft,
-    marginTop: 6,
+    marginTop: 4,
   },
 
   // ── Fortune card ─────────────────────────────────────────────
@@ -465,7 +470,7 @@ const styles = StyleSheet.create({
   },
   rowValue: {
     fontSize: 12,
-    fontWeight: "500",
+    fontFamily: "NotoSansKR_500Medium",
     color: colors.text,
   },
   stars: {

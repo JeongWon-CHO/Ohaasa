@@ -197,7 +197,7 @@ const styles = StyleSheet.create({
   },
   header: {
     fontSize: 9,
-    fontWeight: "400",
+    fontFamily: "NotoSansKR_400Regular",
     color: colors.textSoft,
     letterSpacing: 1.2,
     textAlign: "center",
@@ -209,7 +209,7 @@ const styles = StyleSheet.create({
   },
   rankText: {
     fontSize: 8,
-    fontWeight: "600",
+    fontFamily: "NotoSansKR_600SemiBold",
     color: "#FFFDF9",
     letterSpacing: 0.6,
   },
@@ -238,7 +238,7 @@ const styles = StyleSheet.create({
   },
   zodiacName: {
     fontSize: 15,
-    fontWeight: "300",
+    fontFamily: "NotoSansKR_300Light",
     color: colors.text,
     letterSpacing: 0.5,
   },
@@ -253,7 +253,7 @@ const styles = StyleSheet.create({
   },
   advice: {
     fontSize: 9,
-    fontWeight: "300",
+    fontFamily: "NotoSansKR_300Light",
     color: colors.text,
     lineHeight: 14,
     textAlign: "center",

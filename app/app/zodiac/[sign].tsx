@@ -387,7 +387,9 @@ const styles = StyleSheet.create({
   },
   rankPillText: {
     fontSize: 12,
-    fontWeight: "500",
+    lineHeight: 16,
+    fontFamily: "NotoSansKR_500Medium",
+    includeFontPadding: false,
     color: "#FFFDF9",
     letterSpacing: 0.66,
   },
@@ -422,11 +424,16 @@ const styles = StyleSheet.create({
   },
   zodiacName: {
     fontSize: 20,
-    fontWeight: "400",
+    lineHeight: 28,
+    fontFamily: "NotoSansKR_400Regular",
+    includeFontPadding: false,
     color: colors.text,
   },
   zodiacSub: {
     fontSize: 11,
+    lineHeight: 16,
+    fontFamily: "NotoSansKR_400Regular",
+    includeFontPadding: false,
     color: colors.textSoft,
     marginTop: 3,
   },
