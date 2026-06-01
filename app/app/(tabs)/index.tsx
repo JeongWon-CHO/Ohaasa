@@ -21,11 +21,13 @@ import { FinalHeader } from "@/src/components/final/FinalHeader";
 import { GogoInfoGrid } from "@/src/components/final/GogoInfoGrid";
 import { HoroscopeCard } from "@/src/components/HoroscopeCard";
 import { ShareCard } from "@/src/components/share/ShareCard";
+import { Toast } from "@/src/components/common/Toast";
 import { colors, gradients } from "@/src/constants/design";
 import { ZODIAC_MAP, type ZodiacSign } from "@/src/constants/zodiac";
 import { useAllHoroscopes } from "@/src/hooks/useHoroscope";
 import { useScreenSize } from "@/src/hooks/useScreenSize";
 import { useShareHoroscope } from "@/src/hooks/useShareHoroscope";
+import { useToast } from "@/src/hooks/useToast";
 import { useZodiac } from "@/src/hooks/useZodiac";
 
 const SCREEN_CONFIG = {
@@ -138,7 +140,8 @@ export default function TodayScreen() {
   const screenSize = useScreenSize();
   const cfg = SCREEN_CONFIG[screenSize];
 
-  const { cardRef, share, sharing, saveImage, saving } = useShareHoroscope();
+  const { showToast, toastProps } = useToast();
+  const { cardRef, share, sharing, saveImage, saving } = useShareHoroscope({ showToast });
 
   const {
     zodiacSign,
@@ -327,6 +330,8 @@ export default function TodayScreen() {
           <ShareCard ref={cardRef} horoscope={horoscope} zodiac={zodiac} />
         </View>
       )}
+
+      <Toast {...toastProps} />
     </LinearGradient>
   );
 }

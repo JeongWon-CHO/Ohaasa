@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { Image, StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
 
 import type { ZodiacSign } from '@/src/constants/zodiac';
@@ -36,8 +36,11 @@ export default function IndexScreen() {
 
   return (
     <View style={styles.container}>
-      <ActivityIndicator />
-      <Text style={styles.text}>Preparing app...</Text>
+      <Image
+        source={require('../assets/images/splash-icon.png')}
+        style={styles.image}
+        resizeMode="contain"
+      />
     </View>
   );
 }
@@ -47,11 +50,10 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#fff',
-    gap: 12,
+    backgroundColor: '#FFF3E6',
   },
-  text: {
-    color: '#4b5563',
-    fontSize: 14,
+  image: {
+    width: 200,
+    height: 200,
   },
 });

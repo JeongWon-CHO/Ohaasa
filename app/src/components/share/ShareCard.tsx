@@ -272,7 +272,7 @@ const styles = StyleSheet.create({
 const infoStyles = StyleSheet.create({
   grid: {
     flexDirection: "row",
-    gap: 8,
+    gap: 24,
     width: "100%",
   },
   card: {
