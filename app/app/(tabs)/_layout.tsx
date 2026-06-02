@@ -55,12 +55,16 @@ export default function TabLayout() {
         tabBarInactiveTintColor: colors.textSoft,
         tabBarLabelStyle: {
           fontSize: 11,
+          lineHeight: 14,
           fontFamily: "NotoSansKR_600SemiBold",
         },
         tabBarStyle: {
-          height: (Platform.OS === "ios" ? 54 : 74) + insets.bottom,
+          height:
+            (Platform.OS === "ios" ? 54 : 68) +
+            (Platform.OS === "android" ? Math.max(insets.bottom, 10) : insets.bottom),
           paddingTop: 8,
-          paddingBottom: insets.bottom,
+          paddingBottom:
+            Platform.OS === "android" ? Math.max(insets.bottom, 10) : insets.bottom,
           borderTopWidth: 1,
           borderTopColor: colors.border,
           backgroundColor: "rgba(255,253,249,0.94)",
