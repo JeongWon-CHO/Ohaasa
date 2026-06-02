@@ -14,7 +14,15 @@ import {
   useSafeAreaInsets,
 } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
-import Svg, { Circle, Line, Path, Polygon } from "react-native-svg";
+import Svg, {
+  Circle,
+  Defs,
+  Line,
+  Path,
+  Polygon,
+  RadialGradient,
+  Stop,
+} from "react-native-svg";
 
 import {
   ZodiacPicker,
@@ -339,17 +347,21 @@ function OnboardingIntro({ onStart }: { onStart: () => void }) {
     <View style={styles.introWrap}>
       {/* Hero constellation — 190×190, hex pattern per HTML spec */}
       <View style={styles.heroContainer}>
-        {/* Radial glow — 4 concentric circles, center most opaque → edge transparent */}
-        <View style={styles.heroGlowL1} />
-        <View style={styles.heroGlowL2} />
-        <View style={styles.heroGlowL3} />
-        <View style={styles.heroGlowL4} />
         <Svg
           width={190}
           height={190}
           viewBox="0 0 190 190"
           style={{ position: "absolute", top: 0, left: 0 }}
         >
+          <Defs>
+            <RadialGradient id="heroGlow" cx="50%" cy="50%" r="50%">
+              <Stop offset="0%" stopColor={colors.yellow} stopOpacity={0.3} />
+              <Stop offset="45%" stopColor={colors.yellow} stopOpacity={0.18} />
+              <Stop offset="75%" stopColor={colors.yellow} stopOpacity={0.08} />
+              <Stop offset="100%" stopColor={colors.yellow} stopOpacity={0} />
+            </RadialGradient>
+          </Defs>
+          <Circle cx={95} cy={95} r={95} fill="url(#heroGlow)" />
           {/* Hex outline — sequential edges, strokeOpacity 0.5 */}
           <Line
             x1="60"
@@ -578,48 +590,6 @@ const styles = StyleSheet.create({
     width: 190,
     height: 190,
     marginBottom: 32,
-  },
-  // Radial glow approximation — 4 layers, opacity accumulates toward center
-  // center total ~0.34, outer edge ~0.07, beyond r=85 transparent
-  heroGlowL1: {
-    position: "absolute",
-    top: 10,
-    left: 10,
-    right: 10,
-    bottom: 10,
-    borderRadius: 85,
-    backgroundColor: colors.yellow,
-    opacity: 0.07,
-  },
-  heroGlowL2: {
-    position: "absolute",
-    top: 28,
-    left: 28,
-    right: 28,
-    bottom: 28,
-    borderRadius: 67,
-    backgroundColor: colors.yellow,
-    opacity: 0.09,
-  },
-  heroGlowL3: {
-    position: "absolute",
-    top: 48,
-    left: 48,
-    right: 48,
-    bottom: 48,
-    borderRadius: 47,
-    backgroundColor: colors.yellow,
-    opacity: 0.1,
-  },
-  heroGlowL4: {
-    position: "absolute",
-    top: 66,
-    left: 66,
-    right: 66,
-    bottom: 66,
-    borderRadius: 29,
-    backgroundColor: colors.yellow,
-    opacity: 0.08,
   },
   introLogo: {
     fontSize: 40,
