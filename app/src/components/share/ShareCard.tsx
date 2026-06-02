@@ -1,5 +1,5 @@
 import { forwardRef } from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { Platform, StyleSheet, Text, View } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import FontAwesome from "@expo/vector-icons/FontAwesome";
 import Svg, { Circle, Defs, RadialGradient, Stop } from "react-native-svg";
@@ -10,10 +10,10 @@ import type { ZodiacInfo } from "@/src/constants/zodiac";
 import type { Horoscope } from "@/src/types/horoscope";
 
 export const CARD_WIDTH = 360;
-export const CARD_HEIGHT = 640;
+export const CARD_HEIGHT = 720;
 
-const BADGE_SIZE = 80;
-const CIRCLE_SIZE = 100;
+const BADGE_SIZE = 100;
+const CIRCLE_SIZE = 130;
 const GLOW_SIZE = CIRCLE_SIZE + 32;
 const GLOW_CENTER = GLOW_SIZE / 2;
 const DASH_RADIUS = CIRCLE_SIZE / 2 + 8;
@@ -82,7 +82,7 @@ function ShareInfoGrid({ horoscope }: { horoscope: Horoscope }) {
                   <FontAwesome
                     key={i}
                     name="star"
-                    size={9}
+                    size={11}
                     color={i < value! ? colors.yellow : colors.cream3}
                   />
                 ))}
@@ -167,7 +167,14 @@ export const ShareCard = forwardRef<View, ShareCardProps>(
             {/* 조언 · 행운 아이템 */}
             <View style={styles.bottomGroup}>
               <View style={styles.adviceBox}>
-                <Text style={styles.advice}>{advice}</Text>
+                <Text
+                  style={styles.advice}
+                  adjustsFontSizeToFit
+                  minimumFontScale={0.75}
+                  numberOfLines={7}
+                >
+                  {advice}
+                </Text>
               </View>
 
               <ShareInfoGrid horoscope={horoscope} />
@@ -193,10 +200,10 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    gap: 36,
+    gap: 28,
   },
   header: {
-    fontSize: 9,
+    fontSize: 12,
     fontFamily: "NotoSansKR_400Regular",
     color: colors.textSoft,
     letterSpacing: 1.2,
@@ -208,7 +215,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 18,
   },
   rankText: {
-    fontSize: 8,
+    fontSize: 11,
+    lineHeight: 14,
     fontFamily: "NotoSansKR_600SemiBold",
     color: "#FFFDF9",
     letterSpacing: 0.6,
@@ -237,7 +245,8 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   zodiacName: {
-    fontSize: 15,
+    fontSize: 20,
+    lineHeight: 28,
     fontFamily: "NotoSansKR_300Light",
     color: colors.text,
     letterSpacing: 0.5,
@@ -247,24 +256,24 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     borderRadius: 16,
     backgroundColor: "rgba(255,253,249,0.75)",
-    paddingHorizontal: 20,
-    paddingVertical: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
     width: "100%",
   },
   advice: {
-    fontSize: 9,
+    fontSize: 13,
     fontFamily: "NotoSansKR_300Light",
     color: colors.text,
-    lineHeight: 14,
+    lineHeight: Platform.OS === "android" ? 22 : 20,
     textAlign: "center",
   },
   topGroup: {
     alignItems: "center",
-    gap: 30,
+    gap: 22,
   },
   bottomGroup: {
     alignItems: "center",
-    gap: 10,
+    gap: 12,
     width: "100%",
   },
 });
@@ -272,7 +281,7 @@ const styles = StyleSheet.create({
 const infoStyles = StyleSheet.create({
   grid: {
     flexDirection: "row",
-    gap: 24,
+    gap: 16,
     width: "100%",
   },
   card: {
@@ -284,24 +293,24 @@ const infoStyles = StyleSheet.create({
     padding: 12,
   },
   cardHeader: {
-    fontSize: 6,
+    fontSize: 10,
     color: colors.textSoft,
     letterSpacing: 1,
-    marginBottom: 8,
+    marginBottom: 10,
   },
   row: {
     flexDirection: "row",
-    gap: 6,
-    marginBottom: 5,
+    gap: 8,
+    marginBottom: 8,
   },
   rowLabel: {
-    fontSize: 8,
+    fontSize: 12,
     color: colors.textSoft,
     flexShrink: 0,
   },
   rowValue: {
     flex: 1,
-    fontSize: 8,
+    fontSize: 12,
     color: colors.textMid,
     flexWrap: "wrap",
     textAlign: "right",
@@ -310,10 +319,10 @@ const infoStyles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
-    marginBottom: 5,
+    marginBottom: 8,
   },
   starLabel: {
-    fontSize: 8,
+    fontSize: 12,
     color: colors.textSoft,
     width: 28,
   },
