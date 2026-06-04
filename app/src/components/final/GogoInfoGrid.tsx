@@ -92,24 +92,24 @@ const styles = StyleSheet.create({
   },
   gridCard: {
     flex: 1,
-    padding: 16,
+    padding: 12,
   },
   gridHeader: {
     fontSize: 10,
     color: colors.textSoft,
     letterSpacing: 1.08,
-    marginBottom: 12,
+    marginBottom: 8,
   },
   luckyRow: {
     flexDirection: "row",
     gap: 8,
-    marginBottom: Platform.OS === "ios" ? 12 : 8,
+    marginBottom: Platform.OS === "ios" ? 12 : 4,
   },
   starRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
-    marginBottom: Platform.OS === "ios" ? 12 : 8,
+    marginBottom: Platform.OS === "ios" ? 12 : 4,
   },
   rowLabel: {
     fontSize: 13,

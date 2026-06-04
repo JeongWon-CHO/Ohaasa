@@ -32,14 +32,14 @@ import { useZodiac } from "@/src/hooks/useZodiac";
 
 const SCREEN_CONFIG = {
   android: {
-    circleSize: 120,
-    badgeSize: 92,
-    glowSize: 152,
-    glowCenter: 76,
-    dashRadius: 68,
-    heroMarginTop: 28,
+    circleSize: 100,
+    badgeSize: 76,
+    glowSize: 128,
+    glowCenter: 64,
+    dashRadius: 56,
+    heroMarginTop: 24,
     zodiacFontSize: 20,
-    cardMarginTop: 20,
+    cardMarginTop: 12,
   },
   ios: {
     circleSize: 136,
@@ -141,7 +141,9 @@ export default function TodayScreen() {
   const cfg = SCREEN_CONFIG[screenSize];
 
   const { showToast, toastProps } = useToast();
-  const { cardRef, share, sharing, saveImage, saving } = useShareHoroscope({ showToast });
+  const { cardRef, share, sharing, saveImage, saving } = useShareHoroscope({
+    showToast,
+  });
 
   const {
     zodiacSign,
@@ -379,7 +381,7 @@ const styles = StyleSheet.create({
   rankPillText: {
     fontSize: 11,
     lineHeight: 14,
-    paddingVertical: 2,
+    paddingVertical: 1,
     fontFamily: "NotoSansKR_600SemiBold",
     // includeFontPadding: false,
     color: "#FFFDF9",
