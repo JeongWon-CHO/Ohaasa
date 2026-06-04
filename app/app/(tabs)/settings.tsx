@@ -156,7 +156,7 @@ export default function SettingsScreen() {
             {zodiac ? (
               <>
                 <View style={[styles.zodiacCircle, { backgroundColor: signColor }]}>
-                  <ConstellationBadge sign={zodiac.sign} size={44} />
+                  <ConstellationBadge sign={zodiac.sign} size={36} />
                 </View>
                 <View style={styles.zodiacCopy}>
                   <Text style={styles.zodiacName}>{zodiac.ko}</Text>
@@ -168,7 +168,7 @@ export default function SettingsScreen() {
             ) : (
               <>
                 <View style={[styles.zodiacCircle, { backgroundColor: colors.cream2 }]}>
-                  <ConstellationBadge size={44} />
+                  <ConstellationBadge size={36} />
                 </View>
                 <View style={styles.zodiacCopy}>
                   <Text style={styles.zodiacName}>선택된 별자리가 없습니다</Text>
@@ -244,7 +244,7 @@ export default function SettingsScreen() {
           />
           <SettingsRow
             title="버전"
-            description="1.0.0"
+            right={<Text style={styles.versionText}>1.0.0</Text>}
             style={[styles.aboutRow, styles.rowBorder]}
           />
           <SettingsRow
@@ -263,7 +263,6 @@ export default function SettingsScreen() {
             <Text style={styles.footerLogo}>ohaasa ✦</Text>
           </View>
           <Text style={styles.footerJa}>おはあさ</Text>
-          <Text style={styles.footerCaption}>매일 아침 7:30, 당신의 별자리 운세를 알려드려요</Text>
         </View>
 
         <View style={styles.spacer} />
@@ -299,7 +298,7 @@ const styles = StyleSheet.create({
 
   // ── MY SIGN card ──────────────────────────────────────────────
   mySignCardOverride: {
-    paddingVertical: 16,
+    paddingVertical: 12,
     paddingHorizontal: 18,
   },
   mySignInner: {
@@ -308,9 +307,9 @@ const styles = StyleSheet.create({
     gap: 14,
   },
   zodiacCircle: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     flexShrink: 0,
     alignItems: 'center',
     justifyContent: 'center',
@@ -370,6 +369,13 @@ const styles = StyleSheet.create({
   },
   aboutRow: {
     paddingVertical: 14,
+  },
+  versionText: {
+    fontSize: 13,
+    lineHeight: 18,
+    fontFamily: 'NotoSansKR_400Regular',
+    includeFontPadding: false,
+    color: colors.textSoft,
   },
   rowBorder: {
     borderBottomWidth: 1,
