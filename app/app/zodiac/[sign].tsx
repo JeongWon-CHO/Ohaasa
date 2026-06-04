@@ -246,8 +246,8 @@ export default function ZodiacDetailScreen() {
 
               <View style={styles.circleOuter}>
                 <Svg
-                  width={168}
-                  height={168}
+                  width={150}
+                  height={150}
                   style={{ position: "absolute", top: -16, left: -16 }}
                 >
                   <Defs>
@@ -276,15 +276,15 @@ export default function ZodiacDetailScreen() {
                     </RadialGradient>
                   </Defs>
                   <Circle
-                    cx={84}
-                    cy={84}
-                    r={84}
+                    cx={75}
+                    cy={75}
+                    r={75}
                     fill="url(#detailCircleGlow)"
                   />
                 </Svg>
                 <View style={styles.circleDash} />
                 <View style={styles.circleBadge}>
-                  <ConstellationBadge sign={zodiac.sign} size={106} />
+                  <ConstellationBadge sign={zodiac.sign} size={90} />
                 </View>
               </View>
 
@@ -394,8 +394,8 @@ const styles = StyleSheet.create({
     letterSpacing: 0.66,
   },
   circleOuter: {
-    width: 136,
-    height: 136,
+    width: 118,
+    height: 118,
     marginVertical: 20,
   },
   circleDash: {
@@ -404,7 +404,7 @@ const styles = StyleSheet.create({
     bottom: -8,
     left: -8,
     right: -8,
-    borderRadius: 76,
+    borderRadius: 67,
     borderWidth: 1,
     borderStyle: "dashed",
     borderColor: "rgba(217,138,104,0.32)",

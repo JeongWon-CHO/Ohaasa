@@ -12,8 +12,8 @@ import type { Horoscope } from "@/src/types/horoscope";
 export const CARD_WIDTH = 360;
 export const CARD_HEIGHT = 720;
 
-const BADGE_SIZE = 100;
-const CIRCLE_SIZE = 130;
+const BADGE_SIZE = 88;
+const CIRCLE_SIZE = 118;
 const GLOW_SIZE = CIRCLE_SIZE + 32;
 const GLOW_CENTER = GLOW_SIZE / 2;
 const DASH_RADIUS = CIRCLE_SIZE / 2 + 8;
