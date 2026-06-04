@@ -161,7 +161,10 @@ export const ShareCard = forwardRef<View, ShareCardProps>(
                 </View>
               </View>
 
-              <Text style={styles.zodiacName}>{zodiac.ko}</Text>
+              <View style={styles.zodiacText}>
+                <Text style={styles.zodiacName}>{zodiac.ko}</Text>
+                <Text style={styles.zodiacSub}>{zodiac.en} · {zodiac.dateRange}</Text>
+              </View>
             </View>
 
             {/* 조언 · 행운 아이템 */}
@@ -244,12 +247,23 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
+  zodiacText: {
+    alignItems: "center",
+  },
   zodiacName: {
     fontSize: 20,
     lineHeight: 28,
-    fontFamily: "NotoSansKR_300Light",
+    fontFamily: "NotoSansKR_400Regular",
     color: colors.text,
     letterSpacing: 0.5,
+  },
+  zodiacSub: {
+    fontSize: 11,
+    lineHeight: 16,
+    fontFamily: "NotoSansKR_300Light",
+    color: colors.textSoft,
+    letterSpacing: 0.3,
+    marginTop: 3,
   },
   adviceBox: {
     borderWidth: 1,
@@ -301,7 +315,7 @@ const infoStyles = StyleSheet.create({
   row: {
     flexDirection: "row",
     gap: 8,
-    marginBottom: 8,
+    marginBottom: 4,
   },
   rowLabel: {
     fontSize: 12,
@@ -319,7 +333,7 @@ const infoStyles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
-    marginBottom: 8,
+    marginBottom: 4,
   },
   starLabel: {
     fontSize: 12,

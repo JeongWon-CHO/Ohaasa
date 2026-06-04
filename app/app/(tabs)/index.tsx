@@ -39,7 +39,7 @@ const SCREEN_CONFIG = {
     dashRadius: 56,
     heroMarginTop: 24,
     zodiacFontSize: 20,
-    cardMarginTop: 12,
+    cardMarginTop: 24,
   },
   ios: {
     circleSize: 136,
