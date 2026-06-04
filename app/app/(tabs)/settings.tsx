@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { LinearGradient } from 'expo-linear-gradient';
 import Svg, { Path, Polygon } from 'react-native-svg';
 import { useRouter } from 'expo-router';
@@ -85,6 +86,7 @@ const DATE_RANGES: Record<ZodiacSign, string> = {
 
 export default function SettingsScreen() {
   const router = useRouter();
+  const tabBarHeight = useBottomTabBarHeight();
   const { zodiacSign } = useZodiac();
   const [notificationsEnabled, setNotificationsEnabledState] = useState(false);
   const [storedPushToken, setStoredPushToken] = useState<string | null>(null);
@@ -140,7 +142,7 @@ export default function SettingsScreen() {
 
       {/* Scroll — padding '18px 20px 16px' → paddingBottom 96 for tab bar */}
       <ScrollView
-        contentContainerStyle={styles.content}
+        contentContainerStyle={[styles.content, { paddingBottom: tabBarHeight + 16 }]}
         showsVerticalScrollIndicator={false}
         style={styles.scroll}
       >
@@ -285,7 +287,6 @@ const styles = StyleSheet.create({
   content: {
     paddingTop: 18,
     paddingHorizontal: 20,
-    paddingBottom: 96,
   },
 
   // ── Section spacing ───────────────────────────────────────────

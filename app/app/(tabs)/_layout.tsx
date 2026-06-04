@@ -62,7 +62,7 @@ export default function TabLayout() {
           height:
             (Platform.OS === "ios" ? 54 : 68) +
             (Platform.OS === "android" ? Math.max(insets.bottom, 10) : insets.bottom),
-          paddingTop: 8,
+          paddingTop: 6,
           paddingBottom:
             Platform.OS === "android" ? Math.max(insets.bottom, 10) : insets.bottom,
           borderTopWidth: 1,

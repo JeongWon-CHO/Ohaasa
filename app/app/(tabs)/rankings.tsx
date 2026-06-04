@@ -1,4 +1,5 @@
 import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import Svg, { Path, Polygon } from 'react-native-svg';
@@ -54,6 +55,7 @@ function MoonDeco({ x, y, size, color, opacity }: DecoProps) {
 
 export default function RankingsScreen() {
   const router = useRouter();
+  const tabBarHeight = useBottomTabBarHeight();
   const { zodiacSign } = useZodiac();
   const { horoscopes, broadcastDate, loading, error } = useAllHoroscopes();
 
@@ -95,7 +97,7 @@ export default function RankingsScreen() {
         </View>
       ) : (
         <ScrollView
-          contentContainerStyle={styles.list}
+          contentContainerStyle={[styles.list, { paddingBottom: tabBarHeight + 16 }]}
           showsVerticalScrollIndicator={false}
           style={styles.scroll}
         >
@@ -164,7 +166,6 @@ const styles = StyleSheet.create({
   list: {
     paddingHorizontal: 18,
     paddingTop: 12,
-    paddingBottom: 96,
     gap: 7,
   },
   spacer: {

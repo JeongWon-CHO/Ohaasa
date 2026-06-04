@@ -5,6 +5,7 @@ import {
   Text,
   View,
 } from "react-native";
+import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import { LinearGradient } from "expo-linear-gradient";
 import Svg, {
   Circle,
@@ -139,6 +140,7 @@ function MoonDeco({ x, y, size, color, opacity }: DecoProps) {
 export default function TodayScreen() {
   const screenSize = useScreenSize();
   const cfg = SCREEN_CONFIG[screenSize];
+  const tabBarHeight = useBottomTabBarHeight();
 
   const { showToast, toastProps } = useToast();
   const { cardRef, share, sharing, saveImage, saving } = useShareHoroscope({
@@ -200,7 +202,7 @@ export default function TodayScreen() {
       />
 
       <ScrollView
-        contentContainerStyle={styles.content}
+        contentContainerStyle={[styles.content, { paddingBottom: tabBarHeight + 16 }]}
         showsVerticalScrollIndicator={false}
         style={styles.scroll}
       >
@@ -348,9 +350,7 @@ const styles = StyleSheet.create({
   scroll: {
     flex: 1,
   },
-  content: {
-    paddingBottom: 96,
-  },
+  content: {},
 
   // ── Positioning wrappers ──────────────────────────────────────
   pillWrap: {
