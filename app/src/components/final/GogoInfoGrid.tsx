@@ -96,6 +96,8 @@ const styles = StyleSheet.create({
   },
   gridHeader: {
     fontSize: 10,
+    fontFamily: 'NotoSansKR_400Regular',
+    includeFontPadding: false,
     color: colors.textSoft,
     letterSpacing: 1.08,
     marginBottom: 8,
@@ -113,6 +115,8 @@ const styles = StyleSheet.create({
   },
   rowLabel: {
     fontSize: 13,
+    fontFamily: 'NotoSansKR_400Regular',
+    includeFontPadding: false,
     color: colors.textSoft,
     flexShrink: 0,
   },
@@ -122,6 +126,8 @@ const styles = StyleSheet.create({
   rowValue: {
     flex: 1,
     fontSize: 13,
+    fontFamily: 'NotoSansKR_400Regular',
+    includeFontPadding: false,
     color: colors.textMid,
     flexWrap: "wrap",
     textAlign: "right",
