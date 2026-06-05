@@ -12,8 +12,8 @@ import type { Horoscope } from "@/src/types/horoscope";
 export const CARD_WIDTH = 360;
 export const CARD_HEIGHT = 640;
 
-const BADGE_SIZE = 88;
-const CIRCLE_SIZE = 118;
+const BADGE_SIZE = 76;
+const CIRCLE_SIZE = 100;
 const GLOW_SIZE = CIRCLE_SIZE + 32;
 const GLOW_CENTER = GLOW_SIZE / 2;
 const DASH_RADIUS = CIRCLE_SIZE / 2 + 8;
@@ -99,6 +99,7 @@ export const ShareCard = forwardRef<View, ShareCardProps>(
   ({ horoscope, zodiac }, ref) => {
     const dateLabel = formatShareDate(horoscope.date, horoscope.source);
     const advice = horoscope.advice_ko ?? horoscope.advice;
+    const adviceFontSize = (advice?.length ?? 0) > 45 ? 11 : 13;
 
     return (
       <View ref={ref} style={styles.wrapper} collapsable={false}>
@@ -163,7 +164,9 @@ export const ShareCard = forwardRef<View, ShareCardProps>(
 
               <View style={styles.zodiacText}>
                 <Text style={styles.zodiacName}>{zodiac.ko}</Text>
-                <Text style={styles.zodiacSub}>{zodiac.en} · {zodiac.dateRange}</Text>
+                <Text style={styles.zodiacSub}>
+                  {zodiac.en} · {zodiac.dateRange}
+                </Text>
               </View>
             </View>
 
@@ -171,10 +174,9 @@ export const ShareCard = forwardRef<View, ShareCardProps>(
             <View style={styles.bottomGroup}>
               <View style={styles.adviceBox}>
                 <Text
-                  style={styles.advice}
-                  adjustsFontSizeToFit
-                  minimumFontScale={0.75}
+                  style={[styles.advice, { fontSize: adviceFontSize }]}
                   numberOfLines={7}
+                  textBreakStrategy="simple"
                 >
                   {advice}
                 </Text>
@@ -197,17 +199,20 @@ const styles = StyleSheet.create({
   card: {
     flex: 1,
     paddingHorizontal: 32,
-    paddingVertical: 88,
+    paddingTop: 64,
+    paddingBottom: 84,
   },
   content: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    gap: 28,
+    gap: 20,
   },
   header: {
     fontSize: 12,
+    lineHeight: 16,
     fontFamily: "NotoSansKR_400Regular",
+    includeFontPadding: false,
     color: colors.textSoft,
     letterSpacing: 1.2,
     textAlign: "center",
@@ -251,8 +256,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   zodiacName: {
-    fontSize: 20,
-    lineHeight: 28,
+    fontSize: 18,
+    lineHeight: 26,
     fontFamily: "NotoSansKR_400Regular",
     color: colors.text,
     letterSpacing: 0.5,
@@ -283,7 +288,7 @@ const styles = StyleSheet.create({
   },
   topGroup: {
     alignItems: "center",
-    gap: 22,
+    gap: 16,
   },
   bottomGroup: {
     alignItems: "center",
