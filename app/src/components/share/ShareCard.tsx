@@ -10,7 +10,7 @@ import type { ZodiacInfo } from "@/src/constants/zodiac";
 import type { Horoscope } from "@/src/types/horoscope";
 
 export const CARD_WIDTH = 360;
-export const CARD_HEIGHT = 720;
+export const CARD_HEIGHT = 640;
 
 const BADGE_SIZE = 88;
 const CIRCLE_SIZE = 118;
@@ -308,6 +308,8 @@ const infoStyles = StyleSheet.create({
   },
   cardHeader: {
     fontSize: 10,
+    fontFamily: "NotoSansKR_400Regular",
+    includeFontPadding: false,
     color: colors.textSoft,
     letterSpacing: 1,
     marginBottom: 10,
@@ -319,12 +321,16 @@ const infoStyles = StyleSheet.create({
   },
   rowLabel: {
     fontSize: 12,
+    fontFamily: "NotoSansKR_400Regular",
+    includeFontPadding: false,
     color: colors.textSoft,
     flexShrink: 0,
   },
   rowValue: {
     flex: 1,
     fontSize: 12,
+    fontFamily: "NotoSansKR_400Regular",
+    includeFontPadding: false,
     color: colors.textMid,
     flexWrap: "wrap",
     textAlign: "right",
@@ -337,6 +343,8 @@ const infoStyles = StyleSheet.create({
   },
   starLabel: {
     fontSize: 12,
+    fontFamily: "NotoSansKR_400Regular",
+    includeFontPadding: false,
     color: colors.textSoft,
     width: 28,
   },
