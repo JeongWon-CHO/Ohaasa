@@ -248,6 +248,12 @@ export default function SettingsScreen() {
             style={[styles.aboutRow, styles.rowBorder]}
           />
           <SettingsRow
+            title="개발자에게 문의하기"
+            showChevron
+            onPress={() => Linking.openURL('https://docs.google.com/forms/d/e/1FAIpQLSdWvd5ARPMCe_lcvlmuRiTMUKNuO1gwOk8JI6vCRDJ2pu2ASw/viewform?usp=publish-editor')}
+            style={[styles.aboutRow, styles.rowBorder]}
+          />
+          <SettingsRow
             title="개인정보 처리방침"
             showChevron
             onPress={() => Linking.openURL('https://jeongwon-cho.github.io/Ohaasa/privacy-policy.html')}
