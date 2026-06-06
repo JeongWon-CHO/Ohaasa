@@ -230,21 +230,14 @@ export default function SettingsScreen() {
         <SettingsSection label="ABOUT" style={styles.aboutSection}>
           <SettingsRow
             title="오하아사 별자리"
-            description="평일 메인 운세"
             showChevron
             onPress={() => Linking.openURL('https://www.asahi.co.jp/ohaasa/week/horoscope/')}
             style={[styles.aboutRow, styles.rowBorder]}
           />
           <SettingsRow
             title="고고별자리"
-            description="주말 운세 · 행운 색상/아이템 보강"
             showChevron
             onPress={() => Linking.openURL('https://www.tv-asahi.co.jp/goodmorning/uranai/')}
-            style={[styles.aboutRow, styles.rowBorder]}
-          />
-          <SettingsRow
-            title="버전"
-            right={<Text style={styles.versionText}>1.0.0</Text>}
             style={[styles.aboutRow, styles.rowBorder]}
           />
           <SettingsRow
@@ -269,6 +262,7 @@ export default function SettingsScreen() {
             <Text style={styles.footerLogo}>ohaasa ✦</Text>
           </View>
           <Text style={styles.footerJa}>おはあさ</Text>
+          <Text style={styles.footerCaption}>v1.0.0</Text>
         </View>
 
         <View style={styles.spacer} />
