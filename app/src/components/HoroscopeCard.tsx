@@ -6,8 +6,8 @@ import { useScreenSize } from "@/src/hooks/useScreenSize";
 
 const ADVICE_CONFIG = {
   android: {
-    fontSize: 14,
-    lineHeight: 24,
+    fontSize: 13,
+    lineHeight: 22,
     paddingVertical: 14,
     paddingHorizontal: 18,
   },
