@@ -3,7 +3,6 @@ import { Platform, StyleSheet, Text, View } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import FontAwesome from "@expo/vector-icons/FontAwesome";
 import Svg, { Circle, Defs, RadialGradient, Stop } from "react-native-svg";
-
 import { ConstellationBadge } from "@/src/components/final/ConstellationBadge";
 import { colors, gradients } from "@/src/constants/design";
 import type { ZodiacInfo } from "@/src/constants/zodiac";
@@ -32,7 +31,9 @@ function formatShareDate(dateStr: string, source: "ohaasa" | "gogo"): string {
 
 function ShareInfoGrid({ horoscope }: { horoscope: Horoscope }) {
   const hasLucky =
-    horoscope.lucky_color !== null || horoscope.lucky_item !== null;
+    horoscope.lucky_color !== null ||
+    horoscope.lucky_item !== null ||
+    horoscope.lucky_place !== null;
   const hasScore =
     (horoscope.love_score !== null && horoscope.love_score > 0) ||
     (horoscope.work_score !== null && horoscope.work_score > 0) ||
@@ -53,6 +54,14 @@ function ShareInfoGrid({ horoscope }: { horoscope: Horoscope }) {
       {hasLucky && (
         <View style={infoStyles.card}>
           <Text style={infoStyles.cardHeader}>행운 아이템</Text>
+          {horoscope.lucky_place !== null && (
+            <View style={infoStyles.row}>
+              <Text style={infoStyles.rowLabel}>장소</Text>
+              <Text style={infoStyles.rowValue} numberOfLines={2}>
+                {horoscope.lucky_place_ko ?? horoscope.lucky_place}
+              </Text>
+            </View>
+          )}
           {horoscope.lucky_color !== null && (
             <View style={infoStyles.row}>
               <Text style={infoStyles.rowLabel}>컬러</Text>
@@ -99,7 +108,7 @@ export const ShareCard = forwardRef<View, ShareCardProps>(
   ({ horoscope, zodiac }, ref) => {
     const dateLabel = formatShareDate(horoscope.date, horoscope.source);
     const advice = horoscope.advice_ko ?? horoscope.advice;
-    const adviceFontSize = (advice?.length ?? 0) > 45 ? 11 : 13;
+    const adviceFontSize = (advice?.length ?? 0) > 55 ? 11 : 12;
 
     return (
       <View ref={ref} style={styles.wrapper} collapsable={false}>
@@ -325,7 +334,7 @@ const infoStyles = StyleSheet.create({
     marginBottom: 4,
   },
   rowLabel: {
-    fontSize: 12,
+    fontSize: 11,
     fontFamily: "NotoSansKR_400Regular",
     includeFontPadding: false,
     color: colors.textSoft,
@@ -333,7 +342,7 @@ const infoStyles = StyleSheet.create({
   },
   rowValue: {
     flex: 1,
-    fontSize: 12,
+    fontSize: 11,
     fontFamily: "NotoSansKR_400Regular",
     includeFontPadding: false,
     color: colors.textMid,
@@ -347,7 +356,7 @@ const infoStyles = StyleSheet.create({
     marginBottom: 4,
   },
   starLabel: {
-    fontSize: 12,
+    fontSize: 11,
     fontFamily: "NotoSansKR_400Regular",
     includeFontPadding: false,
     color: colors.textSoft,

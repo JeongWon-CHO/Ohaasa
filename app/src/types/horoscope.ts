@@ -12,6 +12,9 @@ export interface Horoscope {
   advice_ko: string | null;  // GPT 번역된 한국어 조언. null이면 advice(원문)로 fallback
   source: HoroscopeSource;   // 'ohaasa'(평일) | 'gogo'(주말)
   created_at: string;
+  // 행운의 장소 — ohaasa에서 가끔(월 1회 정도) 등장. gogo에서는 항상 null
+  lucky_place:    string | null;
+  lucky_place_ko: string | null; // null이면 lucky_place(원문)로 fallback
   // 고고별자리 필드 — 크롤 미적용 또는 실패 시 null
   lucky_color:    string | null;
   lucky_item:     string | null;

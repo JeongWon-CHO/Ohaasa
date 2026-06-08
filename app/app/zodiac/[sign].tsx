@@ -191,14 +191,22 @@ export default function ZodiacDetailScreen() {
           <TouchableOpacity
             onPress={share}
             hitSlop={12}
-            style={styles.backBtn}
+            style={[styles.backBtn, styles.shareBtn]}
             disabled={sharing}
           >
             <Feather
               name="share-2"
-              size={20}
+              size={16}
               color={sharing ? colors.textSoft : colors.apricotDark}
             />
+            <Text
+              style={[
+                styles.shareText,
+                sharing && { color: colors.textSoft },
+              ]}
+            >
+              공유하기
+            </Text>
           </TouchableOpacity>
         )}
       </View>
@@ -337,6 +345,19 @@ const styles = StyleSheet.create({
     height: 36,
     alignItems: "center",
     justifyContent: "center",
+  },
+  shareBtn: {
+    width: "auto",
+    flexDirection: "row",
+    gap: 6,
+    paddingHorizontal: 6,
+  },
+  shareText: {
+    fontSize: 12,
+    lineHeight: 16,
+    fontFamily: "NotoSansKR_600SemiBold",
+    includeFontPadding: false,
+    color: colors.apricotDark,
   },
   scroll: {
     flex: 1,

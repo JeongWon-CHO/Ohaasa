@@ -51,7 +51,9 @@ function StarRow({ label, value }: { label: string; value: number | null }) {
 
 export function GogoInfoGrid({ horoscope, style }: GogoInfoGridProps) {
   const hasLucky =
-    horoscope.lucky_color !== null || horoscope.lucky_item !== null;
+    horoscope.lucky_color !== null ||
+    horoscope.lucky_item !== null ||
+    horoscope.lucky_place !== null;
   const hasScore =
     (horoscope.love_score !== null && horoscope.love_score > 0) ||
     (horoscope.work_score !== null && horoscope.work_score > 0) ||
@@ -64,6 +66,10 @@ export function GogoInfoGrid({ horoscope, style }: GogoInfoGridProps) {
     <View style={[styles.infoGrid, style]}>
       <FinalCard style={styles.gridCard}>
         <Text style={styles.gridHeader}>행운 아이템</Text>
+        <LuckyRow
+          label="장소"
+          value={horoscope.lucky_place_ko ?? horoscope.lucky_place}
+        />
         <LuckyRow
           label="컬러"
           value={horoscope.lucky_color_ko ?? horoscope.lucky_color}
