@@ -1,6 +1,7 @@
 import FontAwesome from "@expo/vector-icons/FontAwesome";
 import { Tabs } from "expo-router";
 import { useEffect } from "react";
+import { Platform } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { colors } from "@/src/constants/design";
@@ -54,12 +55,16 @@ export default function TabLayout() {
         tabBarInactiveTintColor: colors.textSoft,
         tabBarLabelStyle: {
           fontSize: 11,
-          fontWeight: "600",
+          lineHeight: 14,
+          fontFamily: "NotoSansKR_600SemiBold",
         },
         tabBarStyle: {
-          height: 74 + insets.bottom,
-          paddingTop: 8,
-          paddingBottom: insets.bottom,
+          height:
+            (Platform.OS === "ios" ? 54 : 68) +
+            (Platform.OS === "android" ? Math.max(insets.bottom, 10) : insets.bottom),
+          paddingTop: 6,
+          paddingBottom:
+            Platform.OS === "android" ? Math.max(insets.bottom, 10) : insets.bottom,
           borderTopWidth: 1,
           borderTopColor: colors.border,
           backgroundColor: "rgba(255,253,249,0.94)",

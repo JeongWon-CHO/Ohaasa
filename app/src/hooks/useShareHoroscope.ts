@@ -16,7 +16,7 @@ export function useShareHoroscope({ showToast }: Options = {}) {
     if (!cardRef.current) return;
     setSharing(true);
     try {
-      const uri = await captureRef(cardRef, { format: 'png', quality: 1 });
+      const uri = await captureRef(cardRef, { format: 'png', quality: 1, width: 1080, height: 1920 });
       await Sharing.shareAsync(uri, { mimeType: 'image/png' });
     } catch (e) {
       console.warn('[share] failed', e);
@@ -35,7 +35,7 @@ export function useShareHoroscope({ showToast }: Options = {}) {
         showToast?.('갤러리 접근 권한이 필요해요.');
         return;
       }
-      const uri = await captureRef(cardRef, { format: 'png', quality: 1 });
+      const uri = await captureRef(cardRef, { format: 'png', quality: 1, width: 1080, height: 1920 });
       await MediaLibrary.saveToLibraryAsync(uri);
       showToast?.('이미지가 갤러리에 저장되었어요.');
     } catch (e) {

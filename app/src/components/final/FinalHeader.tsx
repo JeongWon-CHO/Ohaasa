@@ -80,12 +80,17 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 20,
-    fontWeight: "300",
+    lineHeight: 26,
+    fontFamily: "NotoSansKR_300Light",
+    includeFontPadding: false,
     color: colors.text,
     letterSpacing: 2,
   },
   subtitle: {
     fontSize: 11,
+    lineHeight: 16,
+    fontFamily: "NotoSansKR_400Regular",
+    includeFontPadding: false,
     color: colors.textSoft,
     marginTop: 2,
   },

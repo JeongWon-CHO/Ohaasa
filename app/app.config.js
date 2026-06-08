@@ -12,7 +12,7 @@ module.exports = {
   expo: {
     name: appName,
     slug: 'ohaasa',
-    version: '1.0.0',
+    version: '1.0.1',
     orientation: 'portrait',
     icon: './assets/images/icon.png',
     scheme: 'ohaasa',
@@ -25,6 +25,7 @@ module.exports = {
     },
     ios: {
       supportsTablet: true,
+      bundleIdentifier: packageName,
     },
     android: {
       adaptiveIcon: {

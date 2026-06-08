@@ -5,6 +5,7 @@ import {
   Text,
   View,
 } from "react-native";
+import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import { LinearGradient } from "expo-linear-gradient";
 import Svg, {
   Circle,
@@ -31,24 +32,24 @@ import { useToast } from "@/src/hooks/useToast";
 import { useZodiac } from "@/src/hooks/useZodiac";
 
 const SCREEN_CONFIG = {
-  compact: {
-    circleSize: 116,
-    badgeSize: 88,
-    glowSize: 148,
-    glowCenter: 74,
-    dashRadius: 66,
-    heroMarginTop: 20,
-    zodiacFontSize: 16,
-    cardMarginTop: 16,
+  android: {
+    circleSize: 100,
+    badgeSize: 76,
+    glowSize: 128,
+    glowCenter: 64,
+    dashRadius: 56,
+    heroMarginTop: 24,
+    zodiacFontSize: 20,
+    cardMarginTop: 24,
   },
-  regular: {
+  ios: {
     circleSize: 136,
     badgeSize: 106,
     glowSize: 168,
     glowCenter: 84,
     dashRadius: 76,
     heroMarginTop: 28,
-    zodiacFontSize: 19,
+    zodiacFontSize: 20,
     cardMarginTop: 22,
   },
 } as const;
@@ -139,9 +140,12 @@ function MoonDeco({ x, y, size, color, opacity }: DecoProps) {
 export default function TodayScreen() {
   const screenSize = useScreenSize();
   const cfg = SCREEN_CONFIG[screenSize];
+  const tabBarHeight = useBottomTabBarHeight();
 
   const { showToast, toastProps } = useToast();
-  const { cardRef, share, sharing, saveImage, saving } = useShareHoroscope({ showToast });
+  const { cardRef, share, sharing, saveImage, saving } = useShareHoroscope({
+    showToast,
+  });
 
   const {
     zodiacSign,
@@ -198,7 +202,7 @@ export default function TodayScreen() {
       />
 
       <ScrollView
-        contentContainerStyle={styles.content}
+        contentContainerStyle={[styles.content, { paddingBottom: tabBarHeight + 16 }]}
         showsVerticalScrollIndicator={false}
         style={styles.scroll}
       >
@@ -346,9 +350,7 @@ const styles = StyleSheet.create({
   scroll: {
     flex: 1,
   },
-  content: {
-    paddingBottom: 96,
-  },
+  content: {},
 
   // ── Positioning wrappers ──────────────────────────────────────
   pillWrap: {
@@ -377,10 +379,12 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
   },
   rankPillText: {
-    fontSize: 10,
-    fontWeight: "600",
+    fontSize: 11,
+    lineHeight: 14,
+    paddingVertical: 1,
+    fontFamily: "NotoSansKR_600SemiBold",
+    // includeFontPadding: false,
     color: "#FFFDF9",
-    letterSpacing: 0.66,
   },
   circleOuter: {
     // width/height는 cfg.circleSize로 인라인 override
@@ -408,17 +412,19 @@ const styles = StyleSheet.create({
   },
   zodiacText: {
     alignItems: "center",
-    marginTop: 16,
+    marginTop: 10,
   },
   zodiacName: {
     // fontSize는 cfg.zodiacFontSize로 인라인 override
-    fontWeight: "400",
+    fontFamily: "NotoSansKR_400Regular",
+    lineHeight: 28,
     color: colors.text,
   },
   zodiacSub: {
-    fontSize: 11,
+    fontSize: 12,
+    lineHeight: 18,
     color: colors.textSoft,
-    marginTop: 3,
+    marginTop: 4,
   },
 
   // ── Fortune card ─────────────────────────────────────────────
@@ -466,7 +472,7 @@ const styles = StyleSheet.create({
   },
   rowValue: {
     fontSize: 12,
-    fontWeight: "500",
+    fontFamily: "NotoSansKR_500Medium",
     color: colors.text,
   },
   stars: {

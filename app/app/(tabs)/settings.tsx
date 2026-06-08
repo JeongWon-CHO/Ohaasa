@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { LinearGradient } from 'expo-linear-gradient';
 import Svg, { Path, Polygon } from 'react-native-svg';
 import { useRouter } from 'expo-router';
@@ -85,6 +86,7 @@ const DATE_RANGES: Record<ZodiacSign, string> = {
 
 export default function SettingsScreen() {
   const router = useRouter();
+  const tabBarHeight = useBottomTabBarHeight();
   const { zodiacSign } = useZodiac();
   const [notificationsEnabled, setNotificationsEnabledState] = useState(false);
   const [storedPushToken, setStoredPushToken] = useState<string | null>(null);
@@ -140,7 +142,7 @@ export default function SettingsScreen() {
 
       {/* Scroll — padding '18px 20px 16px' → paddingBottom 96 for tab bar */}
       <ScrollView
-        contentContainerStyle={styles.content}
+        contentContainerStyle={[styles.content, { paddingBottom: tabBarHeight + 16 }]}
         showsVerticalScrollIndicator={false}
         style={styles.scroll}
       >
@@ -154,7 +156,7 @@ export default function SettingsScreen() {
             {zodiac ? (
               <>
                 <View style={[styles.zodiacCircle, { backgroundColor: signColor }]}>
-                  <ConstellationBadge sign={zodiac.sign} size={44} />
+                  <ConstellationBadge sign={zodiac.sign} size={36} />
                 </View>
                 <View style={styles.zodiacCopy}>
                   <Text style={styles.zodiacName}>{zodiac.ko}</Text>
@@ -166,7 +168,7 @@ export default function SettingsScreen() {
             ) : (
               <>
                 <View style={[styles.zodiacCircle, { backgroundColor: colors.cream2 }]}>
-                  <ConstellationBadge size={44} />
+                  <ConstellationBadge size={36} />
                 </View>
                 <View style={styles.zodiacCopy}>
                   <Text style={styles.zodiacName}>선택된 별자리가 없습니다</Text>
@@ -228,21 +230,20 @@ export default function SettingsScreen() {
         <SettingsSection label="ABOUT" style={styles.aboutSection}>
           <SettingsRow
             title="오하아사 별자리"
-            description="평일 메인 운세"
             showChevron
             onPress={() => Linking.openURL('https://www.asahi.co.jp/ohaasa/week/horoscope/')}
             style={[styles.aboutRow, styles.rowBorder]}
           />
           <SettingsRow
             title="고고별자리"
-            description="주말 운세 · 행운 색상/아이템 보강"
             showChevron
             onPress={() => Linking.openURL('https://www.tv-asahi.co.jp/goodmorning/uranai/')}
             style={[styles.aboutRow, styles.rowBorder]}
           />
           <SettingsRow
-            title="버전"
-            description="1.0.0"
+            title="개발자에게 문의하기"
+            showChevron
+            onPress={() => Linking.openURL('https://docs.google.com/forms/d/e/1FAIpQLSdWvd5ARPMCe_lcvlmuRiTMUKNuO1gwOk8JI6vCRDJ2pu2ASw/viewform?usp=publish-editor')}
             style={[styles.aboutRow, styles.rowBorder]}
           />
           <SettingsRow
@@ -261,7 +262,7 @@ export default function SettingsScreen() {
             <Text style={styles.footerLogo}>ohaasa ✦</Text>
           </View>
           <Text style={styles.footerJa}>おはあさ</Text>
-          <Text style={styles.footerCaption}>매일 아침 7:30, 당신의 별자리 운세</Text>
+          <Text style={styles.footerCaption}>v1.0.1</Text>
         </View>
 
         <View style={styles.spacer} />
@@ -285,7 +286,6 @@ const styles = StyleSheet.create({
   content: {
     paddingTop: 18,
     paddingHorizontal: 20,
-    paddingBottom: 96,
   },
 
   // ── Section spacing ───────────────────────────────────────────
@@ -298,7 +298,7 @@ const styles = StyleSheet.create({
 
   // ── MY SIGN card ──────────────────────────────────────────────
   mySignCardOverride: {
-    paddingVertical: 16,
+    paddingVertical: 12,
     paddingHorizontal: 18,
   },
   mySignInner: {
@@ -307,9 +307,9 @@ const styles = StyleSheet.create({
     gap: 14,
   },
   zodiacCircle: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     flexShrink: 0,
     alignItems: 'center',
     justifyContent: 'center',
@@ -321,11 +321,16 @@ const styles = StyleSheet.create({
   },
   zodiacName: {
     fontSize: 15,
-    fontWeight: '400',
+    lineHeight: 20,
+    fontFamily: 'NotoSansKR_400Regular',
+    includeFontPadding: false,
     color: colors.text,
   },
   zodiacSub: {
     fontSize: 11,
+    lineHeight: 16,
+    fontFamily: 'NotoSansKR_400Regular',
+    includeFontPadding: false,
     color: colors.textSoft,
     marginTop: 2,
   },
@@ -337,7 +342,9 @@ const styles = StyleSheet.create({
   },
   changeButtonText: {
     fontSize: 12,
-    fontWeight: '500',
+    lineHeight: 16,
+    fontFamily: 'NotoSansKR_500Medium',
+    includeFontPadding: false,
     color: colors.apricotDark,
   },
   pressed: {
@@ -355,11 +362,20 @@ const styles = StyleSheet.create({
   },
   openSettingsText: {
     fontSize: 12,
-    fontWeight: '500',
+    lineHeight: 16,
+    fontFamily: 'NotoSansKR_500Medium',
+    includeFontPadding: false,
     color: colors.apricotDark,
   },
   aboutRow: {
     paddingVertical: 14,
+  },
+  versionText: {
+    fontSize: 13,
+    lineHeight: 18,
+    fontFamily: 'NotoSansKR_400Regular',
+    includeFontPadding: false,
+    color: colors.textSoft,
   },
   rowBorder: {
     borderBottomWidth: 1,
@@ -376,20 +392,28 @@ const styles = StyleSheet.create({
   },
   footerLogo: {
     fontSize: 20,
-    fontWeight: '300',
+    lineHeight: 26,
+    fontFamily: 'NotoSansKR_300Light',
+    includeFontPadding: false,
     color: colors.textSoft,
     letterSpacing: 2.8,
   },
   footerJa: {
     fontSize: 11,
+    lineHeight: 16,
+    fontFamily: 'NotoSansKR_400Regular',
+    includeFontPadding: false,
     color: colors.apricot,
     marginTop: 4,
     letterSpacing: 2,
   },
   footerCaption: {
     fontSize: 10,
-    color: colors.cream3,
-    marginTop: 4,
+    lineHeight: 14,
+    fontFamily: 'NotoSansKR_400Regular',
+    includeFontPadding: false,
+    color: colors.textSoft,
+    marginTop: 12,
   },
 
   spacer: {

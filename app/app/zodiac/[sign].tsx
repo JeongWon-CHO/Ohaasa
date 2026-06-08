@@ -191,14 +191,22 @@ export default function ZodiacDetailScreen() {
           <TouchableOpacity
             onPress={share}
             hitSlop={12}
-            style={styles.backBtn}
+            style={[styles.backBtn, styles.shareBtn]}
             disabled={sharing}
           >
             <Feather
               name="share-2"
-              size={20}
+              size={16}
               color={sharing ? colors.textSoft : colors.apricotDark}
             />
+            <Text
+              style={[
+                styles.shareText,
+                sharing && { color: colors.textSoft },
+              ]}
+            >
+              공유하기
+            </Text>
           </TouchableOpacity>
         )}
       </View>
@@ -246,8 +254,8 @@ export default function ZodiacDetailScreen() {
 
               <View style={styles.circleOuter}>
                 <Svg
-                  width={168}
-                  height={168}
+                  width={150}
+                  height={150}
                   style={{ position: "absolute", top: -16, left: -16 }}
                 >
                   <Defs>
@@ -276,15 +284,15 @@ export default function ZodiacDetailScreen() {
                     </RadialGradient>
                   </Defs>
                   <Circle
-                    cx={84}
-                    cy={84}
-                    r={84}
+                    cx={75}
+                    cy={75}
+                    r={75}
                     fill="url(#detailCircleGlow)"
                   />
                 </Svg>
                 <View style={styles.circleDash} />
                 <View style={styles.circleBadge}>
-                  <ConstellationBadge sign={zodiac.sign} size={106} />
+                  <ConstellationBadge sign={zodiac.sign} size={90} />
                 </View>
               </View>
 
@@ -338,6 +346,19 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
+  shareBtn: {
+    width: "auto",
+    flexDirection: "row",
+    gap: 6,
+    paddingHorizontal: 6,
+  },
+  shareText: {
+    fontSize: 12,
+    lineHeight: 16,
+    fontFamily: "NotoSansKR_600SemiBold",
+    includeFontPadding: false,
+    color: colors.apricotDark,
+  },
   scroll: {
     flex: 1,
     zIndex: 1,
@@ -387,13 +408,15 @@ const styles = StyleSheet.create({
   },
   rankPillText: {
     fontSize: 12,
-    fontWeight: "500",
+    lineHeight: 16,
+    fontFamily: "NotoSansKR_500Medium",
+    includeFontPadding: false,
     color: "#FFFDF9",
     letterSpacing: 0.66,
   },
   circleOuter: {
-    width: 136,
-    height: 136,
+    width: 118,
+    height: 118,
     marginVertical: 20,
   },
   circleDash: {
@@ -402,7 +425,7 @@ const styles = StyleSheet.create({
     bottom: -8,
     left: -8,
     right: -8,
-    borderRadius: 76,
+    borderRadius: 67,
     borderWidth: 1,
     borderStyle: "dashed",
     borderColor: "rgba(217,138,104,0.32)",
@@ -422,11 +445,16 @@ const styles = StyleSheet.create({
   },
   zodiacName: {
     fontSize: 20,
-    fontWeight: "400",
+    lineHeight: 28,
+    fontFamily: "NotoSansKR_400Regular",
+    includeFontPadding: false,
     color: colors.text,
   },
   zodiacSub: {
     fontSize: 11,
+    lineHeight: 16,
+    fontFamily: "NotoSansKR_400Regular",
+    includeFontPadding: false,
     color: colors.textSoft,
     marginTop: 3,
   },
