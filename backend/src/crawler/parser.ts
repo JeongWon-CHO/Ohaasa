@@ -11,6 +11,7 @@ export interface HoroscopeEntry {
   zodiac_name: string; // 'おひつじ座' | 'おうし座' | ...
   rank: number;        // 1 ~ 12
   advice: string;      // 탭 문자를 \n으로 정규화한 조언 텍스트
+  lucky_place: string | null; // 행운의 장소 (가끔 등장 — 평소엔 null)
 }
 
 // ============================================================
@@ -62,6 +63,28 @@ function parseDate(raw: string): string {
   }
 
   return `${year}-${month}-${day}`;
+}
+
+/**
+ * raw horoscope_text를 advice 부분과 행운의 장소 부분으로 분리한다.
+ *
+ * 문장 구분은 탭(\t) 1개를 쓰지만, 행운의 장소가 있는 날은
+ * 마지막 조언 문장과 장소명 사이에 탭이 2개 이상 연속으로 들어온다
+ * (둘 사이에 빈 세그먼트가 끼는 형태). 이 탭 길이 차이가 원본 API가
+ * 제공하는 유일한 구조적 경계 신호이므로, 텍스트 내용을 분석할 필요 없이
+ * 마지막 "탭 2개 이상" 위치를 기준으로 분리하면 된다.
+ */
+function splitLuckyPlace(raw: string): { adviceRaw: string; luckyPlace: string | null } {
+  const matches = [...raw.matchAll(/\t{2,}/g)];
+  if (matches.length === 0) {
+    return { adviceRaw: raw, luckyPlace: null };
+  }
+
+  const last = matches[matches.length - 1];
+  const adviceRaw = raw.slice(0, last.index);
+  const place = raw.slice(last.index! + last[0].length).trim();
+
+  return { adviceRaw, luckyPlace: place || null };
 }
 
 /**
@@ -133,8 +156,9 @@ export function parse(data: HoroscopeApiResponse): HoroscopeEntry[] {
       );
     }
 
-    // horoscope_text 검증 및 정규화
-    const advice = normalizeAdvice(item.horoscope_text ?? "");
+    // horoscope_text 검증 및 정규화 (행운의 장소 분리 → advice 정규화)
+    const { adviceRaw, luckyPlace } = splitLuckyPlace(item.horoscope_text ?? "");
+    const advice = normalizeAdvice(adviceRaw);
     if (!advice) {
       throw new Error(
         `[parser] detail[${idx}]: empty horoscope_text for ranking_no "${item.ranking_no}"`
@@ -147,6 +171,7 @@ export function parse(data: HoroscopeApiResponse): HoroscopeEntry[] {
       zodiac_sign: zodiac.sign,
       zodiac_name: zodiac.name,
       advice,
+      lucky_place: luckyPlace,
     };
   });
 
