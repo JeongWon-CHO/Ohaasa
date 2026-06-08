@@ -7,7 +7,7 @@ import { parse, type HoroscopeEntry } from "./crawler/parser";
 import { createAdminClient } from "./db/supabase";
 import { sendNotifications } from "./notifications/sender";
 import { pollReceipts } from "./notifications/receipt-poller";
-import { translateAdvice, containsJapanese } from "./translator/translate";
+import { translateAdvice, translatePlace, containsJapanese } from "./translator/translate";
 import { fetchHtml as fetchGogoHtml } from "./gogo/fetcher";
 import { parse as parseGogo, type GogoEntry } from "./gogo/parser";
 import { translateGogoEntries, type GogoKoEntry } from "./gogo/translator";
@@ -23,6 +23,7 @@ type HoroscopeSource = "ohaasa" | "gogo";
 interface HoroscopeUpsertRow extends HoroscopeEntry {
   advice_ko:      string | null;
   source:         HoroscopeSource;
+  lucky_place_ko: string | null;
   lucky_color:    string | null;
   lucky_item:     string | null;
   lucky_color_ko: string | null;
@@ -95,7 +96,7 @@ async function attachTranslations(
 
   const { data: existingRows, error: queryError } = await supabase
     .from("horoscopes")
-    .select("zodiac_sign, advice, advice_ko")
+    .select("zodiac_sign, advice, advice_ko, lucky_place, lucky_place_ko")
     .eq("date", date);
 
   if (queryError) {
@@ -104,7 +105,13 @@ async function attachTranslations(
     );
   }
 
-  type ExistingRow = { zodiac_sign: string; advice: string; advice_ko: string | null };
+  type ExistingRow = {
+    zodiac_sign: string;
+    advice: string;
+    advice_ko: string | null;
+    lucky_place: string | null;
+    lucky_place_ko: string | null;
+  };
   const existingMap = new Map<string, ExistingRow>(
     (existingRows ?? []).map((r: ExistingRow) => [r.zodiac_sign, r])
   );
@@ -113,6 +120,27 @@ async function attachTranslations(
 
   for (const entry of entries) {
     const existing = existingMap.get(entry.zodiac_sign);
+
+    // ── lucky_place_ko (advice 번역과 독립적으로 skip 판단) ──────
+    let lucky_place_ko: string | null = null;
+    if (entry.lucky_place !== null) {
+      const canSkipPlace =
+        existing !== undefined &&
+        existing.lucky_place === entry.lucky_place &&
+        existing.lucky_place_ko !== null &&
+        !containsJapanese(existing.lucky_place_ko);
+
+      if (canSkipPlace) {
+        lucky_place_ko = existing.lucky_place_ko;
+      } else {
+        console.log(`[translator] ${entry.zodiac_sign}: translating lucky_place "${entry.lucky_place}"`);
+        lucky_place_ko = await translatePlace(entry.lucky_place);
+        if (lucky_place_ko === null) {
+          console.warn(`[translator] ${entry.zodiac_sign}: lucky_place translation failed, lucky_place_ko=null`);
+        }
+      }
+    }
+
     const canSkip =
       existing !== undefined &&
       existing.advice === entry.advice &&
@@ -132,7 +160,7 @@ async function attachTranslations(
 
     if (canSkip) {
       console.log(`[translator] ${entry.zodiac_sign}: skip (same advice, already translated)`);
-      results.push({ ...entry, advice_ko: existing.advice_ko, source: "ohaasa", ...nullGogoFields });
+      results.push({ ...entry, advice_ko: existing.advice_ko, lucky_place_ko, source: "ohaasa", ...nullGogoFields });
       continue;
     }
 
@@ -145,7 +173,7 @@ async function attachTranslations(
     if (advice_ko === null) {
       console.warn(`[translator] ${entry.zodiac_sign}: translation failed, advice_ko=null`);
     }
-    results.push({ ...entry, advice_ko, source: "ohaasa", ...nullGogoFields });
+    results.push({ ...entry, advice_ko, lucky_place_ko, source: "ohaasa", ...nullGogoFields });
   }
 
   return results;
@@ -308,6 +336,8 @@ async function buildWeekendRows(
       advice:         entry.advice,
       advice_ko,
       source:         "gogo",
+      lucky_place:    null,
+      lucky_place_ko: null,
       lucky_color:    entry.lucky_color,
       lucky_item:     entry.lucky_item,
       lucky_color_ko: gogoKo?.lucky_color_ko ?? null,
