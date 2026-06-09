@@ -111,13 +111,13 @@ const styles = StyleSheet.create({
   luckyRow: {
     flexDirection: "row",
     gap: 8,
-    marginBottom: Platform.OS === "ios" ? 12 : 4,
+    marginBottom: Platform.OS === "ios" ? 6 : 4,
   },
   starRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
-    marginBottom: Platform.OS === "ios" ? 12 : 4,
+    marginBottom: Platform.OS === "ios" ? 6 : 4,
   },
   rowLabel: {
     fontSize: 12,
