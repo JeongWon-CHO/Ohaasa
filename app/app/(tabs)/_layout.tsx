@@ -5,13 +5,12 @@ import { Platform } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { colors } from "@/src/constants/design";
-import { requestPushToken } from "@/src/lib/notifications";
 import {
   getOrCreateDeviceId,
   getZodiacSign,
-  setNotificationsEnabled,
-  setPushToken,
-  setPlatform,
+  getNotificationsEnabled,
+  getPushToken,
+  getPlatform,
 } from "@/src/lib/storage";
 import { upsertDevice } from "@/src/lib/supabase";
 
@@ -31,12 +30,12 @@ export default function TabLayout() {
       const zodiac = await getZodiacSign();
       if (!zodiac) return;
 
-      const { token, platform } = await requestPushToken();
-      await setPushToken(token);
-      await setPlatform(platform);
-      const notificationsEnabled = token !== null;
+      const [token, platform, notificationsEnabled] = await Promise.all([
+        getPushToken(),
+        getPlatform(),
+        getNotificationsEnabled(),
+      ]);
 
-      await setNotificationsEnabled(notificationsEnabled);
       await upsertDevice({
         deviceId,
         zodiacSign: zodiac,
