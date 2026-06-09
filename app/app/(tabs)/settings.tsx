@@ -150,6 +150,15 @@ export default function SettingsScreen() {
   useFocusEffect(
     useCallback(() => {
       reload();
+      Promise.all([
+        getNotificationsEnabled(),
+        getPushToken(),
+        checkPermissionStatus(),
+      ]).then(([enabled, token, perm]) => {
+        setNotificationsEnabledState(enabled);
+        setStoredPushToken(token);
+        setPermStatus(perm);
+      });
     }, [reload]),
   );
 
@@ -157,7 +166,7 @@ export default function SettingsScreen() {
     if (next && !storedPushToken) return; // push_token 없으면 ON 불가
 
     setNotificationsEnabledState(next);
-    saveNotificationsEnabled(next);
+    await saveNotificationsEnabled(next);
 
     const currentPushToken = storedPushToken;
     (async () => {
@@ -403,6 +412,15 @@ export default function SettingsScreen() {
               description="로컬 알림 즉시 발송"
               showChevron
               onPress={sendTestNotification}
+              style={[styles.aboutRow, styles.rowBorder]}
+            />
+            <SettingsRow
+              title={storedPushToken ? "토글 비활성화 (초기화)" : "토글 활성화 시뮬레이션"}
+              description={storedPushToken ? "가짜 토큰 제거" : "가짜 토큰으로 토글 ON/OFF 테스트"}
+              showChevron
+              onPress={() =>
+                setStoredPushToken(storedPushToken ? null : "ExponentPushToken[DEV_TEST]")
+              }
               style={[styles.aboutRow, styles.rowBorder]}
             />
             <SettingsRow
