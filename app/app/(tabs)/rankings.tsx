@@ -1,3 +1,4 @@
+import { useCallback, useRef } from "react";
 import {
   ActivityIndicator,
   ScrollView,
@@ -6,6 +7,7 @@ import {
   View,
 } from "react-native";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
+import { useFocusEffect } from "@react-navigation/native";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import Svg, { Path, Polygon } from "react-native-svg";
@@ -84,6 +86,11 @@ export default function RankingsScreen() {
   const tabBarHeight = useBottomTabBarHeight();
   const { zodiacSign } = useZodiac();
   const { horoscopes, broadcastDate, loading, error } = useAllHoroscopes();
+  const navigatingRef = useRef(false);
+
+  useFocusEffect(useCallback(() => {
+    navigatingRef.current = false;
+  }, []));
 
   return (
     <LinearGradient colors={gradients.screen} style={styles.fill}>
@@ -159,12 +166,14 @@ export default function RankingsScreen() {
               horoscope={horoscope}
               isMine={horoscope.zodiac_sign === zodiacSign}
               key={horoscope.zodiac_sign}
-              onPress={() =>
+              onPress={() => {
+                if (navigatingRef.current) return;
+                navigatingRef.current = true;
                 router.push({
                   pathname: "/zodiac/[sign]",
                   params: { sign: horoscope.zodiac_sign },
-                })
-              }
+                });
+              }}
             />
           ))}
           <View style={styles.spacer} />
