@@ -204,6 +204,7 @@ export default function TodayScreen() {
       <ScrollView
         contentContainerStyle={[styles.content, { paddingBottom: tabBarHeight + 16 }]}
         showsVerticalScrollIndicator={false}
+        scrollEnabled={false}
         style={styles.scroll}
       >
         {/* Header */}
