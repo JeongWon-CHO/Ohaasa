@@ -14,6 +14,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import Svg, { Path, Polygon } from "react-native-svg";
 import { useRouter } from "expo-router";
 
+import { NotificationDeniedSheet } from "@/src/components/NotificationDeniedSheet";
 import { ConstellationBadge } from "@/src/components/final/ConstellationBadge";
 import { FinalHeader } from "@/src/components/final/FinalHeader";
 import { SettingsRow } from "@/src/components/final/SettingsRow";
@@ -28,6 +29,7 @@ import {
   requestPushToken,
   type NotifPermissionStatus,
 } from "@/src/lib/notifications";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
   getNotificationsEnabled,
   setNotificationsEnabled as saveNotificationsEnabled,
@@ -37,6 +39,7 @@ import {
   getPlatform,
   setPushToken,
   setPlatform,
+  STORAGE_KEYS,
 } from "@/src/lib/storage";
 import { upsertDevice } from "@/src/lib/supabase";
 
@@ -125,15 +128,10 @@ export default function SettingsScreen() {
   const { zodiacSign, reload } = useZodiac();
   const [notificationsEnabled, setNotificationsEnabledState] = useState(false);
   const [storedPushToken, setStoredPushToken] = useState<string | null>(null);
-  const [permStatus, setPermStatus] = useState<NotifPermissionStatus | null>(
-    null,
-  );
+  const [permStatus, setPermStatus] = useState<NotifPermissionStatus | null>(null);
+  const [deniedSheetVisible, setDeniedSheetVisible] = useState(false);
 
-  const canNotify = storedPushToken !== null;
-  const isPermanentlyDenied =
-    permStatus?.available === true &&
-    !permStatus.granted &&
-    !permStatus.canAskAgain;
+  const isUnavailable = permStatus?.available === false;
 
   useFocusEffect(
     useCallback(() => {
@@ -151,25 +149,56 @@ export default function SettingsScreen() {
   );
 
   async function handleToggle(next: boolean) {
-    if (next && !storedPushToken) return; // push_token 없으면 ON 불가
+    if (!next) {
+      setNotificationsEnabledState(false);
+      await saveNotificationsEnabled(false);
+      const token = storedPushToken;
+      (async () => {
+        const deviceId = await getOrCreateDeviceId();
+        const zodiac = await getZodiacSign();
+        const platform = await getPlatform();
+        if (!zodiac) return;
+        await upsertDevice({ deviceId, zodiacSign: zodiac, pushToken: token, platform, notificationsEnabled: false });
+      })();
+      return;
+    }
 
-    setNotificationsEnabledState(next);
-    await saveNotificationsEnabled(next);
+    if (storedPushToken) {
+      setNotificationsEnabledState(true);
+      await saveNotificationsEnabled(true);
+      const token = storedPushToken;
+      (async () => {
+        const deviceId = await getOrCreateDeviceId();
+        const zodiac = await getZodiacSign();
+        const platform = await getPlatform();
+        if (!zodiac) return;
+        await upsertDevice({ deviceId, zodiacSign: zodiac, pushToken: token, platform, notificationsEnabled: true });
+      })();
+      return;
+    }
 
-    const currentPushToken = storedPushToken;
-    (async () => {
-      const deviceId = await getOrCreateDeviceId();
-      const zodiac = await getZodiacSign();
-      const platform = await getPlatform();
-      if (!zodiac) return;
-      await upsertDevice({
-        deviceId,
-        zodiacSign: zodiac,
-        pushToken: currentPushToken,
-        platform,
-        notificationsEnabled: next,
-      });
-    })();
+    if (!permStatus || !permStatus.available) return;
+
+    if (permStatus.canAskAgain) {
+      const result = await requestPushToken();
+      if (result.token) {
+        await setPushToken(result.token);
+        await setPlatform(result.platform);
+        setStoredPushToken(result.token);
+        setNotificationsEnabledState(true);
+        await saveNotificationsEnabled(true);
+        (async () => {
+          const deviceId = await getOrCreateDeviceId();
+          const zodiac = await getZodiacSign();
+          if (!zodiac) return;
+          await upsertDevice({ deviceId, zodiacSign: zodiac, pushToken: result.token, platform: result.platform, notificationsEnabled: true });
+        })();
+      }
+      const perm = await checkPermissionStatus();
+      setPermStatus(perm);
+    } else {
+      setDeniedSheetVisible(true);
+    }
   }
 
   async function sendTestNotification() {
@@ -190,26 +219,6 @@ export default function SettingsScreen() {
     } catch (err) {
       Alert.alert("테스트 알림 실패", String(err));
     }
-  }
-
-  async function handleDisabledTogglePress() {
-    if (!permStatus || !permStatus.available) return;
-
-    if (!permStatus.canAskAgain) {
-      Linking.openSettings();
-      return;
-    }
-
-    // 권한 재요청
-    const result = await requestPushToken();
-    if (result.token) {
-      await setPushToken(result.token);
-      await setPlatform(result.platform);
-      setStoredPushToken(result.token);
-    }
-    // 재요청 후 canAskAgain 상태가 변할 수 있으므로 재조회
-    const perm = await checkPermissionStatus();
-    setPermStatus(perm);
   }
 
   const zodiac = zodiacSign ? ZODIAC_MAP[zodiacSign] : null;
@@ -312,39 +321,19 @@ export default function SettingsScreen() {
           <SettingsRow
             title="아침 알림"
             description={
-              canNotify
-                ? "매일 아침 운세 알림 받기"
-                : isPermanentlyDenied
-                  ? "시스템 설정에서 알림을 허용해주세요"
-                  : permStatus?.available === false
-                    ? "알림은 개발 빌드에서 사용할 수 있어요"
-                    : "알림을 받으려면 탭해주세요"
+              isUnavailable
+                ? "알림은 개발 빌드에서 사용할 수 있어요"
+                : "매일 아침 운세 알림 받기"
             }
             right={
               <Toggle
                 value={notificationsEnabled}
                 onChange={handleToggle}
-                disabled={!canNotify}
-                onDisabledPress={handleDisabledTogglePress}
+                disabled={isUnavailable}
               />
             }
-            style={[
-              styles.notifRow,
-              (notificationsEnabled || isPermanentlyDenied) && styles.rowBorder,
-            ]}
+            style={[styles.notifRow, notificationsEnabled && styles.rowBorder]}
           />
-          {isPermanentlyDenied && (
-            <Pressable
-              accessibilityRole="button"
-              onPress={() => Linking.openSettings()}
-              style={({ pressed }) => [
-                styles.openSettingsRow,
-                pressed && styles.pressed,
-              ]}
-            >
-              <Text style={styles.openSettingsText}>설정 열기</Text>
-            </Pressable>
-          )}
           {notificationsEnabled && (
             <SettingsRow
               title="알림 시각"
@@ -420,6 +409,16 @@ export default function SettingsScreen() {
               onPress={() =>
                 setPermStatus({ available: true, granted: false, canAskAgain: false })
               }
+              style={[styles.aboutRow, styles.rowBorder]}
+            />
+            <SettingsRow
+              title="권한 요청 시트 초기화"
+              description="플래그 리셋 → 앱 리로드하면 시트 재표시"
+              showChevron
+              onPress={async () => {
+                await AsyncStorage.removeItem(STORAGE_KEYS.hasAskedPushPermission);
+                Alert.alert("완료", "Metro 터미널에서 'r' 눌러 리로드하면 시트가 다시 표시됩니다.");
+              }}
               style={styles.aboutRow}
             />
           </SettingsSection>
@@ -450,6 +449,15 @@ export default function SettingsScreen() {
 
         <View style={styles.spacer} />
       </ScrollView>
+
+      <NotificationDeniedSheet
+        visible={deniedSheetVisible}
+        onOpenSettings={() => {
+          setDeniedSheetVisible(false);
+          Linking.openSettings();
+        }}
+        onClose={() => setDeniedSheetVisible(false)}
+      />
     </LinearGradient>
   );
 }
