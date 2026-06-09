@@ -136,7 +136,9 @@ export default function OnboardingScreen() {
   const router = useRouter();
   const { from } = useLocalSearchParams<{ from?: string }>();
   const { zodiacSign, loading, saving, error, saveZodiacSign } = useZodiac();
-  const [step, setStep] = useState<OnboardingStep>("intro");
+  const [step, setStep] = useState<OnboardingStep>(
+    from === 'settings' ? 'selection' : 'intro'
+  );
   const [selectedZodiacSign, setSelectedZodiacSign] =
     useState<ZodiacSign | null>(null);
   const [deviceError, setDeviceError] = useState<string | null>(null);

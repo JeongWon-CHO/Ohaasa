@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import {
   Alert,
   Linking,
@@ -134,18 +134,6 @@ export default function SettingsScreen() {
     permStatus?.available === true &&
     !permStatus.granted &&
     !permStatus.canAskAgain;
-
-  useEffect(() => {
-    Promise.all([
-      getNotificationsEnabled(),
-      getPushToken(),
-      checkPermissionStatus(),
-    ]).then(([enabled, token, perm]) => {
-      setNotificationsEnabledState(enabled);
-      setStoredPushToken(token);
-      setPermStatus(perm);
-    });
-  }, []);
 
   useFocusEffect(
     useCallback(() => {
@@ -328,7 +316,9 @@ export default function SettingsScreen() {
                 ? "매일 아침 운세 알림 받기"
                 : isPermanentlyDenied
                   ? "시스템 설정에서 알림을 허용해주세요"
-                  : "알림은 개발 빌드에서 사용할 수 있어요"
+                  : permStatus?.available === false
+                    ? "알림은 개발 빌드에서 사용할 수 있어요"
+                    : "알림을 받으려면 탭해주세요"
             }
             right={
               <Toggle
