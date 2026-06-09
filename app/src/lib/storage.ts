@@ -9,6 +9,7 @@ export const STORAGE_KEYS = {
   notificationsEnabled: 'ohaasa:notifications_enabled',
   pushToken: 'ohaasa:push_token',
   platform: 'ohaasa:platform',
+  hasAskedPushPermission: 'ohaasa:has_asked_push_permission',
 } as const;
 
 const ZODIAC_SIGNS = new Set<ZodiacSign>(ZODIAC_LIST.map((zodiac) => zodiac.sign));
@@ -96,4 +97,13 @@ export async function setPlatform(platform: 'ios' | 'android' | null): Promise<v
   } else {
     await AsyncStorage.setItem(STORAGE_KEYS.platform, platform);
   }
+}
+
+export async function getHasAskedPushPermission(): Promise<boolean> {
+  const stored = await AsyncStorage.getItem(STORAGE_KEYS.hasAskedPushPermission);
+  return stored === 'true';
+}
+
+export async function setHasAskedPushPermission(): Promise<void> {
+  await AsyncStorage.setItem(STORAGE_KEYS.hasAskedPushPermission, 'true');
 }
