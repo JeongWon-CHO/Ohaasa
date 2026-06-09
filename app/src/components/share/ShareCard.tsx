@@ -190,7 +190,6 @@ export const ShareCard = forwardRef<View, ShareCardProps>(
               <View style={styles.adviceBox}>
                 <Text
                   style={[styles.advice, { fontSize: adviceFontSize }]}
-                  numberOfLines={7}
                   textBreakStrategy="simple"
                 >
                   {advice}
@@ -293,6 +292,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 14,
     width: "100%",
+    maxHeight: 7 * (Platform.OS === "android" ? 22 : 20) + 28,
+    overflow: "hidden",
   },
   advice: {
     fontSize: 13,
@@ -353,7 +354,7 @@ const infoStyles = StyleSheet.create({
     flexDirection: "row",
     flexWrap: "wrap",
     justifyContent: "flex-end",
-    gap: 3,
+    columnGap: 3,
   },
   rowValue: {
     fontSize: 11,

@@ -144,7 +144,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     flexWrap: "wrap",
     justifyContent: "flex-end",
-    gap: 3,
+    columnGap: 3,
   },
   rowValue: {
     fontSize: 12,
