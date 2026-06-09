@@ -6,15 +6,21 @@ interface ToggleProps {
   value: boolean;
   onChange: (value: boolean) => void;
   disabled?: boolean;
+  onDisabledPress?: () => void;
 }
 
-export function Toggle({ value, onChange, disabled = false }: ToggleProps) {
+export function Toggle({ value, onChange, disabled = false, onDisabledPress }: ToggleProps) {
   return (
     <Pressable
       accessibilityRole="switch"
       accessibilityState={{ checked: value, disabled }}
-      disabled={disabled}
-      onPress={() => onChange(!value)}
+      onPress={() => {
+        if (disabled) {
+          onDisabledPress?.();
+          return;
+        }
+        onChange(!value);
+      }}
       style={[styles.track, value && styles.trackOn, disabled && styles.trackDisabled]}>
       <View style={[styles.thumb, value && styles.thumbOn]} />
     </Pressable>
