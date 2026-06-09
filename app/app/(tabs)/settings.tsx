@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react';
-import { Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useCallback, useEffect, useState } from 'react';
+import { Alert, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
+import { useFocusEffect } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import Svg, { Path, Polygon } from 'react-native-svg';
 import { useRouter } from 'expo-router';
@@ -14,7 +15,7 @@ import { colors, gradients, zodiacColors } from '@/src/constants/design';
 import type { ZodiacSign } from '@/src/constants/zodiac';
 import { ZODIAC_MAP } from '@/src/constants/zodiac';
 import { useZodiac } from '@/src/hooks/useZodiac';
-import { checkPermissionStatus, type NotifPermissionStatus } from '@/src/lib/notifications';
+import { checkPermissionStatus, requestPushToken, type NotifPermissionStatus } from '@/src/lib/notifications';
 import {
   getNotificationsEnabled,
   setNotificationsEnabled as saveNotificationsEnabled,
@@ -22,6 +23,8 @@ import {
   getZodiacSign,
   getPushToken,
   getPlatform,
+  setPushToken,
+  setPlatform,
 } from '@/src/lib/storage';
 import { upsertDevice } from '@/src/lib/supabase';
 
@@ -87,7 +90,7 @@ const DATE_RANGES: Record<ZodiacSign, string> = {
 export default function SettingsScreen() {
   const router = useRouter();
   const tabBarHeight = useBottomTabBarHeight();
-  const { zodiacSign } = useZodiac();
+  const { zodiacSign, reload } = useZodiac();
   const [notificationsEnabled, setNotificationsEnabledState] = useState(false);
   const [storedPushToken, setStoredPushToken] = useState<string | null>(null);
   const [permStatus, setPermStatus] = useState<NotifPermissionStatus | null>(null);
@@ -106,6 +109,10 @@ export default function SettingsScreen() {
     );
   }, []);
 
+  useFocusEffect(useCallback(() => {
+    reload();
+  }, [reload]));
+
   async function handleToggle(next: boolean) {
     if (next && !storedPushToken) return; // push_token 없으면 ON 불가
 
@@ -120,6 +127,33 @@ export default function SettingsScreen() {
       if (!zodiac) return;
       await upsertDevice({ deviceId, zodiacSign: zodiac, pushToken: currentPushToken, platform, notificationsEnabled: next });
     })();
+  }
+
+  async function handleDisabledTogglePress() {
+    if (!permStatus || !permStatus.available) return;
+
+    if (!permStatus.canAskAgain) {
+      Alert.alert(
+        '알림 권한 필요',
+        '시스템 설정에서 알림을 허용해주세요.',
+        [
+          { text: '취소', style: 'cancel' },
+          { text: '설정 열기', onPress: () => Linking.openSettings() },
+        ],
+      );
+      return;
+    }
+
+    // 권한 재요청
+    const result = await requestPushToken();
+    if (result.token) {
+      await setPushToken(result.token);
+      await setPlatform(result.platform);
+      setStoredPushToken(result.token);
+    }
+    // 재요청 후 canAskAgain 상태가 변할 수 있으므로 재조회
+    const perm = await checkPermissionStatus();
+    setPermStatus(perm);
   }
 
   const zodiac = zodiacSign ? ZODIAC_MAP[zodiacSign] : null;
@@ -177,7 +211,7 @@ export default function SettingsScreen() {
             )}
             <Pressable
               accessibilityRole="button"
-              onPress={() => router.push('/onboarding')}
+              onPress={() => router.push({ pathname: '/onboarding', params: { from: 'settings' } })}
               style={({ pressed }) => [styles.changeButton, pressed && styles.pressed]}
             >
               <Text style={styles.changeButtonText}>변경</Text>
@@ -201,6 +235,7 @@ export default function SettingsScreen() {
                 value={notificationsEnabled}
                 onChange={handleToggle}
                 disabled={!canNotify}
+                onDisabledPress={handleDisabledTogglePress}
               />
             }
             style={[

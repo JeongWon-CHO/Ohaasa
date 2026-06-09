@@ -8,7 +8,7 @@ import {
   Text,
   View,
 } from "react-native";
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import {
   SafeAreaView,
   useSafeAreaInsets,
@@ -134,6 +134,7 @@ function MoonDeco({ x, y, size, color, opacity }: DecoProps) {
 
 export default function OnboardingScreen() {
   const router = useRouter();
+  const { from } = useLocalSearchParams<{ from?: string }>();
   const { zodiacSign, loading, saving, error, saveZodiacSign } = useZodiac();
   const [step, setStep] = useState<OnboardingStep>("intro");
   const [selectedZodiacSign, setSelectedZodiacSign] =
@@ -175,7 +176,11 @@ export default function OnboardingScreen() {
         });
       })();
 
-      router.replace("/(tabs)");
+      if (from === 'settings') {
+        router.back();
+      } else {
+        router.replace("/(tabs)");
+      }
     } catch (startError) {
       setDeviceError(
         startError instanceof Error
