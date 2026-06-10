@@ -125,7 +125,7 @@ const DATE_RANGES: Record<ZodiacSign, string> = {
 export default function SettingsScreen() {
   const router = useRouter();
   const tabBarHeight = useBottomTabBarHeight();
-  const { zodiacSign, reload } = useZodiac();
+  const { zodiacSign } = useZodiac();
   const [notificationsEnabled, setNotificationsEnabledState] = useState(false);
   const [storedPushToken, setStoredPushToken] = useState<string | null>(null);
   const [permStatus, setPermStatus] = useState<NotifPermissionStatus | null>(null);
@@ -135,7 +135,6 @@ export default function SettingsScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      reload();
       Promise.all([
         getNotificationsEnabled(),
         getPushToken(),
@@ -145,7 +144,7 @@ export default function SettingsScreen() {
         setStoredPushToken(token);
         setPermStatus(perm);
       });
-    }, [reload]),
+    }, []),
   );
 
   async function handleToggle(next: boolean) {
