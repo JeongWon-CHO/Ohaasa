@@ -86,13 +86,13 @@ export default function RankingsScreen() {
   const tabBarHeight = useBottomTabBarHeight();
   const { zodiacSign } = useZodiac();
   const { horoscopes, broadcastDate, loading, error } = useAllHoroscopes();
-  const pressedSignRef = useRef<string | null>(null);
+  const navigatingRef = useRef(false);
   const multiTouchRef = useRef(false);
   const scrollRef = useRef<ScrollView>(null);
   const prevZodiacRef = useRef(zodiacSign);
 
   useFocusEffect(useCallback(() => {
-    pressedSignRef.current = null;
+    navigatingRef.current = false;
     multiTouchRef.current = false;
   }, []));
 
@@ -169,7 +169,6 @@ export default function RankingsScreen() {
           onTouchStart={(e) => {
             if (e.nativeEvent.touches.length > 1) {
               multiTouchRef.current = true;
-              pressedSignRef.current = null;
             }
           }}
           onTouchEnd={(e) => {
@@ -191,27 +190,12 @@ export default function RankingsScreen() {
               horoscope={horoscope}
               isMine={horoscope.zodiac_sign === zodiacSign}
               key={horoscope.zodiac_sign}
-              onPressIn={() => {
-                if (multiTouchRef.current) return;
-                if (pressedSignRef.current === null) {
-                  pressedSignRef.current = horoscope.zodiac_sign;
-                } else {
-                  pressedSignRef.current = null;
-                }
-              }}
               onPress={() => {
-                if (multiTouchRef.current || pressedSignRef.current !== horoscope.zodiac_sign) return;
-                pressedSignRef.current = null;
+                if (navigatingRef.current || multiTouchRef.current) return;
+                navigatingRef.current = true;
                 router.push({
                   pathname: "/zodiac/[sign]",
                   params: { sign: horoscope.zodiac_sign },
-                });
-              }}
-              onPressOut={() => {
-                requestAnimationFrame(() => {
-                  if (pressedSignRef.current === horoscope.zodiac_sign) {
-                    pressedSignRef.current = null;
-                  }
                 });
               }}
             />
