@@ -29,6 +29,24 @@ function formatShareDate(dateStr: string, source: "ohaasa" | "gogo"): string {
   return `${month}월 ${day}일 ${label}`;
 }
 
+function LuckyRow({ label, value }: { label: string; value: string | null }) {
+  if (value === null) return null;
+  return (
+    <View style={infoStyles.row}>
+      <Text style={infoStyles.rowLabel}>{label}</Text>
+      <View style={infoStyles.rowValueContainer}>
+        <View style={infoStyles.wordsRow}>
+          {value.split(" ").map((word, i) => (
+            <Text key={i} style={infoStyles.rowValue}>
+              {word}
+            </Text>
+          ))}
+        </View>
+      </View>
+    </View>
+  );
+}
+
 function ShareInfoGrid({ horoscope }: { horoscope: Horoscope }) {
   const hasLucky =
     horoscope.lucky_color !== null ||
@@ -54,30 +72,18 @@ function ShareInfoGrid({ horoscope }: { horoscope: Horoscope }) {
       {hasLucky && (
         <View style={infoStyles.card}>
           <Text style={infoStyles.cardHeader}>행운 아이템</Text>
-          {horoscope.lucky_place !== null && (
-            <View style={infoStyles.row}>
-              <Text style={infoStyles.rowLabel}>장소</Text>
-              <Text style={infoStyles.rowValue} numberOfLines={2}>
-                {horoscope.lucky_place_ko ?? horoscope.lucky_place}
-              </Text>
-            </View>
-          )}
-          {horoscope.lucky_color !== null && (
-            <View style={infoStyles.row}>
-              <Text style={infoStyles.rowLabel}>컬러</Text>
-              <Text style={infoStyles.rowValue} numberOfLines={2}>
-                {horoscope.lucky_color_ko ?? horoscope.lucky_color}
-              </Text>
-            </View>
-          )}
-          {horoscope.lucky_item !== null && (
-            <View style={infoStyles.row}>
-              <Text style={infoStyles.rowLabel}>아이템</Text>
-              <Text style={infoStyles.rowValue} numberOfLines={2}>
-                {horoscope.lucky_item_ko ?? horoscope.lucky_item}
-              </Text>
-            </View>
-          )}
+          <LuckyRow
+            label="장소"
+            value={horoscope.lucky_place_ko ?? horoscope.lucky_place}
+          />
+          <LuckyRow
+            label="컬러"
+            value={horoscope.lucky_color_ko ?? horoscope.lucky_color}
+          />
+          <LuckyRow
+            label="아이템"
+            value={horoscope.lucky_item_ko ?? horoscope.lucky_item}
+          />
         </View>
       )}
       {hasScore && (
@@ -184,7 +190,6 @@ export const ShareCard = forwardRef<View, ShareCardProps>(
               <View style={styles.adviceBox}>
                 <Text
                   style={[styles.advice, { fontSize: adviceFontSize }]}
-                  numberOfLines={7}
                   textBreakStrategy="simple"
                 >
                   {advice}
@@ -287,6 +292,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 14,
     width: "100%",
+    maxHeight: 7 * (Platform.OS === "android" ? 22 : 20) + 28,
+    overflow: "hidden",
   },
   advice: {
     fontSize: 13,
@@ -340,14 +347,21 @@ const infoStyles = StyleSheet.create({
     color: colors.textSoft,
     flexShrink: 0,
   },
-  rowValue: {
+  rowValueContainer: {
     flex: 1,
+  },
+  wordsRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "flex-end",
+    columnGap: 3,
+  },
+  rowValue: {
     fontSize: 11,
     fontFamily: "NotoSansKR_400Regular",
+    lineHeight: 16,
     includeFontPadding: false,
     color: colors.textMid,
-    flexWrap: "wrap",
-    textAlign: "right",
   },
   starRow: {
     flexDirection: "row",

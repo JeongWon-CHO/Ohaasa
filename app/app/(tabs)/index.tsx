@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   ScrollView,
@@ -23,6 +24,18 @@ import { GogoInfoGrid } from "@/src/components/final/GogoInfoGrid";
 import { HoroscopeCard } from "@/src/components/HoroscopeCard";
 import { ShareCard } from "@/src/components/share/ShareCard";
 import { Toast } from "@/src/components/common/Toast";
+import { PushPermissionSheet } from "@/src/components/PushPermissionSheet";
+import { requestPushToken } from "@/src/lib/notifications";
+import {
+  getHasAskedPushPermission,
+  setHasAskedPushPermission,
+  getPushToken,
+  setPushToken,
+  setPlatform,
+  setNotificationsEnabled,
+  getOrCreateDeviceId,
+} from "@/src/lib/storage";
+import { upsertDevice } from "@/src/lib/supabase";
 import { colors, gradients } from "@/src/constants/design";
 import { ZODIAC_MAP, type ZodiacSign } from "@/src/constants/zodiac";
 import { useAllHoroscopes } from "@/src/hooks/useHoroscope";
@@ -165,6 +178,61 @@ export default function TodayScreen() {
   const horoscope = zodiacSign
     ? (horoscopes.find((h) => h.zodiac_sign === zodiacSign) ?? null)
     : null;
+
+  const [sheetVisible, setSheetVisible] = useState(false);
+  const hasCheckedPermission = useRef(false);
+
+  useEffect(() => {
+    if (loading || !zodiacSign || hasCheckedPermission.current) return;
+    hasCheckedPermission.current = true;
+
+    let timer: ReturnType<typeof setTimeout>;
+
+    (async () => {
+      const [asked, existingToken] = await Promise.all([
+        getHasAskedPushPermission(),
+        getPushToken(),
+      ]);
+
+      if (asked) return;
+
+      if (existingToken) {
+        await setHasAskedPushPermission();
+        return;
+      }
+
+      timer = setTimeout(() => setSheetVisible(true), 1000);
+    })();
+
+    return () => clearTimeout(timer);
+  }, [loading, zodiacSign]);
+
+  async function handlePushAccept() {
+    setSheetVisible(false);
+    await setHasAskedPushPermission();
+
+    const { token, platform } = await requestPushToken();
+    await setPushToken(token);
+    await setPlatform(platform);
+    const notificationsEnabled = token !== null;
+    await setNotificationsEnabled(notificationsEnabled);
+
+    if (zodiacSign) {
+      const deviceId = await getOrCreateDeviceId();
+      await upsertDevice({
+        deviceId,
+        zodiacSign,
+        pushToken: token,
+        platform,
+        notificationsEnabled,
+      });
+    }
+  }
+
+  async function handlePushDecline() {
+    setSheetVisible(false);
+    await setHasAskedPushPermission();
+  }
 
   return (
     <LinearGradient colors={gradients.screen} style={styles.fill}>
@@ -337,6 +405,12 @@ export default function TodayScreen() {
       )}
 
       <Toast {...toastProps} />
+
+      <PushPermissionSheet
+        visible={sheetVisible}
+        onAccept={handlePushAccept}
+        onDecline={handlePushDecline}
+      />
     </LinearGradient>
   );
 }
