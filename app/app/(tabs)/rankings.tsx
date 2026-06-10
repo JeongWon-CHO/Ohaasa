@@ -1,4 +1,4 @@
-import { useCallback, useRef } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import {
   ActivityIndicator,
   ScrollView,
@@ -87,10 +87,19 @@ export default function RankingsScreen() {
   const { zodiacSign } = useZodiac();
   const { horoscopes, broadcastDate, loading, error } = useAllHoroscopes();
   const navigatingRef = useRef(false);
+  const scrollRef = useRef<ScrollView>(null);
+  const prevZodiacRef = useRef(zodiacSign);
 
   useFocusEffect(useCallback(() => {
     navigatingRef.current = false;
   }, []));
+
+  useEffect(() => {
+    if (prevZodiacRef.current !== zodiacSign) {
+      prevZodiacRef.current = zodiacSign;
+      scrollRef.current?.scrollTo({ y: 0, animated: false });
+    }
+  }, [zodiacSign]);
 
   return (
     <LinearGradient colors={gradients.screen} style={styles.fill}>
@@ -154,6 +163,7 @@ export default function RankingsScreen() {
         </View>
       ) : (
         <ScrollView
+          ref={scrollRef}
           contentContainerStyle={[
             styles.list,
             { paddingBottom: tabBarHeight + 16 },
