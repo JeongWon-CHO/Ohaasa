@@ -9,6 +9,8 @@ interface RankingRowProps {
   horoscope: Horoscope;
   isMine?: boolean;
   onPress?: () => void;
+  onPressIn?: () => void;
+  onPressOut?: () => void;
 }
 
 // 1위 금, 2위 은, 3위 동 — HTML rankColor spec
@@ -22,7 +24,7 @@ function getRankColor(rank: number): string {
   return RANK_COLORS[rank] ?? colors.textSoft;
 }
 
-export function RankingRow({ horoscope, isMine = false, onPress }: RankingRowProps) {
+export function RankingRow({ horoscope, isMine = false, onPress, onPressIn, onPressOut }: RankingRowProps) {
   const zodiac = ZODIAC_MAP[horoscope.zodiac_sign];
   const signColor = zodiacColors[horoscope.zodiac_sign];
   const isTop3 = horoscope.rank <= 3;
@@ -44,6 +46,9 @@ export function RankingRow({ horoscope, isMine = false, onPress }: RankingRowPro
   return (
     <Pressable
       onPress={onPress}
+      onPressIn={onPressIn}
+      onPressOut={onPressOut}
+      pressRetentionOffset={0}
       style={({ pressed }) => [
         styles.row,
         isMine

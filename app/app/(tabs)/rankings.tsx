@@ -86,12 +86,14 @@ export default function RankingsScreen() {
   const tabBarHeight = useBottomTabBarHeight();
   const { zodiacSign } = useZodiac();
   const { horoscopes, broadcastDate, loading, error } = useAllHoroscopes();
-  const navigatingRef = useRef(false);
+  const pressedSignRef = useRef<string | null>(null);
+  const multiTouchRef = useRef(false);
   const scrollRef = useRef<ScrollView>(null);
   const prevZodiacRef = useRef(zodiacSign);
 
   useFocusEffect(useCallback(() => {
-    navigatingRef.current = false;
+    pressedSignRef.current = null;
+    multiTouchRef.current = false;
   }, []));
 
   useEffect(() => {
@@ -164,6 +166,19 @@ export default function RankingsScreen() {
       ) : (
         <ScrollView
           ref={scrollRef}
+          onTouchStart={(e) => {
+            if (e.nativeEvent.touches.length > 1) {
+              multiTouchRef.current = true;
+              pressedSignRef.current = null;
+            }
+          }}
+          onTouchEnd={(e) => {
+            if (e.nativeEvent.touches.length === 0) {
+              requestAnimationFrame(() => {
+                multiTouchRef.current = false;
+              });
+            }
+          }}
           contentContainerStyle={[
             styles.list,
             { paddingBottom: tabBarHeight + 16 },
@@ -176,12 +191,27 @@ export default function RankingsScreen() {
               horoscope={horoscope}
               isMine={horoscope.zodiac_sign === zodiacSign}
               key={horoscope.zodiac_sign}
+              onPressIn={() => {
+                if (multiTouchRef.current) return;
+                if (pressedSignRef.current === null) {
+                  pressedSignRef.current = horoscope.zodiac_sign;
+                } else {
+                  pressedSignRef.current = null;
+                }
+              }}
               onPress={() => {
-                if (navigatingRef.current) return;
-                navigatingRef.current = true;
+                if (multiTouchRef.current || pressedSignRef.current !== horoscope.zodiac_sign) return;
+                pressedSignRef.current = null;
                 router.push({
                   pathname: "/zodiac/[sign]",
                   params: { sign: horoscope.zodiac_sign },
+                });
+              }}
+              onPressOut={() => {
+                requestAnimationFrame(() => {
+                  if (pressedSignRef.current === horoscope.zodiac_sign) {
+                    pressedSignRef.current = null;
+                  }
                 });
               }}
             />
