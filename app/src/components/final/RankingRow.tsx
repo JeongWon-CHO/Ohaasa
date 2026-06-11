@@ -44,6 +44,7 @@ export function RankingRow({ horoscope, isMine = false, onPress }: RankingRowPro
   return (
     <Pressable
       onPress={onPress}
+      pressRetentionOffset={0}
       style={({ pressed }) => [
         styles.row,
         isMine

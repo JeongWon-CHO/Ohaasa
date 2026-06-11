@@ -1,6 +1,7 @@
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import {
   Alert,
+  AppState,
   Linking,
   Pressable,
   ScrollView,
@@ -125,30 +126,86 @@ const DATE_RANGES: Record<ZodiacSign, string> = {
 export default function SettingsScreen() {
   const router = useRouter();
   const tabBarHeight = useBottomTabBarHeight();
-  const { zodiacSign, reload } = useZodiac();
+  const { zodiacSign } = useZodiac();
   const [notificationsEnabled, setNotificationsEnabledState] = useState(false);
   const [storedPushToken, setStoredPushToken] = useState<string | null>(null);
   const [permStatus, setPermStatus] = useState<NotifPermissionStatus | null>(null);
   const [deniedSheetVisible, setDeniedSheetVisible] = useState(false);
+  // 사용자가 바텀시트에서 "설정하러 가기"를 눌렀는지 추적 (경우 1-1 자동 활성화용)
+  const pendingActivationRef = useRef(false);
 
   const isUnavailable = permStatus?.available === false;
 
+  // 권한·토큰·알림 활성화 여부를 스토리지+시스템에서 읽어 상태를 동기화
+  // useFocusEffect 진입 시 & 앱 포그라운드 복귀 시 모두 호출
+  const syncState = useCallback(async () => {
+    const [enabled, token, perm] = await Promise.all([
+      getNotificationsEnabled(),
+      getPushToken(),
+      checkPermissionStatus(),
+    ]);
+
+    let effectiveEnabled = enabled;
+    let effectiveToken = token;
+
+    // 시스템 권한이 철회된 경우 앱 내 설정도 강제 동기화
+    if (perm.available && !perm.granted && enabled) {
+      effectiveEnabled = false;
+      await saveNotificationsEnabled(false);
+    }
+
+    // 경우 1-1: 바텀시트 → "설정하러 가기" 후 허용하고 돌아온 경우 자동 활성화
+    // 레이스 방지: 진입 즉시 false로 리셋해 동시에 호출된 두 번째 syncState가 이 블록에 진입하지 못하게 함
+    if (pendingActivationRef.current && perm.available && perm.granted) {
+      pendingActivationRef.current = false;
+      let finalToken = token;
+      if (!finalToken) {
+        const result = await requestPushToken();
+        if (result.token) {
+          await setPushToken(result.token);
+          await setPlatform(result.platform);
+          effectiveToken = result.token;
+          finalToken = result.token;
+        }
+      }
+      if (finalToken) {
+        effectiveEnabled = true;
+        await saveNotificationsEnabled(true);
+        (async () => {
+          const deviceId = await getOrCreateDeviceId();
+          const zodiac = await getZodiacSign();
+          const platform = await getPlatform();
+          if (!zodiac) return;
+          await upsertDevice({ deviceId, zodiacSign: zodiac, pushToken: finalToken, platform, notificationsEnabled: true });
+        })();
+      }
+    } else {
+      pendingActivationRef.current = false;
+    }
+
+    setNotificationsEnabledState(effectiveEnabled);
+    setStoredPushToken(effectiveToken);
+    setPermStatus(perm);
+  }, []);
+
   useFocusEffect(
     useCallback(() => {
-      reload();
-      Promise.all([
-        getNotificationsEnabled(),
-        getPushToken(),
-        checkPermissionStatus(),
-      ]).then(([enabled, token, perm]) => {
-        setNotificationsEnabledState(enabled);
-        setStoredPushToken(token);
-        setPermStatus(perm);
+      syncState();
+
+      // Linking.openSettings() 후 앱 복귀 시 useFocusEffect가 재실행되지 않을 수 있으므로
+      // AppState 리스너로 포그라운드 복귀를 감지해 권한 상태를 재확인
+      const subscription = AppState.addEventListener("change", (nextState) => {
+        if (nextState === "active") {
+          syncState();
+        }
       });
-    }, [reload]),
+
+      return () => subscription.remove();
+    }, [syncState]),
   );
 
   async function handleToggle(next: boolean) {
+    // OFF: 권한 상태와 무관하게 비활성화
     if (!next) {
       setNotificationsEnabledState(false);
       await saveNotificationsEnabled(false);
@@ -163,6 +220,45 @@ export default function SettingsScreen() {
       return;
     }
 
+    // ON: 환경 자체가 지원 안 되면 아무것도 안 함
+    if (!permStatus || !permStatus.available) return;
+
+    // 토글 탭 시점에 항상 최신 시스템 권한을 확인 (캐시된 permStatus 신뢰 금지)
+    const freshPerm = await checkPermissionStatus();
+    setPermStatus(freshPerm);
+
+    // 경우 1: 시스템 알림 비활성화
+    if (!freshPerm.available || !freshPerm.granted) {
+      if (freshPerm.available && freshPerm.canAskAgain) {
+        // OS 권한 다이얼로그를 한 번도 안 띄운 경우 → 네이티브 다이얼로그 표시
+        const result = await requestPushToken();
+        if (result.token) {
+          await setPushToken(result.token);
+          await setPlatform(result.platform);
+          setStoredPushToken(result.token);
+          setNotificationsEnabledState(true);
+          await saveNotificationsEnabled(true);
+          const perm = await checkPermissionStatus();
+          setPermStatus(perm);
+          (async () => {
+            const deviceId = await getOrCreateDeviceId();
+            const zodiac = await getZodiacSign();
+            if (!zodiac) return;
+            await upsertDevice({ deviceId, zodiacSign: zodiac, pushToken: result.token, platform: result.platform, notificationsEnabled: true });
+          })();
+        } else {
+          // 다이얼로그에서 거부 → permStatus 갱신만 (토글은 OFF 유지)
+          const perm = await checkPermissionStatus();
+          setPermStatus(perm);
+        }
+      } else {
+        // canAskAgain === false → 시스템 설정으로 안내
+        setDeniedSheetVisible(true);
+      }
+      return;
+    }
+
+    // 경우 2: 시스템 알림 활성화 → 토큰 있으면 바로 ON, 없으면 발급 후 ON
     if (storedPushToken) {
       setNotificationsEnabledState(true);
       await saveNotificationsEnabled(true);
@@ -177,27 +273,19 @@ export default function SettingsScreen() {
       return;
     }
 
-    if (!permStatus || !permStatus.available) return;
-
-    if (permStatus.canAskAgain) {
-      const result = await requestPushToken();
-      if (result.token) {
-        await setPushToken(result.token);
-        await setPlatform(result.platform);
-        setStoredPushToken(result.token);
-        setNotificationsEnabledState(true);
-        await saveNotificationsEnabled(true);
-        (async () => {
-          const deviceId = await getOrCreateDeviceId();
-          const zodiac = await getZodiacSign();
-          if (!zodiac) return;
-          await upsertDevice({ deviceId, zodiacSign: zodiac, pushToken: result.token, platform: result.platform, notificationsEnabled: true });
-        })();
-      }
-      const perm = await checkPermissionStatus();
-      setPermStatus(perm);
-    } else {
-      setDeniedSheetVisible(true);
+    const result = await requestPushToken();
+    if (result.token) {
+      await setPushToken(result.token);
+      await setPlatform(result.platform);
+      setStoredPushToken(result.token);
+      setNotificationsEnabledState(true);
+      await saveNotificationsEnabled(true);
+      (async () => {
+        const deviceId = await getOrCreateDeviceId();
+        const zodiac = await getZodiacSign();
+        if (!zodiac) return;
+        await upsertDevice({ deviceId, zodiacSign: zodiac, pushToken: result.token, platform: result.platform, notificationsEnabled: true });
+      })();
     }
   }
 
@@ -419,6 +507,23 @@ export default function SettingsScreen() {
                 await AsyncStorage.removeItem(STORAGE_KEYS.hasAskedPushPermission);
                 Alert.alert("완료", "Metro 터미널에서 'r' 눌러 리로드하면 시트가 다시 표시됩니다.");
               }}
+              style={[styles.aboutRow, styles.rowBorder]}
+            />
+            <SettingsRow
+              title="첫 설치 상태 초기화"
+              description="토큰·권한 플래그 전체 삭제 → 알림 바텀시트 재현"
+              showChevron
+              onPress={async () => {
+                await Promise.all([
+                  AsyncStorage.removeItem(STORAGE_KEYS.pushToken),
+                  AsyncStorage.removeItem(STORAGE_KEYS.platform),
+                  AsyncStorage.removeItem(STORAGE_KEYS.hasAskedPushPermission),
+                  AsyncStorage.removeItem(STORAGE_KEYS.notificationsEnabled),
+                ]);
+                setStoredPushToken(null);
+                setNotificationsEnabledState(false);
+                Alert.alert("완료", "앱을 리로드하면 첫 설치 상태로 동작합니다.");
+              }}
               style={styles.aboutRow}
             />
           </SettingsSection>
@@ -444,7 +549,7 @@ export default function SettingsScreen() {
             <Text style={styles.footerLogo}>ohaasa ✦</Text>
           </View>
           <Text style={styles.footerJa}>おはあさ</Text>
-          <Text style={styles.footerCaption}>v1.0.2</Text>
+          <Text style={styles.footerCaption}>v1.0.3</Text>
         </View>
 
         <View style={styles.spacer} />
@@ -454,6 +559,7 @@ export default function SettingsScreen() {
         visible={deniedSheetVisible}
         onOpenSettings={() => {
           setDeniedSheetVisible(false);
+          pendingActivationRef.current = true;
           Linking.openSettings();
         }}
         onClose={() => setDeniedSheetVisible(false)}

@@ -1,4 +1,4 @@
-import { useCallback, useRef } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import {
   ActivityIndicator,
   ScrollView,
@@ -87,10 +87,21 @@ export default function RankingsScreen() {
   const { zodiacSign } = useZodiac();
   const { horoscopes, broadcastDate, loading, error } = useAllHoroscopes();
   const navigatingRef = useRef(false);
+  const multiTouchRef = useRef(false);
+  const scrollRef = useRef<ScrollView>(null);
+  const prevZodiacRef = useRef(zodiacSign);
 
   useFocusEffect(useCallback(() => {
     navigatingRef.current = false;
+    multiTouchRef.current = false;
   }, []));
+
+  useEffect(() => {
+    if (prevZodiacRef.current !== zodiacSign) {
+      prevZodiacRef.current = zodiacSign;
+      scrollRef.current?.scrollTo({ y: 0, animated: false });
+    }
+  }, [zodiacSign]);
 
   return (
     <LinearGradient colors={gradients.screen} style={styles.fill}>
@@ -154,6 +165,22 @@ export default function RankingsScreen() {
         </View>
       ) : (
         <ScrollView
+          ref={scrollRef}
+          onTouchStart={(e) => {
+            if (e.nativeEvent.touches.length > 1) {
+              multiTouchRef.current = true;
+            }
+          }}
+          onTouchEnd={(e) => {
+            // touches에는 Android에서 떼는 손가락이 포함되어 있을 수 있어
+            // changedTouches(이번 이벤트에서 변화한 터치)를 빼서 실제 잔여 수 계산
+            const remaining = e.nativeEvent.touches.length - e.nativeEvent.changedTouches.length;
+            if (remaining <= 0) {
+              requestAnimationFrame(() => {
+                multiTouchRef.current = false;
+              });
+            }
+          }}
           contentContainerStyle={[
             styles.list,
             { paddingBottom: tabBarHeight + 16 },
@@ -167,7 +194,7 @@ export default function RankingsScreen() {
               isMine={horoscope.zodiac_sign === zodiacSign}
               key={horoscope.zodiac_sign}
               onPress={() => {
-                if (navigatingRef.current) return;
+                if (navigatingRef.current || multiTouchRef.current) return;
                 navigatingRef.current = true;
                 router.push({
                   pathname: "/zodiac/[sign]",
