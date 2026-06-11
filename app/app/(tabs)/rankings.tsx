@@ -172,7 +172,10 @@ export default function RankingsScreen() {
             }
           }}
           onTouchEnd={(e) => {
-            if (e.nativeEvent.touches.length === 0) {
+            // touches에는 Android에서 떼는 손가락이 포함되어 있을 수 있어
+            // changedTouches(이번 이벤트에서 변화한 터치)를 빼서 실제 잔여 수 계산
+            const remaining = e.nativeEvent.touches.length - e.nativeEvent.changedTouches.length;
+            if (remaining <= 0) {
               requestAnimationFrame(() => {
                 multiTouchRef.current = false;
               });
