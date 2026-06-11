@@ -151,7 +151,7 @@ export default function SettingsScreen() {
     // 시스템 권한이 철회된 경우 앱 내 설정도 강제 동기화
     if (perm.available && !perm.granted && enabled) {
       effectiveEnabled = false;
-      saveNotificationsEnabled(false);
+      await saveNotificationsEnabled(false);
     }
 
     // 경우 1-1: 바텀시트 → "설정하러 가기" 후 허용하고 돌아온 경우 자동 활성화
@@ -170,7 +170,7 @@ export default function SettingsScreen() {
       }
       if (finalToken) {
         effectiveEnabled = true;
-        saveNotificationsEnabled(true);
+        await saveNotificationsEnabled(true);
         (async () => {
           const deviceId = await getOrCreateDeviceId();
           const zodiac = await getZodiacSign();
