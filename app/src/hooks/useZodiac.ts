@@ -1,5 +1,4 @@
 import { useCallback, useState } from 'react';
-
 import type { ZodiacSign } from '@/src/constants/zodiac';
 import { useZodiacContext } from '@/src/context/ZodiacContext';
 
@@ -28,7 +27,6 @@ export function useZodiac() {
     loading,
     saving,
     error,
-    reload: useCallback(() => {}, []),
     saveZodiacSign,
   };
 }
