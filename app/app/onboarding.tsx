@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Platform,
@@ -9,6 +9,7 @@ import {
   View,
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
+import { useFocusEffect } from "@react-navigation/native";
 import {
   SafeAreaView,
   useSafeAreaInsets,
@@ -142,6 +143,13 @@ export default function OnboardingScreen() {
   const [selectedZodiacSign, setSelectedZodiacSign] =
     useState<ZodiacSign | null>(null);
   const [deviceError, setDeviceError] = useState<string | null>(null);
+  const multiTouchRef = useRef(false);
+  const navigatingRef = useRef(false);
+
+  useFocusEffect(useCallback(() => {
+    navigatingRef.current = false;
+    multiTouchRef.current = false;
+  }, []));
 
   useEffect(() => {
     if (zodiacSign) {
@@ -150,9 +158,10 @@ export default function OnboardingScreen() {
   }, [zodiacSign]);
 
   async function handleStart() {
-    if (!selectedZodiacSign) {
+    if (!selectedZodiacSign || navigatingRef.current || multiTouchRef.current) {
       return;
     }
+    navigatingRef.current = true;
 
     setDeviceError(null);
 
@@ -184,6 +193,7 @@ export default function OnboardingScreen() {
         router.replace("/(tabs)");
       }
     } catch (startError) {
+      navigatingRef.current = false;
       setDeviceError(
         startError instanceof Error
           ? startError.message
@@ -281,7 +291,24 @@ export default function OnboardingScreen() {
 
   // ── Selection step — FinalSignSelection layout (unchanged)
   return (
-    <LinearGradient colors={gradients.screen} style={styles.fill}>
+    <LinearGradient
+      colors={gradients.screen}
+      style={styles.fill}
+      onTouchStart={(e) => {
+        if (e.nativeEvent.touches.length > 1) {
+          multiTouchRef.current = true;
+        }
+      }}
+      onTouchEnd={(e) => {
+        const remaining =
+          e.nativeEvent.touches.length - e.nativeEvent.changedTouches.length;
+        if (remaining <= 0) {
+          requestAnimationFrame(() => {
+            multiTouchRef.current = false;
+          });
+        }
+      }}
+    >
       {/* FinalSignSelection CircleDeco */}
       <CircleDeco
         x={-40}
@@ -327,6 +354,7 @@ export default function OnboardingScreen() {
             >
               <ZodiacPicker
                 disabled={saving}
+                multiTouchRef={multiTouchRef}
                 onChange={setSelectedZodiacSign}
                 value={selectedZodiacSign}
               />

@@ -9,6 +9,7 @@ interface ZodiacPickerProps {
   value: ZodiacSign | null;
   onChange: (zodiacSign: ZodiacSign) => void;
   disabled?: boolean;
+  multiTouchRef?: { current: boolean };
 }
 
 export const ZODIAC_SIGN_COLORS: Record<ZodiacSign, string> = {
@@ -26,7 +27,7 @@ export const ZODIAC_SIGN_COLORS: Record<ZodiacSign, string> = {
   pisces:      '#B8D0F0',
 };
 
-export function ZodiacPicker({ value, onChange, disabled = false }: ZodiacPickerProps) {
+export function ZodiacPicker({ value, onChange, disabled = false, multiTouchRef }: ZodiacPickerProps) {
   return (
     <View style={styles.grid}>
       {ZODIAC_LIST.map((zodiac) => {
@@ -39,7 +40,10 @@ export function ZodiacPicker({ value, onChange, disabled = false }: ZodiacPicker
             accessibilityState={{ disabled, selected }}
             disabled={disabled}
             key={zodiac.sign}
-            onPress={() => onChange(zodiac.sign)}
+            onPress={() => {
+              if (multiTouchRef?.current) return;
+              onChange(zodiac.sign);
+            }}
             style={({ pressed }) => [
               styles.card,
               selected && {
