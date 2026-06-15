@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  Linking,
   ScrollView,
   StyleSheet,
   Text,
@@ -24,6 +25,7 @@ import { GogoInfoGrid } from "@/src/components/final/GogoInfoGrid";
 import { HoroscopeCard } from "@/src/components/HoroscopeCard";
 import { ShareCard } from "@/src/components/share/ShareCard";
 import { Toast } from "@/src/components/common/Toast";
+import { MediaDeniedSheet } from "@/src/components/MediaDeniedSheet";
 import { PushPermissionSheet } from "@/src/components/PushPermissionSheet";
 import { requestPushToken } from "@/src/lib/notifications";
 import {
@@ -156,7 +158,7 @@ export default function TodayScreen() {
   const tabBarHeight = useBottomTabBarHeight();
 
   const { showToast, toastProps } = useToast();
-  const { cardRef, share, sharing, saveImage, saving } = useShareHoroscope({
+  const { cardRef, share, sharing, saveImage, saving, mediaDeniedSheetVisible, closeMediaDeniedSheet } = useShareHoroscope({
     showToast,
   });
 
@@ -410,6 +412,12 @@ export default function TodayScreen() {
         visible={sheetVisible}
         onAccept={handlePushAccept}
         onDecline={handlePushDecline}
+      />
+
+      <MediaDeniedSheet
+        visible={mediaDeniedSheetVisible}
+        onClose={closeMediaDeniedSheet}
+        onOpenSettings={() => { Linking.openSettings(); closeMediaDeniedSheet(); }}
       />
     </LinearGradient>
   );
