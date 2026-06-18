@@ -11,6 +11,7 @@ export function useShareHoroscope({ showToast }: Options = {}) {
   const cardRef = useRef<View>(null);
   const [sharing, setSharing] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [mediaDeniedSheetVisible, setMediaDeniedSheetVisible] = useState(false);
 
   const share = useCallback(async () => {
     if (!cardRef.current) return;
@@ -30,9 +31,13 @@ export function useShareHoroscope({ showToast }: Options = {}) {
     setSaving(true);
     try {
       const MediaLibrary = await import('expo-media-library');
-      const { status } = await MediaLibrary.requestPermissionsAsync(true);
+      const { status, canAskAgain } = await MediaLibrary.requestPermissionsAsync(true);
       if (status !== 'granted') {
-        showToast?.('갤러리 접근 권한이 필요해요.');
+        if (!canAskAgain) {
+          setMediaDeniedSheetVisible(true);
+        } else {
+          showToast?.('갤러리 접근 권한이 필요해요.');
+        }
         return;
       }
       const uri = await captureRef(cardRef, { format: 'png', quality: 1, width: 1080, height: 1920 });
@@ -45,5 +50,13 @@ export function useShareHoroscope({ showToast }: Options = {}) {
     }
   }, [showToast]);
 
-  return { cardRef, share, sharing, saveImage, saving };
+  return {
+    cardRef,
+    share,
+    sharing,
+    saveImage,
+    saving,
+    mediaDeniedSheetVisible,
+    closeMediaDeniedSheet: () => setMediaDeniedSheetVisible(false),
+  };
 }
