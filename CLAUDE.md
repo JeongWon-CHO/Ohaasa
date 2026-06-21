@@ -101,7 +101,7 @@ CREATE POLICY "user_devices_anon_select" ON public.user_devices FOR SELECT  TO a
 
 - 개인정보처리방침 URL: `https://jeongwon-cho.github.io/Ohaasa/privacy-policy.html`
 - `google-services.json`: 커밋 대상(앱 수신용) · Firebase service account JSON은 커밋 금지
-- 현재 버전: v1.0.3
+- 현재 버전: v1.0.4
 
 ---
 
@@ -139,6 +139,17 @@ CREATE POLICY "user_devices_anon_select" ON public.user_devices FOR SELECT  TO a
 - **공유**: `captureRef()` → `shareAsync(uri, { mimeType: 'image/png' })` — 추가 권한 불필요.
 - **동적 import**: `await import('expo-media-library')` — static import 금지.
 - **구현 위치**: `src/hooks/useShareHoroscope.ts`
+
+---
+
+## 배포 전 체크리스트
+
+> **배포 전 반드시 수기로 확인할 것. 자동으로 올라가지 않는다.**
+
+- [ ] `app/app.config.js`의 `version` 필드를 올렸는가?
+- [ ] 이 파일(`CLAUDE.md`) 하단의 "현재 버전"을 같은 값으로 수정했는가?
+
+버전은 `app.config.js` 한 곳만 고치면 EAS 빌드에 반영된다. CLAUDE.md의 "현재 버전"은 대화 맥락용 메모이므로 같이 맞춰줘야 한다.
 
 ---
 
