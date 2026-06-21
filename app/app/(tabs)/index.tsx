@@ -7,7 +7,6 @@ import {
   Text,
   View,
 } from "react-native";
-import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import { LinearGradient } from "expo-linear-gradient";
 import Svg, {
   Circle,
@@ -155,8 +154,6 @@ function MoonDeco({ x, y, size, color, opacity }: DecoProps) {
 export default function TodayScreen() {
   const screenSize = useScreenSize();
   const cfg = SCREEN_CONFIG[screenSize];
-  const tabBarHeight = useBottomTabBarHeight();
-
   const { showToast, toastProps } = useToast();
   const { cardRef, share, sharing, saveImage, saving, mediaDeniedSheetVisible, closeMediaDeniedSheet } = useShareHoroscope({
     showToast,
@@ -272,9 +269,9 @@ export default function TodayScreen() {
       />
 
       <ScrollView
-        contentContainerStyle={[styles.content, { paddingBottom: tabBarHeight + 16 }]}
+        contentContainerStyle={[styles.content, { paddingBottom: 24 }]}
         showsVerticalScrollIndicator={false}
-        scrollEnabled={false}
+        bounces={false}
         style={styles.scroll}
       >
         {/* Header */}
@@ -396,7 +393,6 @@ export default function TodayScreen() {
           </View>
         )}
 
-        <View style={styles.spacer} />
       </ScrollView>
 
       {/* 오프스크린 캡처용 ShareCard */}
@@ -578,10 +574,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     textAlign: "center",
   },
-  spacer: {
-    minHeight: 20,
-  },
-
   // ── 오프스크린 캡처 영역 ──────────────────────────────────────
   offscreen: {
     position: "absolute",
