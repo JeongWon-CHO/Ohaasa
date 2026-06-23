@@ -22,15 +22,7 @@ function LuckyRow({ label, value }: { label: string; value: string | null }) {
   return (
     <View style={styles.luckyRow}>
       <Text style={styles.rowLabel}>{label}</Text>
-      <View style={styles.rowValueContainer}>
-        <View style={styles.wordsRow}>
-          {value.split(" ").map((word, i) => (
-            <Text key={i} style={styles.rowValue}>
-              {word}
-            </Text>
-          ))}
-        </View>
-      </View>
+      <Text style={styles.rowValue}>{value}</Text>
     </View>
   );
 }
@@ -137,20 +129,14 @@ const styles = StyleSheet.create({
   starLabel: {
     minWidth: 34,
   },
-  rowValueContainer: {
-    flex: 1,
-  },
-  wordsRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "flex-end",
-    columnGap: 3,
-  },
   rowValue: {
+    flex: 1,
     fontSize: 12,
+    lineHeight: 18,
     fontFamily: "NotoSansKR_400Regular",
     includeFontPadding: false,
     color: colors.textMid,
+    textAlign: "right",
   },
   stars: {
     flexDirection: "row",
