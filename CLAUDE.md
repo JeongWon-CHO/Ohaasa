@@ -11,7 +11,7 @@
 ## 아키텍처
 
 ```
-GitHub Actions (cron: UTC 일~금 22:00 = KST 월~토 07:00)
+GitHub Actions (cron: UTC 일~금 20:58 = KST 월~토 05:58, 데이터 없으면 21:58 = 06:58 재시도)
   └─ backend (Node.js/TypeScript)
        ├─ 아사히 JSON API fetch → parse → 12개 HoroscopeEntry
        ├─ GPT 번역 (advice_ko — advice 불변 + advice_ko IS NOT NULL이면 skip)
