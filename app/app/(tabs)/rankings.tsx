@@ -99,6 +99,7 @@ export default function RankingsScreen() {
   useFocusEffect(useCallback(() => {
     navigatingRef.current = false;
     multiTouchRef.current = false;
+    scrollRef.current?.scrollTo({ y: 0, animated: false });
   }, []));
 
   useEffect(() => {

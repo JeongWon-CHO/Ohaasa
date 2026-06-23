@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Linking,
@@ -7,6 +7,7 @@ import {
   Text,
   View,
 } from "react-native";
+import { useFocusEffect } from "@react-navigation/native";
 import { LinearGradient } from "expo-linear-gradient";
 import Svg, {
   Circle,
@@ -192,6 +193,12 @@ export default function TodayScreen() {
         ? COPY.noDateData
         : COPY.noData;
 
+  const scrollRef = useRef<ScrollView>(null);
+
+  useFocusEffect(useCallback(() => {
+    scrollRef.current?.scrollTo({ y: 0, animated: false });
+  }, []));
+
   const [pushSheetVisible, setPushSheetVisible] = useState(false);
   const [dateSheetVisible, setDateSheetVisible] = useState(false);
   const hasCheckedPermission = useRef(false);
@@ -288,6 +295,7 @@ export default function TodayScreen() {
       />
 
       <ScrollView
+        ref={scrollRef}
         contentContainerStyle={[styles.content, { paddingBottom: 24 }]}
         showsVerticalScrollIndicator={false}
         bounces={false}
