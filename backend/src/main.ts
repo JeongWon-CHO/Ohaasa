@@ -550,6 +550,39 @@ async function crawlAndSave(
 }
 
 // ============================================================
+// Notification deduplication
+// ============================================================
+
+/**
+ * 오늘(JST) 이미 푸시를 발송했는지 확인한다.
+ * DB 조회 실패 시 false를 반환해 파이프라인을 계속 진행한다.
+ */
+async function hasNotifiedToday(supabase: SupabaseClient, today: string): Promise<boolean> {
+  const { data, error } = await supabase
+    .from("notification_log")
+    .select("date")
+    .eq("date", today)
+    .maybeSingle();
+
+  if (error) {
+    console.warn(`[main] Failed to check notification_log: ${error.message}. Proceeding.`);
+    return false;
+  }
+  return data !== null;
+}
+
+/** 발송 완료 후 오늘 날짜를 notification_log에 기록한다. */
+async function markNotifiedToday(supabase: SupabaseClient, today: string): Promise<void> {
+  const { error } = await supabase
+    .from("notification_log")
+    .insert({ date: today });
+
+  if (error) {
+    console.warn(`[main] Failed to insert notification_log: ${error.message}`);
+  }
+}
+
+// ============================================================
 // Main
 // ============================================================
 
@@ -611,6 +644,13 @@ async function main(): Promise<void> {
   let receiptIds:      string[]               = [];
   let receiptTokenMap: Record<string, string> = {};
 
+  const today = getTodayJST();
+
+  if (await hasNotifiedToday(supabase, today)) {
+    console.log(`[main] Already notified today (${today}). Skipping notifications.`);
+    return;
+  }
+
   try {
     const result = await sendNotifications(supabase, isDryRun);
     console.log(
@@ -619,6 +659,7 @@ async function main(): Promise<void> {
     );
     receiptIds      = result.receiptIds;
     receiptTokenMap = result.receiptTokenMap;
+    await markNotifiedToday(supabase, today);
   } catch (err) {
     console.error(
       `[main] Notification failed: ${err instanceof Error ? err.message : String(err)}`
