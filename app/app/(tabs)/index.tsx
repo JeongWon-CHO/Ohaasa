@@ -22,10 +22,12 @@ import { DatePill } from "@/src/components/final/DatePill";
 import { FinalHeader } from "@/src/components/final/FinalHeader";
 import { GogoInfoGrid } from "@/src/components/final/GogoInfoGrid";
 import { HoroscopeCard } from "@/src/components/HoroscopeCard";
-import { ShareCard } from "@/src/components/share/ShareCard";
-import { Toast } from "@/src/components/common/Toast";
+import { HoroscopeDateSheet } from "@/src/components/HoroscopeDateSheet";
 import { MediaDeniedSheet } from "@/src/components/MediaDeniedSheet";
 import { PushPermissionSheet } from "@/src/components/PushPermissionSheet";
+import { ShareCard } from "@/src/components/share/ShareCard";
+import { Toast } from "@/src/components/common/Toast";
+import { useHoroscopeDateContext } from "@/src/context/HoroscopeDateContext";
 import { requestPushToken } from "@/src/lib/notifications";
 import {
   getHasAskedPushPermission,
@@ -69,9 +71,11 @@ const SCREEN_CONFIG = {
 } as const;
 
 const COPY = {
-  headerSubtitle: "오늘도 좋은 하루 되세요 ☀️",
+  headerToday: "오늘도 좋은 하루 되세요 ☀️",
+  headerPast: "그날의 운세를 다시 보고 있어요 ✨",
   noZodiac: "별자리를 선택해주세요.",
   noData: "방송 데이터가 없습니다.",
+  noDateData: "해당 날짜에 저장된 운세가 없어요.\n다른 날짜를 선택해 주세요.",
 };
 
 const EN_NAMES: Record<ZodiacSign, string> = {
@@ -159,6 +163,8 @@ export default function TodayScreen() {
     showToast,
   });
 
+  const { selectedDate, isLatest, setSelectedDate } = useHoroscopeDateContext();
+
   const {
     zodiacSign,
     loading: zodiacLoading,
@@ -169,7 +175,7 @@ export default function TodayScreen() {
     broadcastDate,
     loading: horoscopeLoading,
     error: horoscopeError,
-  } = useAllHoroscopes();
+  } = useAllHoroscopes({ date: selectedDate });
 
   const loading = zodiacLoading || horoscopeLoading;
   const error = zodiacError ?? horoscopeError;
@@ -178,7 +184,16 @@ export default function TodayScreen() {
     ? (horoscopes.find((h) => h.zodiac_sign === zodiacSign) ?? null)
     : null;
 
-  const [sheetVisible, setSheetVisible] = useState(false);
+  // 빈 상태 문구: 별자리 없음 / 특정 날짜에 데이터 없음 / 최신 데이터 없음
+  const emptyText =
+    zodiacSign === null
+      ? COPY.noZodiac
+      : selectedDate !== null && horoscopes.length === 0
+        ? COPY.noDateData
+        : COPY.noData;
+
+  const [pushSheetVisible, setPushSheetVisible] = useState(false);
+  const [dateSheetVisible, setDateSheetVisible] = useState(false);
   const hasCheckedPermission = useRef(false);
 
   useEffect(() => {
@@ -200,14 +215,14 @@ export default function TodayScreen() {
         return;
       }
 
-      timer = setTimeout(() => setSheetVisible(true), 1000);
+      timer = setTimeout(() => setPushSheetVisible(true), 1000);
     })();
 
     return () => clearTimeout(timer);
   }, [loading, zodiacSign]);
 
   async function handlePushAccept() {
-    setSheetVisible(false);
+    setPushSheetVisible(false);
     await setHasAskedPushPermission();
 
     const { token, platform } = await requestPushToken();
@@ -229,13 +244,17 @@ export default function TodayScreen() {
   }
 
   async function handlePushDecline() {
-    setSheetVisible(false);
+    setPushSheetVisible(false);
     await setHasAskedPushPermission();
   }
 
+  const rankPillText = isLatest
+    ? `오늘의 운세 ${horoscope?.rank}위`
+    : `그날의 운세 ${horoscope?.rank}위`;
+
   return (
     <LinearGradient colors={gradients.screen} style={styles.fill}>
-      {/* FinalMainRevised background decorations */}
+      {/* Background decorations */}
       <CircleDeco x={-50} y={50} size={170} color={colors.sky} opacity={0.11} />
       <CircleDeco
         x={230}
@@ -276,16 +295,19 @@ export default function TodayScreen() {
       >
         {/* Header */}
         <FinalHeader
-          subtitle={COPY.headerSubtitle}
+          subtitle={isLatest ? COPY.headerToday : COPY.headerPast}
           onSharePress={horoscope ? share : undefined}
           sharing={sharing}
           onSavePress={horoscope ? saveImage : undefined}
           saving={saving}
         />
 
-        {/* DatePill — 오하아사 방송 기준일 표시 */}
+        {/* DatePill */}
         <View style={styles.pillWrap}>
-          <DatePill dateText={broadcastDate ?? ""} />
+          <DatePill
+            dateText={broadcastDate ?? ""}
+            onPress={() => setDateSheetVisible(true)}
+          />
         </View>
 
         {loading ? (
@@ -298,21 +320,17 @@ export default function TodayScreen() {
           </View>
         ) : zodiac && horoscope ? (
           <>
-            {/* Hero — no FinalCard, floats on background */}
+            {/* Hero */}
             <View style={[styles.hero, { marginTop: cfg.heroMarginTop }]}>
-              {/* Gradient rank pill */}
               <LinearGradient
                 colors={[colors.yellow, colors.apricot]}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
                 style={styles.rankPill}
               >
-                <Text style={styles.rankPillText}>
-                  오늘의 운세 {horoscope.rank}위
-                </Text>
+                <Text style={styles.rankPillText}>{rankPillText}</Text>
               </LinearGradient>
 
-              {/* Constellation circle: glow + dashed ring + badge */}
               <View
                 style={[
                   styles.circleOuter,
@@ -364,7 +382,6 @@ export default function TodayScreen() {
                 </View>
               </View>
 
-              {/* Zodiac name + English sub */}
               <View style={styles.zodiacText}>
                 <Text
                   style={[styles.zodiacName, { fontSize: cfg.zodiacFontSize }]}
@@ -387,9 +404,7 @@ export default function TodayScreen() {
           </>
         ) : (
           <View style={styles.emptyWrap}>
-            <Text style={styles.emptyText}>
-              {zodiacSign === null ? COPY.noZodiac : COPY.noData}
-            </Text>
+            <Text style={styles.emptyText}>{emptyText}</Text>
           </View>
         )}
 
@@ -405,7 +420,7 @@ export default function TodayScreen() {
       <Toast {...toastProps} />
 
       <PushPermissionSheet
-        visible={sheetVisible}
+        visible={pushSheetVisible}
         onAccept={handlePushAccept}
         onDecline={handlePushDecline}
       />
@@ -414,6 +429,13 @@ export default function TodayScreen() {
         visible={mediaDeniedSheetVisible}
         onClose={closeMediaDeniedSheet}
         onOpenSettings={() => { Linking.openSettings(); closeMediaDeniedSheet(); }}
+      />
+
+      <HoroscopeDateSheet
+        visible={dateSheetVisible}
+        onClose={() => setDateSheetVisible(false)}
+        selectedDate={selectedDate}
+        onSelect={setSelectedDate}
       />
     </LinearGradient>
   );
@@ -431,7 +453,6 @@ const styles = StyleSheet.create({
   },
   content: {},
 
-  // ── Positioning wrappers ──────────────────────────────────────
   pillWrap: {
     marginTop: 12,
     marginHorizontal: 28,
@@ -443,7 +464,6 @@ const styles = StyleSheet.create({
     marginTop: 28,
   },
 
-  // ── Hero ─────────────────────────────────────────────────────
   hero: {
     alignItems: "center",
   },
@@ -462,11 +482,9 @@ const styles = StyleSheet.create({
     lineHeight: 14,
     paddingVertical: 1,
     fontFamily: "NotoSansKR_600SemiBold",
-    // includeFontPadding: false,
     color: "#FFFDF9",
   },
   circleOuter: {
-    // width/height는 cfg.circleSize로 인라인 override
     marginVertical: 10,
   },
   circleDash: {
@@ -475,7 +493,6 @@ const styles = StyleSheet.create({
     bottom: -8,
     left: -8,
     right: -8,
-    // borderRadius는 cfg.dashRadius로 인라인 override
     borderWidth: 1,
     borderStyle: "dashed",
     borderColor: "rgba(217,138,104,0.32)",
@@ -494,7 +511,6 @@ const styles = StyleSheet.create({
     marginTop: 10,
   },
   zodiacName: {
-    // fontSize는 cfg.zodiacFontSize로 인라인 override
     fontFamily: "NotoSansKR_400Regular",
     lineHeight: 28,
     color: colors.text,
@@ -506,15 +522,10 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
 
-  // ── Fortune card ─────────────────────────────────────────────
   fortuneCard: {
-    // marginTop은 cfg.cardMarginTop으로 인라인 override
     marginHorizontal: 24,
   },
 
-  // ── 행운 아이템 · 오늘의 운 그리드 스타일 ────────────────────────
-  // 오하아사에는 해당 필드가 없어 주석 처리.
-  // 추후 고고별자리 연동 Phase에서 복구 예정.
   infoGrid: {
     flexDirection: "row",
     gap: 10,
@@ -559,7 +570,6 @@ const styles = StyleSheet.create({
     gap: 2,
   },
 
-  // ── Empty / error states ─────────────────────────────────────
   emptyWrap: {
     marginTop: 40,
     alignItems: "center",
@@ -568,13 +578,14 @@ const styles = StyleSheet.create({
   emptyText: {
     fontSize: 14,
     color: colors.textMid,
+    textAlign: "center",
+    lineHeight: 22,
   },
   errorText: {
     color: colors.apricotDark,
     fontSize: 13,
     textAlign: "center",
   },
-  // ── 오프스크린 캡처 영역 ──────────────────────────────────────
   offscreen: {
     position: "absolute",
     left: -9999,

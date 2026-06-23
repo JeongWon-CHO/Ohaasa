@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   ScrollView,
@@ -14,12 +14,14 @@ import Svg, { Path, Polygon } from "react-native-svg";
 
 import { DatePill } from "@/src/components/final/DatePill";
 import { FinalHeader } from "@/src/components/final/FinalHeader";
+import { HoroscopeDateSheet } from "@/src/components/HoroscopeDateSheet";
 import { RankingRow } from "@/src/components/final/RankingRow";
+import { useHoroscopeDateContext } from "@/src/context/HoroscopeDateContext";
 import { colors, gradients } from "@/src/constants/design";
 import { useAllHoroscopes } from "@/src/hooks/useHoroscope";
 import { useZodiac } from "@/src/hooks/useZodiac";
 
-// ─── Background decoration helpers (same pattern as F3) ──────
+// ─── Background decoration helpers ───────────────────────────
 
 type DecoProps = {
   x: number;
@@ -85,11 +87,14 @@ export default function RankingsScreen() {
   const router = useRouter();
   const tabBarHeight = useBottomTabBarHeight();
   const { zodiacSign } = useZodiac();
-  const { horoscopes, broadcastDate, loading, error } = useAllHoroscopes();
+  const { selectedDate, isLatest, setSelectedDate } = useHoroscopeDateContext();
+  const { horoscopes, broadcastDate, loading, error } = useAllHoroscopes({ date: selectedDate });
   const navigatingRef = useRef(false);
   const multiTouchRef = useRef(false);
   const scrollRef = useRef<ScrollView>(null);
   const prevZodiacRef = useRef(zodiacSign);
+
+  const [dateSheetVisible, setDateSheetVisible] = useState(false);
 
   useFocusEffect(useCallback(() => {
     navigatingRef.current = false;
@@ -103,9 +108,16 @@ export default function RankingsScreen() {
     }
   }, [zodiacSign]);
 
+  const sectionTitle = isLatest ? "오늘의 전체 순위" : "그날의 전체 순위";
+
+  // 날짜에 데이터가 없을 때 문구
+  const noDataText =
+    selectedDate !== null && horoscopes.length === 0 && !loading
+      ? "해당 날짜에 저장된 운세가 없어요.\n다른 날짜를 선택해 주세요."
+      : "방송 데이터가 없습니다.";
+
   return (
     <LinearGradient colors={gradients.screen} style={styles.fill}>
-      {/* FinalAllRankings decorations — HTML FScreenBase spec */}
       <CircleDeco x={-50} y={50} size={170} color={colors.sky} opacity={0.11} />
       <CircleDeco
         x={230}
@@ -141,14 +153,17 @@ export default function RankingsScreen() {
       {/* Header */}
       <FinalHeader subtitle="12개 별자리 오하아사 순위" />
 
-      {/* DatePill — 방송 기준일 표시 */}
+      {/* DatePill */}
       <View style={styles.pillWrap}>
-        <DatePill dateText={broadcastDate ?? ""} />
+        <DatePill
+          dateText={broadcastDate ?? ""}
+          onPress={() => setDateSheetVisible(true)}
+        />
       </View>
 
       {/* Section title */}
       <View style={styles.titleWrap}>
-        <Text style={styles.sectionTitle}>오늘의 전체 순위</Text>
+        <Text style={styles.sectionTitle}>{sectionTitle}</Text>
       </View>
 
       {loading ? (
@@ -161,7 +176,7 @@ export default function RankingsScreen() {
         </View>
       ) : horoscopes.length === 0 ? (
         <View style={styles.emptyWrap}>
-          <Text style={styles.emptyText}>방송 데이터가 없습니다.</Text>
+          <Text style={styles.emptyText}>{noDataText}</Text>
         </View>
       ) : (
         <ScrollView
@@ -172,8 +187,6 @@ export default function RankingsScreen() {
             }
           }}
           onTouchEnd={(e) => {
-            // touches에는 Android에서 떼는 손가락이 포함되어 있을 수 있어
-            // changedTouches(이번 이벤트에서 변화한 터치)를 빼서 실제 잔여 수 계산
             const remaining = e.nativeEvent.touches.length - e.nativeEvent.changedTouches.length;
             if (remaining <= 0) {
               requestAnimationFrame(() => {
@@ -198,7 +211,10 @@ export default function RankingsScreen() {
                 navigatingRef.current = true;
                 router.push({
                   pathname: "/zodiac/[sign]",
-                  params: { sign: horoscope.zodiac_sign },
+                  params: {
+                    sign: horoscope.zodiac_sign,
+                    ...(selectedDate ? { date: selectedDate } : {}),
+                  },
                 });
               }}
             />
@@ -206,6 +222,13 @@ export default function RankingsScreen() {
           <View style={styles.spacer} />
         </ScrollView>
       )}
+
+      <HoroscopeDateSheet
+        visible={dateSheetVisible}
+        onClose={() => setDateSheetVisible(false)}
+        selectedDate={selectedDate}
+        onSelect={setSelectedDate}
+      />
     </LinearGradient>
   );
 }
@@ -249,6 +272,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: colors.textMid,
     textAlign: "center",
+    lineHeight: 22,
   },
   errorText: {
     fontSize: 13,
