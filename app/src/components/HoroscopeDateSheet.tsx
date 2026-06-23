@@ -1,4 +1,10 @@
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
+import {
+  ActivityIndicator,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 import { Feather } from "@expo/vector-icons";
 
 import { BottomSheet } from "@/src/components/common/BottomSheet";
@@ -12,10 +18,10 @@ interface HoroscopeDateSheetProps {
   onSelect: (date: string | null) => void; // null = 최신으로 리셋
 }
 
-const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토'] as const;
+const WEEKDAYS = ["일", "월", "화", "수", "목", "금", "토"] as const;
 
 function formatSheetDate(dateStr: string): string {
-  const [year, month, day] = dateStr.split('-').map(Number);
+  const [year, month, day] = dateStr.split("-").map(Number);
   const dow = WEEKDAYS[new Date(year, month - 1, day).getDay()];
   return `${month}월 ${day}일 ${dow}요일`;
 }
@@ -41,7 +47,9 @@ export function HoroscopeDateSheet({
   return (
     <BottomSheet visible={visible} onClose={onClose}>
       <Text style={styles.title}>지난 운세 보기</Text>
-      <Text style={styles.description}>보고 싶은 날짜를 선택해 주세요.</Text>
+      <Text style={styles.description}>
+        최근 7일의 운세를 다시 볼 수 있어요.
+      </Text>
 
       {loading ? (
         <View style={styles.loadingBox}>
@@ -73,7 +81,12 @@ export function HoroscopeDateSheet({
                       <Text style={styles.latestBadgeText}>최신</Text>
                     </View>
                   )}
-                  <Text style={[styles.dateLabel, selected && styles.dateLabelSelected]}>
+                  <Text
+                    style={[
+                      styles.dateLabel,
+                      selected && styles.dateLabelSelected,
+                    ]}
+                  >
                     {formatSheetDate(date)}
                   </Text>
                 </View>
