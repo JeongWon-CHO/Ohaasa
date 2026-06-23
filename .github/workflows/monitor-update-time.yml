@@ -1,0 +1,53 @@
+name: Monitor horoscope update time
+
+on:
+  schedule:
+    - cron: "*/10 21 * * *"   # KST 06:00-06:50 (UTC 21:00-21:50)
+    - cron: "0,10,20,30 22 * * *" # KST 07:00-07:30 (UTC 22:00-22:30)
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+
+    steps:
+      - name: Check ohaasa & gogo dates
+        run: |
+          NOW_KST=$(TZ=Asia/Tokyo date "+%Y-%m-%d %H:%M:%S KST")
+          echo "=== $NOW_KST ==="
+
+          # ohaasa: JSON API → onair_date 필드 ("20260621" 형식)
+          OHAASA_RAW=$(curl -sf \
+            -H "User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36" \
+            -H "Accept: application/json, */*" \
+            "https://www.asahi.co.jp/data/ohaasa2020/horoscope.json" || echo "FETCH_ERROR")
+
+          if [ "$OHAASA_RAW" = "FETCH_ERROR" ]; then
+            echo "[ohaasa] fetch failed"
+          else
+            OHAASA_DATE=$(echo "$OHAASA_RAW" | python3 -c "
+          import json, sys
+          data = json.load(sys.stdin)
+          raw = data[0]['onair_date']  # '20260621'
+          print(f'{raw[:4]}-{raw[4:6]}-{raw[6:8]}')
+          " 2>/dev/null || echo "PARSE_ERROR")
+            echo "[ohaasa] onair_date = $OHAASA_DATE"
+          fi
+
+          # gogo: HTML → ttl-area 텍스트에서 "M月D日" 추출
+          GOGO_RAW=$(curl -sf \
+            -H "User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36" \
+            -H "Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8" \
+            -H "Accept-Language: ja,ko;q=0.9,en-US;q=0.8" \
+            "https://www.tv-asahi.co.jp/goodmorning/uranai/" || echo "FETCH_ERROR")
+
+          if [ "$GOGO_RAW" = "FETCH_ERROR" ]; then
+            echo "[gogo]   fetch failed"
+          else
+            GOGO_DATE=$(echo "$GOGO_RAW" | grep -o '[0-9]\+月[0-9]\+日' | head -1 || echo "PARSE_ERROR")
+            echo "[gogo]   date = $GOGO_DATE"
+          fi
