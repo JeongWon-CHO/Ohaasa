@@ -74,7 +74,7 @@ export function HoroscopeDateSheet({
                     </View>
                   )}
                   <Text style={[styles.dateLabel, selected && styles.dateLabelSelected]}>
-                    {index === 0 ? '최신 운세' : formatSheetDate(date)}
+                    {formatSheetDate(date)}
                   </Text>
                 </View>
                 {selected && (
