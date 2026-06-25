@@ -529,7 +529,7 @@ function OnboardingIntro({ onStart }: { onStart: () => void }) {
       </Pressable>
 
       {/* Caption */}
-      <Text style={styles.introCaption}>매일 아침 7:30에 업데이트됩니다</Text>
+      <Text style={styles.introCaption}>매일 아침 업데이트됩니다</Text>
     </View>
   );
 }
