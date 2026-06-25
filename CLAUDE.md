@@ -11,12 +11,18 @@
 ## 아키텍처
 
 ```
-GitHub Actions (cron: UTC 일~금 20:58 = KST 월~토 05:58, 데이터 없으면 21:58 = 06:58 재시도)
+GitHub Actions (cron: UTC 20:59 = KST 05:59, 매일 1회)
   └─ backend (Node.js/TypeScript)
        ├─ 아사히 JSON API fetch → parse → 12개 HoroscopeEntry
        ├─ GPT 번역 (advice_ko — advice 불변 + advice_ko IS NOT NULL이면 skip)
-       ├─ Supabase horoscopes upsert
-       └─ user_devices 조회 → Expo Push API 발송
+       └─ Supabase horoscopes upsert (INSERT)
+            │
+            └─ Database Webhook (horoscopes INSERT → aries row 1회)
+                 └─ Supabase Edge Function: send-horoscope-notifications
+                      ├─ notification_log dedup (UNIQUE constraint on date)
+                      ├─ horoscopes 12개 조회
+                      ├─ user_devices 조회
+                      └─ Expo Push API 발송 → FCM → 단말기
 
 React Native Expo (app/)
   └─ Supabase horoscopes SELECT → advice_ko ?? advice 표시
@@ -51,7 +57,9 @@ app/
 backend/src/
 ├── crawler/   fetcher · parser (31 tests)
 ├── translator/translate.ts    # GPT 번역
-└── main.ts    # 파이프라인 통합
+└── main.ts    # 크롤 + 번역 + 저장 (알림 발송 제외)
+supabase/functions/
+└── send-horoscope-notifications/index.ts  # Deno Edge Function — 알림 발송
 ```
 
 ---
@@ -61,7 +69,7 @@ backend/src/
 - **데이터 소스**: `https://www.asahi.co.jp/data/ohaasa2020/horoscope.json`
 - **저장 필드**: `date · zodiac_sign · zodiac_name · rank · advice · advice_ko`
 - **주말 데이터**: 고고별자리(`source=gogo`) 크롤링. 토·일 모두 고고 메인 소스.
-- **일요일 cron**: 방송 없음이지만 매일 실행 (`0 22 * * *`), 평일/주말 분기는 `isWeekendJST()`에서 처리.
+- **일요일 cron**: 방송 없음이지만 매일 실행 (`59 20 * * *` = KST 05:59), 평일/주말 분기는 `isWeekendJST()`에서 처리.
 - **DatePill**: "오늘"이 아닌 오하아사 방송 기준일(`date` 컬럼) 표시
 
 ---
@@ -95,7 +103,7 @@ CREATE POLICY "user_devices_anon_select" ON public.user_devices FOR SELECT  TO a
 | Phase / Step | 내용 | 상태 |
 | --- | --- | --- |
 | Phase 1~5 | 파서 · Supabase 스키마 · 파이프라인 · Push 발송 · cron | ✅ |
-| Phase 6 Step 1~9 | Expo 앱 · FCM · Push Receipt polling | ✅ |
+| Phase 6 Step 1~9 | Expo 앱 · FCM · Push (Receipt polling 제거됨) | ✅ |
 | Phase 10 Step 1~5 | EAS profile · 아이콘/splash · 개인정보처리방침 | ✅ |
 | Phase 10 Step 6 | Play Console 내부 테스트 트랙 업로드 | ⬜ |
 
@@ -116,6 +124,10 @@ CREATE POLICY "user_devices_anon_select" ON public.user_devices FOR SELECT  TO a
 
 ### Push Notification
 
+- **발송 주체**: Supabase Edge Function (`send-horoscope-notifications`). backend/main.ts는 알림을 직접 발송하지 않는다.
+- **트리거**: horoscopes 테이블 INSERT → Database Webhook `horoscope_notify` → Edge Function. `zodiac_sign = 'aries'` row 1개만 처리해 중복 실행 방지.
+- **dedup**: `notification_log` 테이블 — date 컬럼에 UNIQUE constraint 필수. INSERT 충돌(23505) 시 즉시 리턴.
+- **재배포**: Edge Function 변경 시 `supabase functions deploy send-horoscope-notifications --project-ref khszicvinkgtqsyqiecc`
 - **Android Expo Go (SDK 53+)**: remote push 제거됨. `push_token = NULL · platform = NULL · notifications_enabled = false`가 정상.
 - **`expo-notifications` static import 금지**: `ExecutionEnvironment.StoreClient` guard 통과 후 `await import('expo-notifications')`로 동적 import.
 - **`requestPushToken()`은 절대 throw하지 않는다**: 시뮬레이터·권한 거부·토큰 발급 실패 모두 `{ token: null, platform: null }` 반환.
@@ -157,5 +169,5 @@ CREATE POLICY "user_devices_anon_select" ON public.user_devices FOR SELECT  TO a
 
 - 한 번에 하나의 Phase/Step만 구현한다
 - Secret 키 원문을 로그에 출력하지 않는다
-- 크롤링 실패와 알림 실패는 분리해서 처리한다 (crawl 실패 → warning, notify 실패 → exit 1)
+- 크롤링 실패 → exit 1. 알림은 Edge Function이 독립적으로 처리하므로 backend에서 관여하지 않는다.
 - 스키마/API 구조 변경은 테스트로 먼저 감지한다
