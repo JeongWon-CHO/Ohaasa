@@ -15,6 +15,7 @@ import { useEffect } from 'react';
 import 'react-native-reanimated';
 
 import { useColorScheme } from '@/components/useColorScheme';
+import { HoroscopeDateProvider } from '@/src/context/HoroscopeDateContext';
 import { ZodiacProvider } from '@/src/context/ZodiacContext';
 import { setupForegroundHandler } from '@/src/lib/notifications';
 
@@ -76,14 +77,16 @@ function RootLayoutNav() {
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : AppLightTheme}>
       <ZodiacProvider>
-        <StatusBar style="dark" />
-        <Stack>
-          <Stack.Screen name="index" options={{ headerShown: false }} />
-          <Stack.Screen name="onboarding" options={{ headerShown: false }} />
-          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-          <Stack.Screen name="zodiac/[sign]" options={{ headerShown: false }} />
-          <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
-        </Stack>
+        <HoroscopeDateProvider>
+          <StatusBar style="dark" />
+          <Stack>
+            <Stack.Screen name="index" options={{ headerShown: false }} />
+            <Stack.Screen name="onboarding" options={{ headerShown: false }} />
+            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+            <Stack.Screen name="zodiac/[sign]" options={{ headerShown: false }} />
+            <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
+          </Stack>
+        </HoroscopeDateProvider>
       </ZodiacProvider>
     </ThemeProvider>
   );

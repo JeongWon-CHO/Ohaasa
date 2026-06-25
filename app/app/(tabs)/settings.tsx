@@ -116,6 +116,7 @@ export default function SettingsScreen() {
   // 사용자가 바텀시트에서 "설정하러 가기"를 눌렀는지 추적 (경우 1-1 자동 활성화용)
   const pendingActivationRef = useRef(false);
 
+  const scrollRef = useRef<ScrollView>(null);
   const isUnavailable = permStatus?.available === false;
 
   // 권한·토큰·알림 활성화 여부를 스토리지+시스템에서 읽어 상태를 동기화
@@ -172,6 +173,7 @@ export default function SettingsScreen() {
 
   useFocusEffect(
     useCallback(() => {
+      scrollRef.current?.scrollTo({ y: 0, animated: false });
       syncState();
 
       // Linking.openSettings() 후 앱 복귀 시 useFocusEffect가 재실행되지 않을 수 있으므로
@@ -320,6 +322,7 @@ export default function SettingsScreen() {
 
       {/* Scroll — padding '18px 20px 16px' → paddingBottom 96 for tab bar */}
       <ScrollView
+        ref={scrollRef}
         contentContainerStyle={[
           styles.content,
           { paddingBottom: tabBarHeight + 16 },
@@ -404,7 +407,7 @@ export default function SettingsScreen() {
           {notificationsEnabled && (
             <SettingsRow
               title="알림 시각"
-              description="매일 아침 07:30, 업데이트 직후"
+              description="매일 아침 7:30"
               style={styles.notifRow}
             />
           )}
@@ -528,7 +531,7 @@ export default function SettingsScreen() {
             <Text style={styles.footerLogo}>ohaasa ✦</Text>
           </View>
           <Text style={styles.footerJa}>おはあさ</Text>
-          <Text style={styles.footerCaption}>v1.0.3</Text>
+          <Text style={styles.footerCaption}>v1.1.0</Text>
         </View>
 
         <View style={styles.spacer} />

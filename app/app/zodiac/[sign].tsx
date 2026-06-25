@@ -26,6 +26,7 @@ import { ConstellationBadge } from "@/src/components/final/ConstellationBadge";
 import { DatePill } from "@/src/components/final/DatePill";
 import { GogoInfoGrid } from "@/src/components/final/GogoInfoGrid";
 import { HoroscopeCard } from "@/src/components/HoroscopeCard";
+import { useHoroscopeDateContext } from "@/src/context/HoroscopeDateContext";
 import { colors, gradients } from "@/src/constants/design";
 import { ZODIAC_MAP, type ZodiacSign } from "@/src/constants/zodiac";
 import { useAllHoroscopes } from "@/src/hooks/useHoroscope";
@@ -95,8 +96,13 @@ function MoonDeco({ x, y, size, color, opacity }: DecoProps) {
 export default function ZodiacDetailScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { sign } = useLocalSearchParams<{ sign: string }>();
-  const { horoscopes, broadcastDate, loading, error } = useAllHoroscopes();
+  const { sign, date: dateParam } = useLocalSearchParams<{ sign: string; date?: string }>();
+  const { latestDate } = useHoroscopeDateContext();
+
+  // dateParam이 빈 문자열이거나 없으면 최신 날짜 조회 (기존 진입 방식 유지)
+  const targetDate = dateParam || undefined;
+
+  const { horoscopes, broadcastDate, loading, error } = useAllHoroscopes({ date: targetDate });
 
   const { cardRef, share, sharing } = useShareHoroscope();
 
@@ -109,6 +115,12 @@ export default function ZodiacDetailScreen() {
   const horoscope = validSign
     ? (horoscopes.find((h) => h.zodiac_sign === validSign) ?? null)
     : null;
+
+  // targetDate가 있고, latestDate와 다르면 과거 날짜로 간주
+  const isPast = !!targetDate && (!latestDate || targetDate !== latestDate);
+  const rankPillText = isPast
+    ? `그날의 운세 ${horoscope?.rank}위`
+    : `오늘의 운세 ${horoscope?.rank}위`;
 
   return (
     <LinearGradient colors={gradients.screen} style={styles.fill}>
@@ -205,7 +217,11 @@ export default function ZodiacDetailScreen() {
           </View>
         ) : !horoscope ? (
           <View style={styles.emptyWrap}>
-            <Text style={styles.emptyText}>방송 데이터가 없습니다.</Text>
+            <Text style={styles.emptyText}>
+              {targetDate
+                ? "해당 날짜에 저장된 운세가 없어요."
+                : "방송 데이터가 없습니다."}
+            </Text>
           </View>
         ) : (
           <>
@@ -217,9 +233,7 @@ export default function ZodiacDetailScreen() {
                 end={{ x: 1, y: 1 }}
                 style={styles.rankPill}
               >
-                <Text style={styles.rankPillText}>
-                  오늘의 운세 {horoscope.rank}위
-                </Text>
+                <Text style={styles.rankPillText}>{rankPillText}</Text>
               </LinearGradient>
 
               <View style={styles.circleOuter}>
@@ -287,6 +301,7 @@ export default function ZodiacDetailScreen() {
 
         <View style={styles.spacer} />
       </ScrollView>
+
       {/* 오프스크린 캡처용 ShareCard */}
       {horoscope && zodiac && (
         <View style={styles.offscreen} pointerEvents="none" collapsable={false}>
@@ -354,6 +369,8 @@ const styles = StyleSheet.create({
   emptyText: {
     fontSize: 14,
     color: colors.textMid,
+    textAlign: "center",
+    lineHeight: 22,
   },
   errorText: {
     fontSize: 13,
@@ -361,7 +378,6 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
 
-  // ── Hero ─────────────────────────────────────────────────────
   hero: {
     marginTop: 28,
     alignItems: "center",
@@ -429,13 +445,11 @@ const styles = StyleSheet.create({
     marginTop: 3,
   },
 
-  // ── Fortune card ─────────────────────────────────────────────
   fortuneCard: {
     marginTop: 22,
     marginHorizontal: 24,
   },
 
-  // ── 고고별자리 행운 아이템 · 오늘의 운 ────────────────────────────
   infoGrid: {
     marginTop: 12,
     marginHorizontal: 24,
