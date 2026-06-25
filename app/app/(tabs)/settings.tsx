@@ -407,7 +407,7 @@ export default function SettingsScreen() {
           {notificationsEnabled && (
             <SettingsRow
               title="알림 시각"
-              description="매일 아침 7:30"
+              description="매일 아침"
               style={styles.notifRow}
             />
           )}

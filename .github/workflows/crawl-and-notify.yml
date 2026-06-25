@@ -1,9 +1,8 @@
-name: Crawl horoscopes and send notifications
+name: Crawl horoscopes and save
 
 on:
   schedule:
-    - cron: "58 20 * * *" # UTC 기준. JST/KST 매일 05:58 실행.
-    - cron: "58 21 * * *" # UTC 기준. JST/KST 매일 06:58 실행. 05:58에 데이터 없을 때 재시도.
+    - cron: "59 20 * * *" # UTC 기준. JST/KST 매일 05:59 실행.
   workflow_dispatch:
     inputs:
       dry_run:
@@ -28,7 +27,7 @@ permissions:
 jobs:
   crawl-and-notify:
     runs-on: ubuntu-latest
-    timeout-minutes: 30 # 발송(~3분) + receipt polling 대기 15분 + 여유
+    timeout-minutes: 70 # 초기 실행 (~8분) + 재시도 최대 2회 × 20분 대기 + 여유
 
     steps:
       - name: Checkout
@@ -43,7 +42,7 @@ jobs:
         working-directory: backend
         run: npm ci
 
-      - name: Crawl and notify
+      - name: Crawl and save
         working-directory: backend
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
@@ -58,4 +57,21 @@ jobs:
           if [ "${{ github.event.inputs.force }}" = "true" ]; then
             ARGS="$ARGS --force"
           fi
-          npx tsx src/main.ts $ARGS
+
+          MAX_RETRIES=2
+          RETRY=0
+          while true; do
+            npx tsx src/main.ts $ARGS
+            EXIT_CODE=$?
+            if [ $EXIT_CODE -eq 0 ]; then
+              echo "[workflow] Crawl succeeded."
+              break
+            elif [ $EXIT_CODE -eq 2 ] && [ $RETRY -lt $MAX_RETRIES ]; then
+              RETRY=$((RETRY + 1))
+              echo "[workflow] No fresh data. Retry $RETRY/$MAX_RETRIES in 20 minutes..."
+              sleep 1200
+            else
+              echo "[workflow] Crawl failed or max retries reached (exit=$EXIT_CODE, retry=$RETRY)."
+              exit $EXIT_CODE
+            fi
+          done
