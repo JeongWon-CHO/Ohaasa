@@ -562,7 +562,10 @@ async function main(): Promise<void> {
 
   try {
     const upserted = await crawlAndSave(supabase, isDryRun, isForce);
-    if (!upserted) console.log("[main] No fresh data today. Skipping.");
+    if (!upserted) {
+      console.log("[main] No fresh data today. Skipping.");
+      process.exit(2);
+    }
   } catch (err) {
     console.error(`[main] Crawl failed: ${err instanceof Error ? err.message : String(err)}`);
     process.exit(1);
