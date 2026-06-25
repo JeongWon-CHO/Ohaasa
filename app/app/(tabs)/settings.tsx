@@ -402,15 +402,8 @@ export default function SettingsScreen() {
                 disabled={isUnavailable}
               />
             }
-            style={[styles.notifRow, notificationsEnabled && styles.rowBorder]}
+            style={styles.notifRow}
           />
-          {notificationsEnabled && (
-            <SettingsRow
-              title="알림 시각"
-              description="매일 아침"
-              style={styles.notifRow}
-            />
-          )}
         </SettingsSection>
 
         {/* ABOUT */}
