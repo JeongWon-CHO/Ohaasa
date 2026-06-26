@@ -49,7 +49,6 @@ export function ZodiacPicker({ value, onChange, disabled = false, multiTouchRef 
               selected && {
                 backgroundColor: signColor,
                 borderColor: 'rgba(217,138,104,0.40)',
-                borderWidth: 2,
                 shadowColor: signColor,
                 shadowOpacity: 0.73,
                 shadowRadius: 9,
@@ -100,7 +99,7 @@ const styles = StyleSheet.create({
     width: '30.8%',
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1.5,
+    borderWidth: 2,
     borderColor: 'rgba(237,227,214,0.7)',
     borderRadius: 18,
     backgroundColor: 'rgba(255,253,249,0.80)',
