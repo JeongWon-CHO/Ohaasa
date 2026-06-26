@@ -60,14 +60,14 @@ const SCREEN_CONFIG = {
     cardMarginTop: 24,
   },
   ios: {
-    circleSize: 136,
-    badgeSize: 106,
-    glowSize: 168,
-    glowCenter: 84,
-    dashRadius: 76,
-    heroMarginTop: 28,
+    circleSize: 110,
+    badgeSize: 84,
+    glowSize: 141,
+    glowCenter: 70,
+    dashRadius: 62,
+    heroMarginTop: 24,
     zodiacFontSize: 20,
-    cardMarginTop: 22,
+    cardMarginTop: 24,
   },
 } as const;
 
