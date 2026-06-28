@@ -9,6 +9,7 @@ interface ZodiacPickerProps {
   value: ZodiacSign | null;
   onChange: (zodiacSign: ZodiacSign) => void;
   disabled?: boolean;
+  multiTouchRef?: { current: boolean };
 }
 
 export const ZODIAC_SIGN_COLORS: Record<ZodiacSign, string> = {
@@ -26,22 +27,7 @@ export const ZODIAC_SIGN_COLORS: Record<ZodiacSign, string> = {
   pisces:      '#B8D0F0',
 };
 
-const DATE_RANGES: Record<ZodiacSign, string> = {
-  aries:       '3/21–4/19',
-  taurus:      '4/20–5/20',
-  gemini:      '5/21–6/21',
-  cancer:      '6/22–7/22',
-  leo:         '7/23–8/22',
-  virgo:       '8/23–9/23',
-  libra:       '9/24–10/22',
-  scorpio:     '10/23–11/22',
-  sagittarius: '11/23–12/21',
-  capricorn:   '12/22–1/19',
-  aquarius:    '1/20–2/18',
-  pisces:      '2/19–3/20',
-};
-
-export function ZodiacPicker({ value, onChange, disabled = false }: ZodiacPickerProps) {
+export function ZodiacPicker({ value, onChange, disabled = false, multiTouchRef }: ZodiacPickerProps) {
   return (
     <View style={styles.grid}>
       {ZODIAC_LIST.map((zodiac) => {
@@ -54,13 +40,15 @@ export function ZodiacPicker({ value, onChange, disabled = false }: ZodiacPicker
             accessibilityState={{ disabled, selected }}
             disabled={disabled}
             key={zodiac.sign}
-            onPress={() => onChange(zodiac.sign)}
+            onPress={() => {
+              if (multiTouchRef?.current) return;
+              onChange(zodiac.sign);
+            }}
             style={({ pressed }) => [
               styles.card,
               selected && {
                 backgroundColor: signColor,
                 borderColor: 'rgba(217,138,104,0.40)',
-                borderWidth: 2,
                 shadowColor: signColor,
                 shadowOpacity: 0.73,
                 shadowRadius: 9,
@@ -91,7 +79,7 @@ export function ZodiacPicker({ value, onChange, disabled = false }: ZodiacPicker
               {zodiac.ko}
             </Text>
             <Text numberOfLines={1} style={[styles.date, selected && styles.selectedDate]}>
-              {DATE_RANGES[zodiac.sign]}
+              {zodiac.dateRange}
             </Text>
           </Pressable>
         );
@@ -111,7 +99,7 @@ const styles = StyleSheet.create({
     width: '30.8%',
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1.5,
+    borderWidth: 2,
     borderColor: 'rgba(237,227,214,0.7)',
     borderRadius: 18,
     backgroundColor: 'rgba(255,253,249,0.80)',
@@ -152,17 +140,21 @@ const styles = StyleSheet.create({
   },
   name: {
     fontSize: 11,
-    fontWeight: '400',
+    lineHeight: 15,
+    fontFamily: 'NotoSansKR_400Regular',
+    includeFontPadding: false,
     color: colors.textMid,
     textAlign: 'center',
   },
   selectedName: {
-    fontWeight: '500',
+    fontFamily: 'NotoSansKR_500Medium',
     color: colors.text,
   },
   date: {
     fontSize: 9,
-    fontWeight: '400',
+    lineHeight: 12,
+    fontFamily: 'NotoSansKR_400Regular',
+    includeFontPadding: false,
     color: colors.textSoft,
     textAlign: 'center',
   },

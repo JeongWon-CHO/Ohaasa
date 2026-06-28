@@ -1,4 +1,5 @@
 import {
+  Platform,
   StyleSheet,
   Text,
   View,
@@ -50,7 +51,9 @@ function StarRow({ label, value }: { label: string; value: number | null }) {
 
 export function GogoInfoGrid({ horoscope, style }: GogoInfoGridProps) {
   const hasLucky =
-    horoscope.lucky_color !== null || horoscope.lucky_item !== null;
+    horoscope.lucky_color !== null ||
+    horoscope.lucky_item !== null ||
+    horoscope.lucky_place !== null;
   const hasScore =
     (horoscope.love_score !== null && horoscope.love_score > 0) ||
     (horoscope.work_score !== null && horoscope.work_score > 0) ||
@@ -63,6 +66,10 @@ export function GogoInfoGrid({ horoscope, style }: GogoInfoGridProps) {
     <View style={[styles.infoGrid, style]}>
       <FinalCard style={styles.gridCard}>
         <Text style={styles.gridHeader}>행운 아이템</Text>
+        <LuckyRow
+          label="장소"
+          value={horoscope.lucky_place_ko ?? horoscope.lucky_place}
+        />
         <LuckyRow
           label="컬러"
           value={horoscope.lucky_color_ko ?? horoscope.lucky_color}
@@ -91,38 +98,44 @@ const styles = StyleSheet.create({
   },
   gridCard: {
     flex: 1,
-    padding: 16,
+    padding: 12,
   },
   gridHeader: {
-    fontSize: 9,
+    fontSize: 10,
+    fontFamily: "NotoSansKR_400Regular",
+    includeFontPadding: false,
     color: colors.textSoft,
     letterSpacing: 1.08,
-    marginBottom: 12,
+    marginBottom: 8,
   },
   luckyRow: {
     flexDirection: "row",
     gap: 8,
-    marginBottom: 8,
+    marginBottom: Platform.OS === "ios" ? 6 : 4,
   },
   starRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
-    marginBottom: 8,
+    gap: 12,
+    marginBottom: Platform.OS === "ios" ? 6 : 4,
   },
   rowLabel: {
-    fontSize: 11,
+    fontSize: 12,
+    fontFamily: "NotoSansKR_400Regular",
+    includeFontPadding: false,
     color: colors.textSoft,
     flexShrink: 0,
   },
   starLabel: {
-    width: 32,
+    minWidth: 34,
   },
   rowValue: {
     flex: 1,
-    fontSize: 11,
+    fontSize: 12,
+    lineHeight: 18,
+    fontFamily: "NotoSansKR_400Regular",
+    includeFontPadding: false,
     color: colors.textMid,
-    flexWrap: "wrap",
     textAlign: "right",
   },
   stars: {

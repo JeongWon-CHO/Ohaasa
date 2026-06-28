@@ -1,9 +1,8 @@
 import { forwardRef } from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { Platform, StyleSheet, Text, View } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import FontAwesome from "@expo/vector-icons/FontAwesome";
 import Svg, { Circle, Defs, RadialGradient, Stop } from "react-native-svg";
-
 import { ConstellationBadge } from "@/src/components/final/ConstellationBadge";
 import { colors, gradients } from "@/src/constants/design";
 import type { ZodiacInfo } from "@/src/constants/zodiac";
@@ -12,7 +11,7 @@ import type { Horoscope } from "@/src/types/horoscope";
 export const CARD_WIDTH = 360;
 export const CARD_HEIGHT = 640;
 
-const BADGE_SIZE = 80;
+const BADGE_SIZE = 76;
 const CIRCLE_SIZE = 100;
 const GLOW_SIZE = CIRCLE_SIZE + 32;
 const GLOW_CENTER = GLOW_SIZE / 2;
@@ -30,9 +29,29 @@ function formatShareDate(dateStr: string, source: "ohaasa" | "gogo"): string {
   return `${month}월 ${day}일 ${label}`;
 }
 
+function LuckyRow({ label, value }: { label: string; value: string | null }) {
+  if (value === null) return null;
+  return (
+    <View style={infoStyles.row}>
+      <Text style={infoStyles.rowLabel}>{label}</Text>
+      <View style={infoStyles.rowValueContainer}>
+        <View style={infoStyles.wordsRow}>
+          {value.split(" ").map((word, i) => (
+            <Text key={i} style={infoStyles.rowValue}>
+              {word}
+            </Text>
+          ))}
+        </View>
+      </View>
+    </View>
+  );
+}
+
 function ShareInfoGrid({ horoscope }: { horoscope: Horoscope }) {
   const hasLucky =
-    horoscope.lucky_color !== null || horoscope.lucky_item !== null;
+    horoscope.lucky_color !== null ||
+    horoscope.lucky_item !== null ||
+    horoscope.lucky_place !== null;
   const hasScore =
     (horoscope.love_score !== null && horoscope.love_score > 0) ||
     (horoscope.work_score !== null && horoscope.work_score > 0) ||
@@ -53,22 +72,18 @@ function ShareInfoGrid({ horoscope }: { horoscope: Horoscope }) {
       {hasLucky && (
         <View style={infoStyles.card}>
           <Text style={infoStyles.cardHeader}>행운 아이템</Text>
-          {horoscope.lucky_color !== null && (
-            <View style={infoStyles.row}>
-              <Text style={infoStyles.rowLabel}>컬러</Text>
-              <Text style={infoStyles.rowValue} numberOfLines={2}>
-                {horoscope.lucky_color_ko ?? horoscope.lucky_color}
-              </Text>
-            </View>
-          )}
-          {horoscope.lucky_item !== null && (
-            <View style={infoStyles.row}>
-              <Text style={infoStyles.rowLabel}>아이템</Text>
-              <Text style={infoStyles.rowValue} numberOfLines={2}>
-                {horoscope.lucky_item_ko ?? horoscope.lucky_item}
-              </Text>
-            </View>
-          )}
+          <LuckyRow
+            label="장소"
+            value={horoscope.lucky_place_ko ?? horoscope.lucky_place}
+          />
+          <LuckyRow
+            label="컬러"
+            value={horoscope.lucky_color_ko ?? horoscope.lucky_color}
+          />
+          <LuckyRow
+            label="아이템"
+            value={horoscope.lucky_item_ko ?? horoscope.lucky_item}
+          />
         </View>
       )}
       {hasScore && (
@@ -82,7 +97,7 @@ function ShareInfoGrid({ horoscope }: { horoscope: Horoscope }) {
                   <FontAwesome
                     key={i}
                     name="star"
-                    size={9}
+                    size={11}
                     color={i < value! ? colors.yellow : colors.cream3}
                   />
                 ))}
@@ -99,6 +114,7 @@ export const ShareCard = forwardRef<View, ShareCardProps>(
   ({ horoscope, zodiac }, ref) => {
     const dateLabel = formatShareDate(horoscope.date, horoscope.source);
     const advice = horoscope.advice_ko ?? horoscope.advice;
+    const adviceFontSize = (advice?.length ?? 0) > 55 ? 11 : 12;
 
     return (
       <View ref={ref} style={styles.wrapper} collapsable={false}>
@@ -161,13 +177,23 @@ export const ShareCard = forwardRef<View, ShareCardProps>(
                 </View>
               </View>
 
-              <Text style={styles.zodiacName}>{zodiac.ko}</Text>
+              <View style={styles.zodiacText}>
+                <Text style={styles.zodiacName}>{zodiac.ko}</Text>
+                <Text style={styles.zodiacSub}>
+                  {zodiac.en} · {zodiac.dateRange}
+                </Text>
+              </View>
             </View>
 
             {/* 조언 · 행운 아이템 */}
             <View style={styles.bottomGroup}>
               <View style={styles.adviceBox}>
-                <Text style={styles.advice}>{advice}</Text>
+                <Text
+                  style={[styles.advice, { fontSize: adviceFontSize }]}
+                  textBreakStrategy="simple"
+                >
+                  {advice}
+                </Text>
               </View>
 
               <ShareInfoGrid horoscope={horoscope} />
@@ -187,17 +213,20 @@ const styles = StyleSheet.create({
   card: {
     flex: 1,
     paddingHorizontal: 32,
-    paddingVertical: 88,
+    paddingTop: 64,
+    paddingBottom: 84,
   },
   content: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    gap: 36,
+    gap: 20,
   },
   header: {
-    fontSize: 9,
-    fontWeight: "400",
+    fontSize: 12,
+    lineHeight: 16,
+    fontFamily: "NotoSansKR_400Regular",
+    includeFontPadding: false,
     color: colors.textSoft,
     letterSpacing: 1.2,
     textAlign: "center",
@@ -208,8 +237,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 18,
   },
   rankText: {
-    fontSize: 8,
-    fontWeight: "600",
+    fontSize: 11,
+    lineHeight: 14,
+    fontFamily: "NotoSansKR_600SemiBold",
     color: "#FFFDF9",
     letterSpacing: 0.6,
   },
@@ -236,35 +266,49 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
+  zodiacText: {
+    alignItems: "center",
+  },
   zodiacName: {
-    fontSize: 15,
-    fontWeight: "300",
+    fontSize: 18,
+    lineHeight: 26,
+    fontFamily: "NotoSansKR_400Regular",
     color: colors.text,
     letterSpacing: 0.5,
+  },
+  zodiacSub: {
+    fontSize: 11,
+    lineHeight: 16,
+    fontFamily: "NotoSansKR_300Light",
+    color: colors.textSoft,
+    letterSpacing: 0.3,
+    marginTop: 3,
   },
   adviceBox: {
     borderWidth: 1,
     borderColor: colors.border,
     borderRadius: 16,
     backgroundColor: "rgba(255,253,249,0.75)",
-    paddingHorizontal: 20,
-    paddingVertical: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
     width: "100%",
+    maxHeight: 7 * (Platform.OS === "android" ? 22 : 20) + 28,
+    overflow: "hidden",
   },
   advice: {
-    fontSize: 8,
-    fontWeight: "300",
+    fontSize: 13,
+    fontFamily: "NotoSansKR_300Light",
     color: colors.text,
-    lineHeight: 15,
+    lineHeight: Platform.OS === "android" ? 22 : 20,
     textAlign: "center",
   },
   topGroup: {
     alignItems: "center",
-    gap: 30,
+    gap: 16,
   },
   bottomGroup: {
     alignItems: "center",
-    gap: 10,
+    gap: 12,
     width: "100%",
   },
 });
@@ -272,7 +316,7 @@ const styles = StyleSheet.create({
 const infoStyles = StyleSheet.create({
   grid: {
     flexDirection: "row",
-    gap: 8,
+    gap: 16,
     width: "100%",
   },
   card: {
@@ -284,37 +328,51 @@ const infoStyles = StyleSheet.create({
     padding: 12,
   },
   cardHeader: {
-    fontSize: 8,
+    fontSize: 10,
+    fontFamily: "NotoSansKR_400Regular",
+    includeFontPadding: false,
     color: colors.textSoft,
     letterSpacing: 1,
-    marginBottom: 8,
+    marginBottom: 10,
   },
   row: {
     flexDirection: "row",
-    gap: 6,
-    marginBottom: 5,
+    gap: 8,
+    marginBottom: 4,
   },
   rowLabel: {
-    fontSize: 8,
+    fontSize: 11,
+    fontFamily: "NotoSansKR_400Regular",
+    includeFontPadding: false,
     color: colors.textSoft,
     flexShrink: 0,
   },
-  rowValue: {
+  rowValueContainer: {
     flex: 1,
-    fontSize: 8,
-    fontWeight: "400",
-    color: colors.text,
+  },
+  wordsRow: {
+    flexDirection: "row",
     flexWrap: "wrap",
-    textAlign: "right",
+    justifyContent: "flex-end",
+    columnGap: 3,
+  },
+  rowValue: {
+    fontSize: 11,
+    fontFamily: "NotoSansKR_400Regular",
+    lineHeight: 16,
+    includeFontPadding: false,
+    color: colors.textMid,
   },
   starRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 5,
-    marginBottom: 5,
+    gap: 8,
+    marginBottom: 4,
   },
   starLabel: {
-    fontSize: 8,
+    fontSize: 11,
+    fontFamily: "NotoSansKR_400Regular",
+    includeFontPadding: false,
     color: colors.textSoft,
     width: 28,
   },

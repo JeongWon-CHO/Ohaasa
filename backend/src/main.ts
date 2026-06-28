@@ -5,9 +5,7 @@ import "dotenv/config";
 import { fetchJson } from "./crawler/fetcher";
 import { parse, type HoroscopeEntry } from "./crawler/parser";
 import { createAdminClient } from "./db/supabase";
-import { sendNotifications } from "./notifications/sender";
-import { pollReceipts } from "./notifications/receipt-poller";
-import { translateAdvice, containsJapanese } from "./translator/translate";
+import { translateAdvice, translatePlace, containsJapanese } from "./translator/translate";
 import { fetchHtml as fetchGogoHtml } from "./gogo/fetcher";
 import { parse as parseGogo, type GogoEntry } from "./gogo/parser";
 import { translateGogoEntries, type GogoKoEntry } from "./gogo/translator";
@@ -23,6 +21,7 @@ type HoroscopeSource = "ohaasa" | "gogo";
 interface HoroscopeUpsertRow extends HoroscopeEntry {
   advice_ko:      string | null;
   source:         HoroscopeSource;
+  lucky_place_ko: string | null;
   lucky_color:    string | null;
   lucky_item:     string | null;
   lucky_color_ko: string | null;
@@ -95,7 +94,7 @@ async function attachTranslations(
 
   const { data: existingRows, error: queryError } = await supabase
     .from("horoscopes")
-    .select("zodiac_sign, advice, advice_ko")
+    .select("zodiac_sign, advice, advice_ko, lucky_place, lucky_place_ko")
     .eq("date", date);
 
   if (queryError) {
@@ -104,7 +103,13 @@ async function attachTranslations(
     );
   }
 
-  type ExistingRow = { zodiac_sign: string; advice: string; advice_ko: string | null };
+  type ExistingRow = {
+    zodiac_sign: string;
+    advice: string;
+    advice_ko: string | null;
+    lucky_place: string | null;
+    lucky_place_ko: string | null;
+  };
   const existingMap = new Map<string, ExistingRow>(
     (existingRows ?? []).map((r: ExistingRow) => [r.zodiac_sign, r])
   );
@@ -113,6 +118,27 @@ async function attachTranslations(
 
   for (const entry of entries) {
     const existing = existingMap.get(entry.zodiac_sign);
+
+    // ── lucky_place_ko (advice 번역과 독립적으로 skip 판단) ──────
+    let lucky_place_ko: string | null = null;
+    if (entry.lucky_place !== null) {
+      const canSkipPlace =
+        existing !== undefined &&
+        existing.lucky_place === entry.lucky_place &&
+        existing.lucky_place_ko !== null &&
+        !containsJapanese(existing.lucky_place_ko);
+
+      if (canSkipPlace) {
+        lucky_place_ko = existing.lucky_place_ko;
+      } else {
+        console.log(`[translator] ${entry.zodiac_sign}: translating lucky_place "${entry.lucky_place}"`);
+        lucky_place_ko = await translatePlace(entry.lucky_place);
+        if (lucky_place_ko === null) {
+          console.warn(`[translator] ${entry.zodiac_sign}: lucky_place translation failed, lucky_place_ko=null`);
+        }
+      }
+    }
+
     const canSkip =
       existing !== undefined &&
       existing.advice === entry.advice &&
@@ -132,7 +158,7 @@ async function attachTranslations(
 
     if (canSkip) {
       console.log(`[translator] ${entry.zodiac_sign}: skip (same advice, already translated)`);
-      results.push({ ...entry, advice_ko: existing.advice_ko, source: "ohaasa", ...nullGogoFields });
+      results.push({ ...entry, advice_ko: existing.advice_ko, lucky_place_ko, source: "ohaasa", ...nullGogoFields });
       continue;
     }
 
@@ -145,7 +171,7 @@ async function attachTranslations(
     if (advice_ko === null) {
       console.warn(`[translator] ${entry.zodiac_sign}: translation failed, advice_ko=null`);
     }
-    results.push({ ...entry, advice_ko, source: "ohaasa", ...nullGogoFields });
+    results.push({ ...entry, advice_ko, lucky_place_ko, source: "ohaasa", ...nullGogoFields });
   }
 
   return results;
@@ -308,6 +334,8 @@ async function buildWeekendRows(
       advice:         entry.advice,
       advice_ko,
       source:         "gogo",
+      lucky_place:    null,
+      lucky_place_ko: null,
       lucky_color:    entry.lucky_color,
       lucky_item:     entry.lucky_item,
       lucky_color_ko: gogoKo?.lucky_color_ko ?? null,
@@ -392,8 +420,8 @@ function printWeekendPreview(
 /**
  * 크롤/번역/저장을 수행한다.
  *
- * @returns true  → upsert 완료 (알림 발송으로 진행)
- *          false → 데이터 미보유로 스킵 (알림도 스킵)
+ * @returns true  → upsert 완료
+ *          false → 데이터 미보유로 스킵
  *
  * 모드 결정 (JST 요일 기준):
  *   평일(월~금): 오하아사 메인. ohaasaDate !== today이면 스킵.
@@ -523,115 +551,23 @@ async function crawlAndSave(
 // Main
 // ============================================================
 
-// POLL_DELAY_MS 환경변수로 대기 시간을 조정한다.
-// 기본값: 15분 (Expo 권장). 로컬 테스트 시 POLL_DELAY_MS=0 으로 단축 가능.
-const POLL_DELAY_MS = Number(process.env.POLL_DELAY_MS ?? 15 * 60 * 1000);
-
-async function sleep(ms: number): Promise<void> {
-  return new Promise(resolve => setTimeout(resolve, ms));
-}
-
 async function main(): Promise<void> {
-  const isDryRun   = process.argv.includes("--dry-run");
-  const isNoNotify = process.argv.includes("--no-notify");
-  const isForce    = process.argv.includes("--force");
+  const isDryRun = process.argv.includes("--dry-run");
+  const isForce  = process.argv.includes("--force");
 
-  if (isDryRun) {
-    console.log("[main] ========== DRY RUN ==========");
-  }
-  if (isForce) {
-    console.log("[main] ========== FORCE MODE ==========");
-  }
+  if (isDryRun) console.log("[main] ========== DRY RUN ==========");
+  if (isForce)  console.log("[main] ========== FORCE MODE ==========");
 
   const supabase = createAdminClient();
 
-  // ----------------------------------------------------------
-  // Step 1: Crawl, translate, and save
-  //
-  // false 반환 → 신선한 데이터 없음 → 알림 스킵
-  // 예외 발생 → crawlFailed → 기존 DB 데이터로 알림 시도 (기존 동작 유지)
-  // ----------------------------------------------------------
-  let crawlFailed  = false;
-  let crawlSkipped = false;
   try {
     const upserted = await crawlAndSave(supabase, isDryRun, isForce);
-    if (!upserted) crawlSkipped = true;
-  } catch (err) {
-    console.error(
-      `[main] Crawl failed: ${err instanceof Error ? err.message : String(err)}`
-    );
-    crawlFailed = true;
-  }
-
-  // ----------------------------------------------------------
-  // Step 2: Send notifications
-  // crawlSkipped = true → 신선한 데이터 없음이므로 알림 발송 안 함
-  // ----------------------------------------------------------
-  if (crawlSkipped) {
-    console.log("[main] Skipping notifications (no fresh data today).");
-    return;
-  }
-
-  if (isDryRun || isNoNotify) {
-    if (isNoNotify) console.log("[main] --no-notify: notification skipped");
-    return;
-  }
-
-  let notifyFailed = false;
-  let receiptIds:      string[]               = [];
-  let receiptTokenMap: Record<string, string> = {};
-
-  try {
-    const result = await sendNotifications(supabase, isDryRun);
-    console.log(
-      `[main] ✓ Notifications: ${result.succeeded}/${result.total} sent` +
-      `  date=${result.date}  failed=${result.failed}  disabled=${result.disabled}`
-    );
-    receiptIds      = result.receiptIds;
-    receiptTokenMap = result.receiptTokenMap;
-  } catch (err) {
-    console.error(
-      `[main] Notification failed: ${err instanceof Error ? err.message : String(err)}`
-    );
-    notifyFailed = true;
-  }
-
-  // ----------------------------------------------------------
-  // Step 3: Poll push receipts
-  // dry-run 또는 발송 실패 시에는 skip. receipt polling 실패는 exit(1) 하지 않는다.
-  // ----------------------------------------------------------
-  if (!isDryRun && !notifyFailed && receiptIds.length > 0) {
-    if (POLL_DELAY_MS > 0) {
-      const mins = Math.round(POLL_DELAY_MS / 60000);
-      console.log(`[main] Waiting ${mins} min for Expo to process receipts...`);
-      await sleep(POLL_DELAY_MS);
+    if (!upserted) {
+      console.log("[main] No fresh data today. Skipping.");
+      process.exit(2);
     }
-    try {
-      await pollReceipts(supabase, receiptIds, receiptTokenMap);
-    } catch (err) {
-      console.warn(
-        `[main] Receipt polling error: ${err instanceof Error ? err.message : String(err)}`
-      );
-    }
-  }
-
-  // ----------------------------------------------------------
-  // Exit code policy:
-  //   notify 실패 → exit(1)  (crawl 결과 무관)
-  //   crawl만 실패 → exit(0), warning
-  //   둘 다 성공  → exit(0)
-  // ----------------------------------------------------------
-  if (crawlFailed) {
-    console.warn(
-      "[main] WARN: crawl failed; notifications used existing DB data"
-    );
-  }
-  if (notifyFailed) {
-    console.error(
-      crawlFailed
-        ? "[main] Fatal: both crawl and notification failed"
-        : "[main] Fatal: notification failed"
-    );
+  } catch (err) {
+    console.error(`[main] Crawl failed: ${err instanceof Error ? err.message : String(err)}`);
     process.exit(1);
   }
 }

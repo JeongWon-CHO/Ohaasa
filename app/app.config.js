@@ -12,7 +12,7 @@ module.exports = {
   expo: {
     name: appName,
     slug: 'ohaasa',
-    version: '1.0.0',
+    version: '1.1.0',
     orientation: 'portrait',
     icon: './assets/images/icon.png',
     scheme: 'ohaasa',
@@ -25,6 +25,7 @@ module.exports = {
     },
     ios: {
       supportsTablet: true,
+      bundleIdentifier: packageName,
     },
     android: {
       adaptiveIcon: {
@@ -51,9 +52,10 @@ module.exports = {
         {
           photosPermission: '갤러리에 이미지를 저장하기 위해 접근 권한이 필요해요.',
           savePhotosPermission: '갤러리에 이미지를 저장하기 위해 접근 권한이 필요해요.',
-          isAccessMediaLocationEnabled: true,
+          isAccessMediaLocationEnabled: false,
         },
       ],
+      './plugins/withWriteOnlyMediaLibrary',
     ],
     experiments: {
       typedRoutes: true,

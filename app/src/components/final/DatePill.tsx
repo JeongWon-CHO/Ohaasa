@@ -1,22 +1,25 @@
-import { StyleSheet, Text, View } from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Feather } from "@expo/vector-icons";
 import Svg, { Circle, Line } from "react-native-svg";
 
 import { colors } from "@/src/constants/design";
 import { useScreenSize } from "@/src/hooks/useScreenSize";
 
 const PILL_CONFIG = {
-  compact: { fontSize: 8 },
-  regular: { fontSize: 10 },
+  android: { fontSize: 10 },
+  ios: { fontSize: 11 },
 } as const;
 
 interface DatePillProps {
   dateText?: string;
   label?: string; // kept for backwards-compat, not rendered
+  onPress?: () => void;
 }
 
-export function DatePill({ dateText = "" }: DatePillProps) {
+export function DatePill({ dateText = "", onPress }: DatePillProps) {
   const cfg = PILL_CONFIG[useScreenSize()];
-  return (
+
+  const inner = (
     <View style={styles.pill}>
       <Svg width={9} height={9} viewBox="0 0 24 24" fill="none">
         <Circle
@@ -46,8 +49,26 @@ export function DatePill({ dateText = "" }: DatePillProps) {
         />
       </Svg>
       <Text style={[styles.date, { fontSize: cfg.fontSize }]}>{dateText}</Text>
+      {onPress && (
+        <Feather name="chevron-down" size={10} color={colors.skyDark} style={styles.chevron} />
+      )}
     </View>
   );
+
+  if (onPress) {
+    return (
+      <Pressable
+        onPress={onPress}
+        accessibilityRole="button"
+        accessibilityLabel="날짜 선택"
+        style={({ pressed }) => pressed && styles.pressed}
+      >
+        {inner}
+      </Pressable>
+    );
+  }
+
+  return inner;
 }
 
 const styles = StyleSheet.create({
@@ -62,7 +83,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
   },
   date: {
-    fontSize: 8,
     color: colors.skyDark,
+  },
+  chevron: {
+    marginLeft: -1,
+  },
+  pressed: {
+    opacity: 0.7,
   },
 });

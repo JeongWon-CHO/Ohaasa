@@ -41,29 +41,29 @@ export const radius = {
 export const typography = {
   appName: {
     fontSize: 28,
-    fontWeight: '300' as const,
+    fontFamily: 'NotoSansKR_300Light',
     color: colors.text,
   },
   sectionTitle: {
     fontSize: 20,
-    fontWeight: '400' as const,
+    fontFamily: 'NotoSansKR_400Regular',
     color: colors.text,
   },
   body: {
     fontSize: 14,
-    fontWeight: '400' as const,
+    fontFamily: 'NotoSansKR_400Regular',
     color: colors.textMid,
   },
   label: {
     fontSize: 11,
-    fontWeight: '500' as const,
+    fontFamily: 'NotoSansKR_500Medium',
     color: colors.textSoft,
     letterSpacing: 1.6,
     textTransform: 'uppercase' as const,
   },
   fortune: {
     fontSize: 13,
-    fontWeight: '300' as const,
+    fontFamily: 'NotoSansKR_300Light',
     color: colors.text,
     lineHeight: 22,
   },

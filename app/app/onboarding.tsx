@@ -1,16 +1,29 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
   View,
 } from "react-native";
-import { useRouter } from "expo-router";
-import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import { useFocusEffect } from "@react-navigation/native";
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
-import Svg, { Circle, Line, Path, Polygon } from "react-native-svg";
+import Svg, {
+  Circle,
+  Defs,
+  Line,
+  Path,
+  Polygon,
+  RadialGradient,
+  Stop,
+} from "react-native-svg";
 
 import {
   ZodiacPicker,
@@ -122,11 +135,21 @@ function MoonDeco({ x, y, size, color, opacity }: DecoProps) {
 
 export default function OnboardingScreen() {
   const router = useRouter();
+  const { from } = useLocalSearchParams<{ from?: string }>();
   const { zodiacSign, loading, saving, error, saveZodiacSign } = useZodiac();
-  const [step, setStep] = useState<OnboardingStep>("intro");
+  const [step, setStep] = useState<OnboardingStep>(
+    from === 'settings' ? 'selection' : 'intro'
+  );
   const [selectedZodiacSign, setSelectedZodiacSign] =
     useState<ZodiacSign | null>(null);
   const [deviceError, setDeviceError] = useState<string | null>(null);
+  const multiTouchRef = useRef(false);
+  const navigatingRef = useRef(false);
+
+  useFocusEffect(useCallback(() => {
+    navigatingRef.current = false;
+    multiTouchRef.current = false;
+  }, []));
 
   useEffect(() => {
     if (zodiacSign) {
@@ -135,9 +158,10 @@ export default function OnboardingScreen() {
   }, [zodiacSign]);
 
   async function handleStart() {
-    if (!selectedZodiacSign) {
+    if (!selectedZodiacSign || navigatingRef.current || multiTouchRef.current) {
       return;
     }
+    navigatingRef.current = true;
 
     setDeviceError(null);
 
@@ -154,11 +178,22 @@ export default function OnboardingScreen() {
         const pushToken = await getPushToken();
         const platform = await getPlatform();
         const notificationsEnabled = await getNotificationsEnabled();
-        await upsertDevice({ deviceId, zodiacSign: zodiacForUpsert, pushToken, platform, notificationsEnabled });
+        await upsertDevice({
+          deviceId,
+          zodiacSign: zodiacForUpsert,
+          pushToken,
+          platform,
+          notificationsEnabled,
+        });
       })();
 
-      router.replace("/(tabs)");
+      if (from === 'settings') {
+        router.back();
+      } else {
+        router.replace("/(tabs)");
+      }
     } catch (startError) {
+      navigatingRef.current = false;
       setDeviceError(
         startError instanceof Error
           ? startError.message
@@ -247,7 +282,7 @@ export default function OnboardingScreen() {
           color={colors.skyDark}
           opacity={0.25}
         />
-        <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
+        <SafeAreaView style={styles.safeArea} edges={["top", "left", "right"]}>
           <OnboardingIntro onStart={() => setStep("selection")} />
         </SafeAreaView>
       </LinearGradient>
@@ -256,7 +291,24 @@ export default function OnboardingScreen() {
 
   // ── Selection step — FinalSignSelection layout (unchanged)
   return (
-    <LinearGradient colors={gradients.screen} style={styles.fill}>
+    <LinearGradient
+      colors={gradients.screen}
+      style={styles.fill}
+      onTouchStart={(e) => {
+        if (e.nativeEvent.touches.length > 1) {
+          multiTouchRef.current = true;
+        }
+      }}
+      onTouchEnd={(e) => {
+        const remaining =
+          e.nativeEvent.touches.length - e.nativeEvent.changedTouches.length;
+        if (remaining <= 0) {
+          requestAnimationFrame(() => {
+            multiTouchRef.current = false;
+          });
+        }
+      }}
+    >
       {/* FinalSignSelection CircleDeco */}
       <CircleDeco
         x={-40}
@@ -278,7 +330,7 @@ export default function OnboardingScreen() {
       {/* Moon */}
       <MoonDeco x={268} y={58} size={22} color={colors.apricot} opacity={0.2} />
 
-      <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
+      <SafeAreaView style={styles.safeArea} edges={["top", "left", "right"]}>
         <View style={styles.selectionScreen}>
           {/* Fixed header */}
           <View style={styles.selectionHeader}>
@@ -302,6 +354,7 @@ export default function OnboardingScreen() {
             >
               <ZodiacPicker
                 disabled={saving}
+                multiTouchRef={multiTouchRef}
                 onChange={setSelectedZodiacSign}
                 value={selectedZodiacSign}
               />
@@ -329,17 +382,21 @@ function OnboardingIntro({ onStart }: { onStart: () => void }) {
     <View style={styles.introWrap}>
       {/* Hero constellation — 190×190, hex pattern per HTML spec */}
       <View style={styles.heroContainer}>
-        {/* Radial glow — 4 concentric circles, center most opaque → edge transparent */}
-        <View style={styles.heroGlowL1} />
-        <View style={styles.heroGlowL2} />
-        <View style={styles.heroGlowL3} />
-        <View style={styles.heroGlowL4} />
         <Svg
           width={190}
           height={190}
           viewBox="0 0 190 190"
           style={{ position: "absolute", top: 0, left: 0 }}
         >
+          <Defs>
+            <RadialGradient id="heroGlow" cx="50%" cy="50%" r="50%">
+              <Stop offset="0%" stopColor={colors.yellow} stopOpacity={0.3} />
+              <Stop offset="45%" stopColor={colors.yellow} stopOpacity={0.18} />
+              <Stop offset="75%" stopColor={colors.yellow} stopOpacity={0.08} />
+              <Stop offset="100%" stopColor={colors.yellow} stopOpacity={0} />
+            </RadialGradient>
+          </Defs>
+          <Circle cx={95} cy={95} r={95} fill="url(#heroGlow)" />
           {/* Hex outline — sequential edges, strokeOpacity 0.5 */}
           <Line
             x1="60"
@@ -472,7 +529,7 @@ function OnboardingIntro({ onStart }: { onStart: () => void }) {
       </Pressable>
 
       {/* Caption */}
-      <Text style={styles.introCaption}>매일 아침 7:30에 업데이트됩니다</Text>
+      <Text style={styles.introCaption}>매일 아침 업데이트됩니다</Text>
     </View>
   );
 }
@@ -496,7 +553,12 @@ function SelectedZodiacBar({
 }: SelectedZodiacBarProps) {
   const insets = useSafeAreaInsets();
   return (
-    <View style={[styles.ctaFooter, { paddingBottom: 20 + insets.bottom }]}>
+    <View
+      style={[
+        styles.ctaFooter,
+        { paddingBottom: (Platform.OS === "ios" ? 2 : 20) + insets.bottom },
+      ]}
+    >
       {selectedZodiac ? (
         <View style={styles.ctaPreview}>
           <View
@@ -564,65 +626,25 @@ const styles = StyleSheet.create({
     height: 190,
     marginBottom: 32,
   },
-  // Radial glow approximation — 4 layers, opacity accumulates toward center
-  // center total ~0.34, outer edge ~0.07, beyond r=85 transparent
-  heroGlowL1: {
-    position: "absolute",
-    top: 10,
-    left: 10,
-    right: 10,
-    bottom: 10,
-    borderRadius: 85,
-    backgroundColor: colors.yellow,
-    opacity: 0.07,
-  },
-  heroGlowL2: {
-    position: "absolute",
-    top: 28,
-    left: 28,
-    right: 28,
-    bottom: 28,
-    borderRadius: 67,
-    backgroundColor: colors.yellow,
-    opacity: 0.09,
-  },
-  heroGlowL3: {
-    position: "absolute",
-    top: 48,
-    left: 48,
-    right: 48,
-    bottom: 48,
-    borderRadius: 47,
-    backgroundColor: colors.yellow,
-    opacity: 0.1,
-  },
-  heroGlowL4: {
-    position: "absolute",
-    top: 66,
-    left: 66,
-    right: 66,
-    bottom: 66,
-    borderRadius: 29,
-    backgroundColor: colors.yellow,
-    opacity: 0.08,
-  },
   introLogo: {
     fontSize: 40,
-    fontWeight: "300",
+    lineHeight: 50,
+    fontFamily: "NotoSansKR_300Light",
+    includeFontPadding: false,
     color: colors.text,
     letterSpacing: 4.8,
     marginBottom: 6,
   },
   introSubtext: {
     fontSize: 11,
-    fontWeight: "400",
+    fontFamily: "NotoSansKR_400Regular",
     color: colors.textSoft,
     letterSpacing: 2.42,
     marginBottom: 16,
   },
   introBody: {
     fontSize: 14,
-    fontWeight: "300",
+    fontFamily: "NotoSansKR_300Light",
     color: colors.textMid,
     textAlign: "center",
     lineHeight: 25.2,
@@ -639,7 +661,9 @@ const styles = StyleSheet.create({
   },
   introButtonText: {
     fontSize: 15,
-    fontWeight: "500",
+    lineHeight: 20,
+    fontFamily: "NotoSansKR_500Medium",
+    includeFontPadding: false,
     color: colors.cream,
     letterSpacing: 0.9,
   },
@@ -668,7 +692,7 @@ const styles = StyleSheet.create({
   },
   selectionTitle: {
     fontSize: 22,
-    fontWeight: "400",
+    fontFamily: "NotoSansKR_400Regular",
     color: colors.text,
     lineHeight: 31,
   },
@@ -716,11 +740,16 @@ const styles = StyleSheet.create({
   },
   ctaName: {
     fontSize: 13,
-    fontWeight: "500",
+    lineHeight: 18,
+    fontFamily: "NotoSansKR_500Medium",
+    includeFontPadding: false,
     color: colors.text,
   },
   ctaEn: {
     fontSize: 10,
+    lineHeight: 14,
+    fontFamily: "NotoSansKR_400Regular",
+    includeFontPadding: false,
     color: colors.textSoft,
   },
   ctaButton: {
@@ -736,7 +765,9 @@ const styles = StyleSheet.create({
   },
   ctaButtonText: {
     fontSize: 15,
-    fontWeight: "500",
+    lineHeight: 20,
+    fontFamily: "NotoSansKR_500Medium",
+    includeFontPadding: false,
     color: colors.cream,
     letterSpacing: 0.75,
   },
@@ -749,7 +780,9 @@ const styles = StyleSheet.create({
   errorText: {
     color: colors.apricotDark,
     fontSize: 13,
-    lineHeight: 19,
+    lineHeight: 18,
+    fontFamily: "NotoSansKR_400Regular",
+    includeFontPadding: false,
     marginTop: 12,
   },
 });

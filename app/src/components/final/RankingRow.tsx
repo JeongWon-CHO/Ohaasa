@@ -44,6 +44,7 @@ export function RankingRow({ horoscope, isMine = false, onPress }: RankingRowPro
   return (
     <Pressable
       onPress={onPress}
+      pressRetentionOffset={0}
       style={({ pressed }) => [
         styles.row,
         isMine
@@ -60,7 +61,9 @@ export function RankingRow({ horoscope, isMine = false, onPress }: RankingRowPro
             styles.rankNumber,
             {
               fontSize: isTop3 ? 16 : 13,
-              fontWeight: isTop3 ? '700' : '500',
+              lineHeight: isTop3 ? 22 : 18,
+              fontFamily: isTop3 ? 'NotoSansKR_700Bold' : 'NotoSansKR_500Medium',
+              includeFontPadding: false,
               color: getRankColor(horoscope.rank),
             },
           ]}
@@ -130,7 +133,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 11,
     borderRadius: 16,
-    paddingVertical: 11,
+    paddingVertical: 12,
     paddingHorizontal: 16,
   },
   normalRow: {
@@ -177,11 +180,13 @@ const styles = StyleSheet.create({
   },
   name: {
     fontSize: 13,
-    fontWeight: '400',
+    lineHeight: 18,
+    fontFamily: 'NotoSansKR_400Regular',
+    includeFontPadding: false,
     color: colors.text,
   },
   myName: {
-    fontWeight: '600',
+    fontFamily: 'NotoSansKR_500Medium',
   },
   mineBadge: {
     borderRadius: 6,
@@ -192,15 +197,23 @@ const styles = StyleSheet.create({
   mineBadgeText: {
     color: colors.apricotDark,
     fontSize: 9,
-    fontWeight: '700',
+    lineHeight: 12,
+    fontFamily: 'NotoSansKR_700Bold',
+    includeFontPadding: false,
     letterSpacing: 0.54,
   },
   dateRange: {
     fontSize: 9,
+    lineHeight: 12,
+    fontFamily: 'NotoSansKR_400Regular',
+    includeFontPadding: false,
     color: colors.textSoft,
   },
   preview: {
     fontSize: 10.5,
+    lineHeight: 14,
+    fontFamily: 'NotoSansKR_400Regular',
+    includeFontPadding: false,
     // color applied inline
   },
 

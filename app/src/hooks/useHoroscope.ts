@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 
 import { supabase } from '@/src/lib/supabase';
-import type { Horoscope } from '@/src/types/horoscope';
+import type { Horoscope, HoroscopeSource } from '@/src/types/horoscope';
 
 export interface AllHoroscopesState {
   horoscopes: Horoscope[];
@@ -10,7 +10,7 @@ export interface AllHoroscopesState {
   error: string | null;
 }
 
-function formatBroadcastDate(dateStr: string, source: 'ohaasa' | 'gogo'): string {
+export function formatBroadcastDate(dateStr: string, source: HoroscopeSource): string {
   const [year, month, day] = dateStr.split('-').map(Number);
   const weekdays = ['일', '월', '화', '수', '목', '금', '토'];
   const dow = weekdays[new Date(year, month - 1, day).getDay()];
@@ -22,7 +22,13 @@ function getErrorMessage(err: unknown): string {
   return err instanceof Error ? err.message : '운세 데이터를 불러오지 못했습니다.';
 }
 
-export function useAllHoroscopes(): AllHoroscopesState {
+interface UseAllHoroscopesOptions {
+  date?: string | null; // 지정하면 해당 날짜 조회, null/undefined면 최신 날짜 조회
+}
+
+export function useAllHoroscopes(options?: UseAllHoroscopesOptions): AllHoroscopesState {
+  const targetDate = options?.date ?? null;
+
   const [state, setState] = useState<AllHoroscopesState>({
     horoscopes: [],
     broadcastDate: null,
@@ -33,38 +39,49 @@ export function useAllHoroscopes(): AllHoroscopesState {
   useEffect(() => {
     let isMounted = true;
 
+    setState({ horoscopes: [], broadcastDate: null, loading: true, error: null });
+
     async function load() {
       try {
-        // Step 1: 최신 방송일 조회 (날짜 혼합 방지)
-        const { data: dateRow, error: dateError } = await supabase
-          .from('horoscopes')
-          .select('date')
-          .order('date', { ascending: false })
-          .limit(1)
-          .maybeSingle();
+        let resolvedDate: string;
 
-        if (dateError) throw dateError;
+        if (targetDate) {
+          // 날짜가 지정된 경우: 최신 날짜 조회 skip
+          resolvedDate = targetDate;
+        } else {
+          // 날짜 미지정: 최신 방송일 조회
+          const { data: dateRow, error: dateError } = await supabase
+            .from('horoscopes')
+            .select('date')
+            .order('date', { ascending: false })
+            .limit(1)
+            .maybeSingle();
 
-        if (!dateRow) {
-          if (isMounted) {
-            setState({ horoscopes: [], broadcastDate: null, loading: false, error: null });
+          if (dateError) throw dateError;
+
+          if (!dateRow) {
+            if (isMounted) {
+              setState({ horoscopes: [], broadcastDate: null, loading: false, error: null });
+            }
+            return;
           }
-          return;
+          resolvedDate = dateRow.date;
         }
 
-        // Step 2: 해당 방송일의 12개 별자리 조회
+        // 해당 날짜의 12개 별자리 조회
         const { data: rows, error: rowsError } = await supabase
           .from('horoscopes')
           .select('*')
-          .eq('date', dateRow.date)
+          .eq('date', resolvedDate)
           .order('rank', { ascending: true });
 
         if (rowsError) throw rowsError;
 
         if (isMounted) {
+          const source = (rows?.[0] as Horoscope | undefined)?.source ?? 'ohaasa';
           setState({
             horoscopes: (rows ?? []) as Horoscope[],
-            broadcastDate: formatBroadcastDate(dateRow.date, (rows?.[0] as Horoscope | undefined)?.source ?? 'ohaasa'),
+            broadcastDate: rows?.length ? formatBroadcastDate(resolvedDate, source) : null,
             loading: false,
             error: null,
           });
@@ -81,7 +98,7 @@ export function useAllHoroscopes(): AllHoroscopesState {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [targetDate]);
 
   return state;
 }
