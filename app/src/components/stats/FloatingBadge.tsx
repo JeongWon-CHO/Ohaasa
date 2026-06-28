@@ -27,7 +27,7 @@ export function FloatingBadge({ sign, size = 56 }: FloatingBadgeProps) {
   }, [offset]);
 
   const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ translateY: (offset.value - 0.5) * 12 }],
+    transform: [{ translateY: (offset.value - 0.5) * 3 }],
   }));
 
   return (

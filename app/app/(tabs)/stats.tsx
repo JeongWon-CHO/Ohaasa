@@ -1,7 +1,8 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   LayoutChangeEvent,
+  Linking,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -11,12 +12,13 @@ import {
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import { Feather } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
-import * as Sharing from "expo-sharing";
-import { captureRef } from "react-native-view-shot";
 
 import { AverageRankRow } from "@/src/components/final/AverageRankRow";
 import { ConstellationBadge } from "@/src/components/final/ConstellationBadge";
 import { FinalHeader } from "@/src/components/final/FinalHeader";
+import { MediaDeniedSheet } from "@/src/components/MediaDeniedSheet";
+import { Toast } from "@/src/components/common/Toast";
+import { StatsShareCard } from "@/src/components/share/StatsShareCard";
 import { FloatingBadge } from "@/src/components/stats/FloatingBadge";
 import { PeriodSelector } from "@/src/components/stats/PeriodSelector";
 import { RankTrendChart } from "@/src/components/stats/RankTrendChart";
@@ -26,6 +28,8 @@ import { colors, gradients } from "@/src/constants/design";
 import { ZODIAC_MAP } from "@/src/constants/zodiac";
 import type { ZodiacSign } from "@/src/constants/zodiac";
 import { getSummaryComment, useHoroscopeTrends, type TrendsPeriod } from "@/src/hooks/useHoroscopeTrends";
+import { useShareHoroscope } from "@/src/hooks/useShareHoroscope";
+import { useToast } from "@/src/hooks/useToast";
 import { useZodiac } from "@/src/hooks/useZodiac";
 
 function periodLabel(period: TrendsPeriod): string {
@@ -50,24 +54,13 @@ export default function StatsScreen() {
     setChartWidth(e.nativeEvent.layout.width);
   };
 
-  const chartCardRef = useRef<View>(null);
-  const [sharingChart, setSharingChart] = useState(false);
-
-  async function shareView(ref: React.RefObject<View | null>, setSharing: (v: boolean) => void) {
-    if (!ref.current) return;
-    setSharing(true);
-    try {
-      const uri = await captureRef(ref, { format: "png", quality: 1 });
-      await Sharing.shareAsync(uri, { mimeType: "image/png" });
-    } catch (e) {
-      console.warn("[stats share] failed", e);
-    } finally {
-      setSharing(false);
-    }
-  }
+  const { showToast, toastProps } = useToast();
+  const { cardRef, share, sharing, saveImage, saving, mediaDeniedSheetVisible, closeMediaDeniedSheet } =
+    useShareHoroscope({ showToast });
 
   const zodiac = zodiacSign ? ZODIAC_MAP[zodiacSign] : null;
   const compareSign = compareId ? ZODIAC_MAP[compareId] : null;
+  const canShare = !!zodiac && points.length >= 7 && averageRank !== null;
 
   return (
     <LinearGradient colors={gradients.screen} style={styles.fill}>
@@ -139,16 +132,27 @@ export default function StatsScreen() {
           </View>
 
           {/* 그래프 카드 */}
-          <View style={styles.chartCard} ref={chartCardRef} collapsable={false}>
+          <View style={styles.chartCard}>
             <View style={styles.chartTitleRow}>
               <Text style={styles.chartTitle}>순위 흐름</Text>
-              <Pressable onPress={() => shareView(chartCardRef, setSharingChart)} disabled={sharingChart}>
-                {sharingChart ? (
-                  <ActivityIndicator size="small" color={colors.apricotDark} />
-                ) : (
-                  <Feather name="upload" size={16} color={colors.apricotDark} />
-                )}
-              </Pressable>
+              {canShare && (
+                <View style={styles.chartActions}>
+                  <Pressable onPress={saveImage} disabled={saving || sharing} hitSlop={8}>
+                    {saving ? (
+                      <ActivityIndicator size="small" color={colors.apricotDark} />
+                    ) : (
+                      <Feather name="download" size={16} color={colors.apricotDark} />
+                    )}
+                  </Pressable>
+                  <Pressable onPress={share} disabled={saving || sharing} hitSlop={8}>
+                    {sharing ? (
+                      <ActivityIndicator size="small" color={colors.apricotDark} />
+                    ) : (
+                      <Feather name="share-2" size={16} color={colors.apricotDark} />
+                    )}
+                  </Pressable>
+                </View>
+              )}
             </View>
 
             {zodiac && (
@@ -235,6 +239,22 @@ export default function StatsScreen() {
           setCompareSheetOpen(false);
         }}
       />
+
+      {canShare && zodiac && (
+        <View style={styles.offscreen} pointerEvents="none" collapsable={false}>
+          <StatsShareCard ref={cardRef} zodiac={zodiac} period={period} points={points} averageRank={averageRank!} />
+        </View>
+      )}
+
+      <MediaDeniedSheet
+        visible={mediaDeniedSheetVisible}
+        onClose={closeMediaDeniedSheet}
+        onOpenSettings={() => {
+          Linking.openSettings();
+          closeMediaDeniedSheet();
+        }}
+      />
+      <Toast {...toastProps} />
     </LinearGradient>
   );
 }
@@ -422,6 +442,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
   },
+  chartActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 16,
+  },
   chartTitle: {
     fontSize: 14,
     lineHeight: 19,
@@ -564,5 +589,10 @@ const styles = StyleSheet.create({
   },
   rankingList: {
     gap: 2,
+  },
+  offscreen: {
+    position: "absolute",
+    left: -9999,
+    top: 0,
   },
 });

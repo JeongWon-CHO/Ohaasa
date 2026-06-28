@@ -84,6 +84,7 @@ export function RankTrendChart({ points, comparePoints = [], width, height = 160
   }, []);
 
   const lastIndex = coords.length - 1;
+  const lastPointLabel = points[lastIndex].date === format(new Date(), 'yyyy-MM-dd') ? '오늘' : '최근';
   const baselineY = yScale(OVERALL_AVERAGE_RANK, height);
   const markerIndices = sampleMarkerIndices(coords.length, MARKER_TARGET);
   const dateLabelIndices = sampleMarkerIndices(coords.length, DATE_LABEL_TARGET);
@@ -165,7 +166,7 @@ export function RankTrendChart({ points, comparePoints = [], width, height = 160
         })}
         <Circle cx={coords[lastIndex].x} cy={coords[lastIndex].y} r={4} fill={colors.apricotDark} />
         <SvgText x={coords[lastIndex].x} y={coords[lastIndex].y - 14} fontSize={10} fill={colors.apricotDark} textAnchor="middle">
-          오늘
+          {lastPointLabel}
         </SvgText>
 
         <SvgText x={LABEL_X + 34} y={baselineY + 14} fontSize={9} fill={colors.textSoft} textAnchor="start">

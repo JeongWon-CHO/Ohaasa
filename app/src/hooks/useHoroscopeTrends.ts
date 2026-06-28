@@ -68,8 +68,17 @@ export function getSummaryComment(averageRank: number | null): string {
   return '곧 더 좋은 날이 찾아올 거예요';
 }
 
+// 자정이 지나도 그날 크론(KST 05:59)이 아직 안 돌아 오늘 row가 없을 수 있으므로,
+// "오늘부터 N일 전" 캘린더 날짜로 자르지 않고 여유 버퍼만큼 더 넓게 가져온 뒤
+// 실제 존재하는 row 중 최근 N개를 골라 쓴다 (아래 targetCount slice).
+const CUTOFF_BUFFER_DAYS = 3;
+
+function getTargetCount(period: TrendsPeriod): number {
+  return period === '7d' ? 7 : 30;
+}
+
 function getCutoffDate(period: TrendsPeriod): string {
-  const daysBack = period === '7d' ? 6 : 29;
+  const daysBack = getTargetCount(period) - 1 + CUTOFF_BUFFER_DAYS;
   return format(subDays(new Date(), daysBack), 'yyyy-MM-dd');
 }
 
@@ -112,17 +121,20 @@ export function useHoroscopeTrends(
         if (error) throw error;
 
         const allRows = (rows ?? []) as { date: string; zodiac_sign: ZodiacSign; rank: number }[];
+        const targetCount = getTargetCount(period);
 
         const points: RankPoint[] = zodiacSign
           ? allRows
               .filter((row) => row.zodiac_sign === zodiacSign)
               .map((row) => ({ date: row.date, rank: row.rank }))
+              .slice(-targetCount)
           : [];
 
         const comparePoints: RankPoint[] = compareSign
           ? allRows
               .filter((row) => row.zodiac_sign === compareSign)
               .map((row) => ({ date: row.date, rank: row.rank }))
+              .slice(-targetCount)
           : [];
 
         const ranks = points.map((p) => p.rank);
@@ -138,11 +150,14 @@ export function useHoroscopeTrends(
         }
 
         const signAverages: SignAverage[] = Array.from(ranksBySign.entries())
-          .map(([sign, signRanks]) => ({
-            sign,
-            averageRank: Math.round(average(signRanks) * 10) / 10,
-            trend: computeTrend(signRanks),
-          }))
+          .map(([sign, signRanks]) => {
+            const recentRanks = signRanks.slice(-targetCount);
+            return {
+              sign,
+              averageRank: Math.round(average(recentRanks) * 10) / 10,
+              trend: computeTrend(recentRanks),
+            };
+          })
           .sort((a, b) => a.averageRank - b.averageRank);
 
         if (isMounted) {
