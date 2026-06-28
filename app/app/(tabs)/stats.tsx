@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   LayoutChangeEvent,
@@ -11,12 +11,16 @@ import {
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import { Feather } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
+import * as Sharing from "expo-sharing";
+import { captureRef } from "react-native-view-shot";
 
 import { AverageRankRow } from "@/src/components/final/AverageRankRow";
 import { ConstellationBadge } from "@/src/components/final/ConstellationBadge";
 import { FinalHeader } from "@/src/components/final/FinalHeader";
+import { FloatingBadge } from "@/src/components/stats/FloatingBadge";
 import { PeriodSelector } from "@/src/components/stats/PeriodSelector";
 import { RankTrendChart } from "@/src/components/stats/RankTrendChart";
+import { StatsLoadingState } from "@/src/components/stats/StatsLoadingState";
 import { ZodiacSelectBottomSheet } from "@/src/components/stats/ZodiacSelectBottomSheet";
 import { colors, gradients } from "@/src/constants/design";
 import { ZODIAC_MAP } from "@/src/constants/zodiac";
@@ -24,7 +28,9 @@ import type { ZodiacSign } from "@/src/constants/zodiac";
 import { getSummaryComment, useHoroscopeTrends, type TrendsPeriod } from "@/src/hooks/useHoroscopeTrends";
 import { useZodiac } from "@/src/hooks/useZodiac";
 
-const PERIOD_DAYS: Record<TrendsPeriod, number> = { "7d": 7, "30d": 30 };
+function periodLabel(period: TrendsPeriod): string {
+  return period === "7d" ? "최근 7일" : "최근 30일";
+}
 
 export default function StatsScreen() {
   const tabBarHeight = useBottomTabBarHeight();
@@ -44,9 +50,24 @@ export default function StatsScreen() {
     setChartWidth(e.nativeEvent.layout.width);
   };
 
+  const chartCardRef = useRef<View>(null);
+  const [sharingChart, setSharingChart] = useState(false);
+
+  async function shareView(ref: React.RefObject<View | null>, setSharing: (v: boolean) => void) {
+    if (!ref.current) return;
+    setSharing(true);
+    try {
+      const uri = await captureRef(ref, { format: "png", quality: 1 });
+      await Sharing.shareAsync(uri, { mimeType: "image/png" });
+    } catch (e) {
+      console.warn("[stats share] failed", e);
+    } finally {
+      setSharing(false);
+    }
+  }
+
   const zodiac = zodiacSign ? ZODIAC_MAP[zodiacSign] : null;
   const compareSign = compareId ? ZODIAC_MAP[compareId] : null;
-  const periodDays = PERIOD_DAYS[period];
 
   return (
     <LinearGradient colors={gradients.screen} style={styles.fill}>
@@ -55,12 +76,15 @@ export default function StatsScreen() {
       </View>
 
       {loading ? (
-        <View style={styles.loadingBox}>
-          <ActivityIndicator color={colors.apricotDark} size="large" />
-          <Text style={styles.loadingText}>운세 흐름을 불러오는 중이에요…</Text>
-        </View>
+        <StatsLoadingState />
       ) : error ? (
         <View style={styles.emptyWrap}>
+          <View style={styles.errorIllustration}>
+            <ConstellationBadge sign={zodiacSign ?? undefined} size={64} />
+            <View style={styles.errorCloud}>
+              <Feather name="cloud" size={20} color={colors.textSoft} />
+            </View>
+          </View>
           <Text style={styles.errorTitle}>운세 흐름을 불러오지 못했어요</Text>
           <Text style={styles.errorSubtitle}>잠시 후 다시 시도해 주세요</Text>
           <Pressable style={styles.retryButton} onPress={refetch}>
@@ -89,7 +113,7 @@ export default function StatsScreen() {
                         <Text style={styles.mineBadgeText}>내 별자리</Text>
                       </View>
                     </View>
-                    <Text style={styles.summarySubtitle}>최근 {periodDays}일 운세 흐름</Text>
+                    <Text style={styles.summarySubtitle}>{periodLabel(period)} 운세 흐름</Text>
                   </View>
                   <View style={styles.averageBlock}>
                     <Text style={styles.averageLabel}>평균</Text>
@@ -115,11 +139,15 @@ export default function StatsScreen() {
           </View>
 
           {/* 그래프 카드 */}
-          <View style={styles.chartCard}>
+          <View style={styles.chartCard} ref={chartCardRef} collapsable={false}>
             <View style={styles.chartTitleRow}>
               <Text style={styles.chartTitle}>순위 흐름</Text>
-              <Pressable onPress={() => {}}>
-                <Feather name="upload" size={16} color={colors.apricotDark} />
+              <Pressable onPress={() => shareView(chartCardRef, setSharingChart)} disabled={sharingChart}>
+                {sharingChart ? (
+                  <ActivityIndicator size="small" color={colors.apricotDark} />
+                ) : (
+                  <Feather name="upload" size={16} color={colors.apricotDark} />
+                )}
               </Pressable>
             </View>
 
@@ -155,12 +183,9 @@ export default function StatsScreen() {
             )}
 
             <View style={styles.chartBody} onLayout={onChartLayout}>
-              {points.length === 0 ? (
+              {points.length < 7 ? (
                 <View style={styles.chartPlaceholder}>
-                  <Text style={styles.placeholderText}>데이터가 아직 없어요</Text>
-                </View>
-              ) : points.length < 7 ? (
-                <View style={styles.chartPlaceholder}>
+                  <FloatingBadge sign={zodiacSign ?? undefined} size={56} />
                   <Text style={styles.placeholderTitle}>아직 흐름을 보여드리기엔 일러요</Text>
                   <Text style={styles.placeholderText}>며칠만 더 운세를 모으면 예쁜 흐름을 보여드릴게요</Text>
                   <View style={styles.progressTrack}>
@@ -180,7 +205,7 @@ export default function StatsScreen() {
           <View style={styles.rankingCard}>
             <View style={styles.rankingTitleRow}>
               <Text style={styles.sectionTitle}>별자리별 평균 순위</Text>
-              <Text style={styles.rankingPeriodLabel}>최근 {periodDays}일</Text>
+              <Text style={styles.rankingPeriodLabel}>{periodLabel(period)}</Text>
             </View>
             <View style={styles.rankingList}>
               {signAverages.map((item, index) => (
@@ -191,6 +216,8 @@ export default function StatsScreen() {
                   rank={index + 1}
                   trend={item.trend}
                   isMine={item.sign === zodiacSign}
+                  isComparing={item.sign === compareId}
+                  onPress={(sign) => setCompareId((current) => (current === sign ? null : sign))}
                 />
               ))}
             </View>
@@ -219,24 +246,24 @@ const styles = StyleSheet.create({
   headerSpacer: {
     paddingBottom: 18,
   },
-  loadingBox: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 12,
-  },
-  loadingText: {
-    fontSize: 13,
-    lineHeight: 18,
-    includeFontPadding: false,
-    color: colors.textSoft,
-  },
   emptyWrap: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: 24,
     gap: 6,
+  },
+  errorIllustration: {
+    marginBottom: 8,
+    opacity: 0.55,
+  },
+  errorCloud: {
+    position: "absolute",
+    right: -8,
+    bottom: -4,
+    borderRadius: 12,
+    backgroundColor: colors.cardSolid,
+    padding: 4,
   },
   errorTitle: {
     fontSize: 15,
