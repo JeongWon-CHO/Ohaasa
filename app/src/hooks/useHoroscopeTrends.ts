@@ -52,10 +52,18 @@ function computeTrend(ranks: number[]): Trend {
 }
 
 export function getSummaryComment(averageRank: number | null): string {
-  if (averageRank === null) return '아직 데이터가 부족해요';
-  if (averageRank <= 3.5) return '요즘 흐름이 정말 좋아요 ✦';
-  if (averageRank <= 6) return '점점 좋아지고 있어요';
-  if (averageRank <= 9) return '조금씩 올라오는 중이에요';
+  if (averageRank === null) return '며칠만 더 모이면 흐름을 보여드릴게요';
+
+  if (averageRank <= 3.5) return '별들이 작정하고 밀어주는 중이에요 ✦';
+  if (averageRank <= 4.0) return '요즘 운세가 가장 빛나는 흐름이에요';
+  if (averageRank <= 4.8) return '기분 좋은 별빛이 머물고 있어요';
+  if (averageRank <= 5.6) return '좋은 기운이 차분히 이어지고 있어요';
+  if (averageRank <= 6.5) return '편안한 기운이 안정적으로 머물고 있어요';
+  if (averageRank <= 7.3) return '무난하고 편안한 흐름이에요';
+  if (averageRank <= 8.1) return '조금 기복은 있지만 괜찮아요';
+  if (averageRank <= 9.0) return '잠시 숨을 고르는 시기예요';
+  if (averageRank <= 9.6) return '잠깐 쉬어가는 흐름이에요';
+
   return '곧 더 좋은 날이 찾아올 거예요';
 }
 
