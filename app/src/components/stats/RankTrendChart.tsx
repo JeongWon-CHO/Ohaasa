@@ -1,3 +1,5 @@
+import { format, parseISO } from 'date-fns';
+import { StyleSheet, Text, View } from 'react-native';
 import Svg, { Circle, Defs, LinearGradient, Line, Path, Stop, Text as SvgText } from 'react-native-svg';
 
 import { colors } from '@/src/constants/design';
@@ -14,6 +16,7 @@ const PADDING_X = 16;
 const MIN_RANK = 1;
 const MAX_RANK = 12;
 const MARKER_TARGET = 6;
+const DATE_LABEL_TARGET = 6;
 
 function yScale(rank: number, height: number): number {
   return PADDING_Y + ((rank - MIN_RANK) / (MAX_RANK - MIN_RANK)) * (height - 2 * PADDING_Y);
@@ -22,6 +25,10 @@ function yScale(rank: number, height: number): number {
 function xScale(index: number, count: number, width: number): number {
   const span = count > 1 ? count - 1 : 1;
   return PADDING_X + (index / span) * (width - 2 * PADDING_X);
+}
+
+function formatDateLabel(dateStr: string): string {
+  return format(parseISO(dateStr), 'M/d');
 }
 
 function buildSmoothPath(coords: { x: number; y: number }[]): string {
@@ -68,68 +75,100 @@ export function RankTrendChart({ points, width, height = 160 }: RankTrendChartPr
   const lastIndex = coords.length - 1;
   const baselineY = yScale(OVERALL_AVERAGE_RANK, height);
   const markerIndices = sampleMarkerIndices(coords.length, MARKER_TARGET);
+  const dateLabelStep = Math.max(1, Math.ceil(points.length / DATE_LABEL_TARGET));
 
   return (
-    <Svg width={width} height={height}>
-      <Defs>
-        <LinearGradient id="areaFill" x1="0" y1="0" x2="0" y2="1">
-          <Stop offset="0" stopColor={colors.apricot} stopOpacity={0.42} />
-          <Stop offset="0.55" stopColor={colors.yellow} stopOpacity={0.18} />
-          <Stop offset="1" stopColor={colors.yellow} stopOpacity={0} />
-        </LinearGradient>
-      </Defs>
+    <View>
+      <Svg width={width} height={height}>
+        <Defs>
+          <LinearGradient id="areaFill" x1="0" y1="0" x2="0" y2="1">
+            <Stop offset="0" stopColor={colors.apricot} stopOpacity={0.42} />
+            <Stop offset="0.55" stopColor={colors.yellow} stopOpacity={0.18} />
+            <Stop offset="1" stopColor={colors.yellow} stopOpacity={0} />
+          </LinearGradient>
+        </Defs>
 
-      <Line
-        x1={PADDING_X}
-        y1={baselineY}
-        x2={width - PADDING_X}
-        y2={baselineY}
-        stroke={colors.chartBaseline}
-        strokeWidth={1}
-        strokeDasharray="2,5"
-      />
-      <SvgText x={width - PADDING_X} y={baselineY - 4} fontSize={9} fill={colors.textSoft} textAnchor="end">
-        전체 평균
-      </SvgText>
+        <Line
+          x1={PADDING_X}
+          y1={baselineY}
+          x2={width - PADDING_X}
+          y2={baselineY}
+          stroke={colors.chartBaseline}
+          strokeWidth={1}
+          strokeDasharray="2,5"
+        />
+        <SvgText x={width - PADDING_X} y={baselineY - 4} fontSize={9} fill={colors.textSoft} textAnchor="end">
+          전체 평균 {OVERALL_AVERAGE_RANK}위
+        </SvgText>
 
-      <SvgText x={PADDING_X} y={PADDING_Y - 4} fontSize={9} fill={colors.textSoft} textAnchor="start">
-        1위 · 좋아요
-      </SvgText>
-      <SvgText x={PADDING_X} y={height - 2} fontSize={9} fill={colors.textSoft} textAnchor="start">
-        12위
-      </SvgText>
+        <SvgText x={PADDING_X} y={PADDING_Y - 4} fontSize={9} fill={colors.textSoft} textAnchor="start">
+          1위 · 좋아요
+        </SvgText>
+        <SvgText x={PADDING_X} y={yScale(6, height) + 3} fontSize={9} fill={colors.textSoft} textAnchor="start">
+          6위
+        </SvgText>
+        <SvgText x={PADDING_X} y={height - 2} fontSize={9} fill={colors.textSoft} textAnchor="start">
+          12위
+        </SvgText>
 
-      {coords.length >= 2 && (
-        <>
-          <Path
-            d={`${buildSmoothPath(coords)} L ${coords[lastIndex].x} ${height - PADDING_Y} L ${coords[0].x} ${height - PADDING_Y} Z`}
-            fill="url(#areaFill)"
-          />
-          <Path
-            d={buildSmoothPath(coords)}
-            fill="none"
-            stroke={colors.apricotDark}
-            strokeWidth={2.6}
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-        </>
-      )}
+        {coords.length >= 2 && (
+          <>
+            <Path
+              d={`${buildSmoothPath(coords)} L ${coords[lastIndex].x} ${height - PADDING_Y} L ${coords[0].x} ${height - PADDING_Y} Z`}
+              fill="url(#areaFill)"
+            />
+            <Path
+              d={buildSmoothPath(coords)}
+              fill="none"
+              stroke={colors.apricotDark}
+              strokeWidth={2.6}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </>
+        )}
 
-      {markerIndices.map((i) => {
-        const c = coords[i];
-        const isToday = i === lastIndex;
-        if (isToday) {
+        {markerIndices.map((i) => {
+          const c = coords[i];
+          const isToday = i === lastIndex;
+          if (isToday) {
+            return (
+              <Circle key={points[i].date} cx={c.x} cy={c.y} r={7} fill={colors.apricotDark} opacity={0.16} />
+            );
+          }
+          return <Circle key={points[i].date} cx={c.x} cy={c.y} r={3} fill="#FFFFFF" stroke={colors.apricotDark} strokeWidth={1.8} />;
+        })}
+        <Circle cx={coords[lastIndex].x} cy={coords[lastIndex].y} r={4} fill={colors.apricotDark} />
+        <SvgText x={coords[lastIndex].x} y={coords[lastIndex].y - 14} fontSize={10} fill={colors.apricotDark} textAnchor="middle">
+          오늘
+        </SvgText>
+      </Svg>
+      <View style={[styles.dateLabelRow, { paddingHorizontal: PADDING_X }]}>
+        {points.map((p, i) => {
+          const showLabel = i % dateLabelStep === 0 || i === lastIndex;
           return (
-            <Circle key={points[i].date} cx={c.x} cy={c.y} r={7} fill={colors.apricotDark} opacity={0.16} />
+            <Text key={p.date} style={styles.dateLabel}>
+              {showLabel ? formatDateLabel(p.date) : ''}
+            </Text>
           );
-        }
-        return <Circle key={points[i].date} cx={c.x} cy={c.y} r={3} fill="#FFFFFF" stroke={colors.apricotDark} strokeWidth={1.8} />;
-      })}
-      <Circle cx={coords[lastIndex].x} cy={coords[lastIndex].y} r={4} fill={colors.apricotDark} />
-      <SvgText x={coords[lastIndex].x} y={coords[lastIndex].y - 14} fontSize={10} fill={colors.apricotDark} textAnchor="middle">
-        오늘
-      </SvgText>
-    </Svg>
+        })}
+      </View>
+    </View>
   );
 }
+
+const styles = StyleSheet.create({
+  dateLabelRow: {
+    flexDirection: 'row',
+    marginTop: 4,
+  },
+  dateLabel: {
+    flex: 1,
+    fontSize: 10,
+    lineHeight: 14,
+    fontFamily: 'NotoSansKR_400Regular',
+    includeFontPadding: false,
+    color: colors.textSoft,
+    textAlign: 'center',
+  },
+});

@@ -93,7 +93,10 @@ export default function StatsScreen() {
                     최고 {minRank}위 · 최저 {maxRank}위
                   </Text>
                 )}
-                <Text style={styles.comment}>"{getSummaryComment(averageRank)}"</Text>
+                <View style={styles.commentBox}>
+                  <Feather name="sun" size={14} color={colors.apricotDark} />
+                  <Text style={styles.commentText}>{getSummaryComment(averageRank)}</Text>
+                </View>
               </>
             ) : (
               <Text style={styles.noZodiacText}>별자리를 먼저 선택해주세요.</Text>
@@ -139,12 +142,6 @@ export default function StatsScreen() {
                 chartWidth > 0 && <RankTrendChart points={points} width={chartWidth} />
               )}
             </View>
-
-            {points.length >= 1 && (
-              <View style={styles.noteBox}>
-                <Text style={styles.noteText}>🌤️ 순위가 위로 올라갈수록 좋은 흐름이에요</Text>
-              </View>
-            )}
           </View>
 
           {/* 별자리별 평균 순위 */}
@@ -184,6 +181,8 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     fontSize: 13,
+    lineHeight: 18,
+    includeFontPadding: false,
     color: colors.textSoft,
   },
   emptyWrap: {
@@ -195,12 +194,16 @@ const styles = StyleSheet.create({
   },
   errorTitle: {
     fontSize: 15,
+    lineHeight: 20,
+    includeFontPadding: false,
     fontFamily: "NotoSansKR_500Medium",
     color: colors.text,
     textAlign: "center",
   },
   errorSubtitle: {
     fontSize: 13,
+    lineHeight: 18,
+    includeFontPadding: false,
     color: colors.textSoft,
     textAlign: "center",
   },
@@ -213,6 +216,8 @@ const styles = StyleSheet.create({
   },
   retryButtonText: {
     fontSize: 13,
+    lineHeight: 18,
+    includeFontPadding: false,
     fontFamily: "NotoSansKR_500Medium",
     color: colors.cardSolid,
   },
@@ -228,6 +233,7 @@ const styles = StyleSheet.create({
     paddingBottom: 16,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
+    paddingHorizontal: 8,
   },
   summaryTopRow: {
     flexDirection: "row",
@@ -245,6 +251,7 @@ const styles = StyleSheet.create({
   zodiacName: {
     fontSize: 16,
     lineHeight: 22,
+    includeFontPadding: false,
     fontFamily: "NotoSansKR_500Medium",
     color: colors.text,
   },
@@ -265,6 +272,7 @@ const styles = StyleSheet.create({
   summarySubtitle: {
     fontSize: 12,
     lineHeight: 17,
+    includeFontPadding: false,
     fontFamily: "NotoSansKR_400Regular",
     color: colors.textSoft,
     marginTop: 2,
@@ -274,6 +282,8 @@ const styles = StyleSheet.create({
   },
   averageLabel: {
     fontSize: 11,
+    lineHeight: 15,
+    includeFontPadding: false,
     color: colors.textSoft,
   },
   averageValueRow: {
@@ -284,32 +294,47 @@ const styles = StyleSheet.create({
   averageValue: {
     fontSize: 34,
     lineHeight: 38,
+    includeFontPadding: false,
     fontFamily: "NotoSansKR_700Bold",
     color: colors.apricotDark,
   },
   averageUnit: {
     fontSize: 13,
     lineHeight: 18,
+    includeFontPadding: false,
     color: colors.textMid,
     marginBottom: 4,
   },
   bestWorst: {
     fontSize: 12,
     lineHeight: 18,
+    includeFontPadding: false,
     fontFamily: "NotoSansKR_400Regular",
     color: colors.textSoft,
     marginTop: 12,
   },
-  comment: {
+  commentBox: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginTop: 10,
+    borderRadius: 14,
+    backgroundColor: "rgba(245,217,139,0.25)",
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+  },
+  commentText: {
+    flex: 1,
     fontSize: 13,
     lineHeight: 20,
+    includeFontPadding: false,
     fontFamily: "NotoSansKR_300Light",
     color: colors.text,
-    marginTop: 6,
   },
   noZodiacText: {
     fontSize: 13,
     lineHeight: 20,
+    includeFontPadding: false,
     fontFamily: "NotoSansKR_400Regular",
     color: colors.textMid,
     textAlign: "center",
@@ -328,6 +353,8 @@ const styles = StyleSheet.create({
   },
   chartTitle: {
     fontSize: 14,
+    lineHeight: 19,
+    includeFontPadding: false,
     fontFamily: "NotoSansKR_400Regular",
     color: colors.text,
   },
@@ -352,6 +379,8 @@ const styles = StyleSheet.create({
   },
   compareChipText: {
     fontSize: 11.5,
+    lineHeight: 15,
+    includeFontPadding: false,
     fontFamily: "NotoSansKR_500Medium",
     color: colors.text,
   },
@@ -363,6 +392,8 @@ const styles = StyleSheet.create({
   },
   addCompareChipText: {
     fontSize: 11.5,
+    lineHeight: 15,
+    includeFontPadding: false,
     fontFamily: "NotoSansKR_400Regular",
     color: colors.skyDark,
   },
@@ -379,15 +410,18 @@ const styles = StyleSheet.create({
   },
   placeholderTitle: {
     fontSize: 13,
+    lineHeight: 18,
+    includeFontPadding: false,
     fontFamily: "NotoSansKR_500Medium",
     color: colors.text,
     textAlign: "center",
   },
   placeholderText: {
     fontSize: 12,
+    lineHeight: 18,
+    includeFontPadding: false,
     color: colors.textSoft,
     textAlign: "center",
-    lineHeight: 18,
   },
   progressTrack: {
     width: "80%",
@@ -404,19 +438,10 @@ const styles = StyleSheet.create({
   },
   progressLabel: {
     fontSize: 11,
+    lineHeight: 15,
+    includeFontPadding: false,
     color: colors.textSoft,
     marginTop: 2,
-  },
-  noteBox: {
-    marginTop: 14,
-    borderRadius: 14,
-    backgroundColor: "rgba(245,217,139,0.25)",
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-  },
-  noteText: {
-    fontSize: 12,
-    color: colors.textMid,
   },
   rankingCard: {
     borderRadius: 20,
@@ -434,11 +459,14 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 16,
     lineHeight: 22,
+    includeFontPadding: false,
     fontFamily: "NotoSansKR_400Regular",
     color: colors.text,
   },
   rankingPeriodLabel: {
     fontSize: 11,
+    lineHeight: 15,
+    includeFontPadding: false,
     color: colors.textSoft,
   },
   rankingList: {

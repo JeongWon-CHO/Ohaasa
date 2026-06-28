@@ -52,6 +52,7 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 13,
     lineHeight: 18,
+    includeFontPadding: false,
     fontFamily: 'NotoSansKR_500Medium',
     color: colors.textMid,
   },

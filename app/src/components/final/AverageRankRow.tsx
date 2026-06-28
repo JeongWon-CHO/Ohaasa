@@ -126,6 +126,7 @@ const styles = StyleSheet.create({
   trendSymbol: {
     fontSize: 11,
     lineHeight: 18,
+    includeFontPadding: false,
     flexShrink: 0,
   },
   average: {
