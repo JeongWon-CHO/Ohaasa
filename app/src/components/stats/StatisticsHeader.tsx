@@ -27,6 +27,7 @@ const styles = StyleSheet.create({
     alignItems: "flex-start",
     justifyContent: "space-between",
     paddingHorizontal: 28,
+    paddingBottom: 18,
   },
   copy: {
     flex: 1,
