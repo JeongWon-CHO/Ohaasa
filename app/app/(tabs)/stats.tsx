@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   LayoutChangeEvent,
@@ -17,8 +17,10 @@ import { ConstellationBadge } from "@/src/components/final/ConstellationBadge";
 import { FinalHeader } from "@/src/components/final/FinalHeader";
 import { PeriodSelector } from "@/src/components/stats/PeriodSelector";
 import { RankTrendChart } from "@/src/components/stats/RankTrendChart";
+import { ZodiacSelectBottomSheet } from "@/src/components/stats/ZodiacSelectBottomSheet";
 import { colors, gradients } from "@/src/constants/design";
 import { ZODIAC_MAP } from "@/src/constants/zodiac";
+import type { ZodiacSign } from "@/src/constants/zodiac";
 import { getSummaryComment, useHoroscopeTrends, type TrendsPeriod } from "@/src/hooks/useHoroscopeTrends";
 import { useZodiac } from "@/src/hooks/useZodiac";
 
@@ -28,8 +30,14 @@ export default function StatsScreen() {
   const tabBarHeight = useBottomTabBarHeight();
   const { zodiacSign } = useZodiac();
   const [period, setPeriod] = useState<TrendsPeriod>("7d");
-  const { points, averageRank, minRank, maxRank, signAverages, loading, error, refetch } =
-    useHoroscopeTrends(zodiacSign, period);
+  const [compareId, setCompareId] = useState<ZodiacSign | null>(null);
+  const [compareSheetOpen, setCompareSheetOpen] = useState(false);
+  const { points, comparePoints, averageRank, minRank, maxRank, signAverages, loading, error, refetch } =
+    useHoroscopeTrends(zodiacSign, period, compareId);
+
+  useEffect(() => {
+    setCompareId(null);
+  }, [zodiacSign]);
 
   const [chartWidth, setChartWidth] = useState(0);
   const onChartLayout = (e: LayoutChangeEvent) => {
@@ -37,6 +45,7 @@ export default function StatsScreen() {
   };
 
   const zodiac = zodiacSign ? ZODIAC_MAP[zodiacSign] : null;
+  const compareSign = compareId ? ZODIAC_MAP[compareId] : null;
   const periodDays = PERIOD_DAYS[period];
 
   return (
@@ -120,10 +129,29 @@ export default function StatsScreen() {
                   <View style={[styles.compareSwatch, { backgroundColor: colors.apricotDark }]} />
                   <Text style={styles.compareChipText}>{zodiac.ko}</Text>
                 </View>
-                <View style={styles.addCompareChip}>
-                  <Text style={styles.addCompareChipText}>+ 다른 별자리와 비교</Text>
-                </View>
+
+                {compareSign ? (
+                  <>
+                    <View style={[styles.compareChip, styles.compareChipSky]}>
+                      <View style={[styles.compareSwatch, { backgroundColor: colors.skyDark }]} />
+                      <Text style={styles.compareChipText}>{compareSign.ko}</Text>
+                      <Pressable onPress={() => setCompareId(null)} hitSlop={8}>
+                        <Feather name="x" size={12} color={colors.skyDark} />
+                      </Pressable>
+                    </View>
+                    <Pressable style={styles.changeCompareChip} onPress={() => setCompareSheetOpen(true)}>
+                      <Text style={styles.changeCompareChipText}>변경</Text>
+                    </Pressable>
+                  </>
+                ) : (
+                  <Pressable style={styles.addCompareChip} onPress={() => setCompareSheetOpen(true)}>
+                    <Text style={styles.addCompareChipText}>+ 다른 별자리와 비교</Text>
+                  </Pressable>
+                )}
               </View>
+            )}
+            {compareSign && comparePoints.length < 2 && (
+              <Text style={styles.compareInsufficientText}>이 별자리는 아직 데이터가 부족해요</Text>
             )}
 
             <View style={styles.chartBody} onLayout={onChartLayout}>
@@ -141,7 +169,9 @@ export default function StatsScreen() {
                   <Text style={styles.progressLabel}>{points.length}일째 기록 중 · 7일부터 그래프 등장 ✦</Text>
                 </View>
               ) : (
-                chartWidth > 0 && <RankTrendChart points={points} width={chartWidth} />
+                chartWidth > 0 && (
+                  <RankTrendChart points={points} comparePoints={comparePoints} width={chartWidth} />
+                )
               )}
             </View>
           </View>
@@ -167,6 +197,17 @@ export default function StatsScreen() {
           </View>
         </ScrollView>
       )}
+
+      <ZodiacSelectBottomSheet
+        visible={compareSheetOpen}
+        mySign={zodiacSign}
+        selectedId={compareId}
+        onClose={() => setCompareSheetOpen(false)}
+        onSelect={(sign) => {
+          setCompareId(sign);
+          setCompareSheetOpen(false);
+        }}
+      />
     </LinearGradient>
   );
 }
@@ -387,6 +428,21 @@ const styles = StyleSheet.create({
     fontFamily: "NotoSansKR_500Medium",
     color: colors.text,
   },
+  compareChipSky: {
+    backgroundColor: "rgba(123,174,199,0.16)",
+  },
+  changeCompareChip: {
+    borderRadius: 14,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  changeCompareChipText: {
+    fontSize: 11.5,
+    lineHeight: 15,
+    includeFontPadding: false,
+    fontFamily: "NotoSansKR_500Medium",
+    color: colors.textSoft,
+  },
   addCompareChip: {
     borderRadius: 14,
     backgroundColor: "rgba(184,216,232,0.35)",
@@ -399,6 +455,13 @@ const styles = StyleSheet.create({
     includeFontPadding: false,
     fontFamily: "NotoSansKR_400Regular",
     color: colors.skyDark,
+  },
+  compareInsufficientText: {
+    fontSize: 11,
+    lineHeight: 15,
+    includeFontPadding: false,
+    color: colors.textSoft,
+    marginTop: 6,
   },
   chartBody: {
     marginTop: 16,

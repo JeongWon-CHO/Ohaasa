@@ -20,6 +20,7 @@ export interface SignAverage {
 
 export interface HoroscopeTrendsState {
   points: RankPoint[];
+  comparePoints: RankPoint[];
   averageRank: number | null;
   minRank: number | null;
   maxRank: number | null;
@@ -78,6 +79,7 @@ function getErrorMessage(err: unknown): string {
 
 const EMPTY_STATE: Omit<HoroscopeTrendsState, 'refetch'> = {
   points: [],
+  comparePoints: [],
   averageRank: null,
   minRank: null,
   maxRank: null,
@@ -89,6 +91,7 @@ const EMPTY_STATE: Omit<HoroscopeTrendsState, 'refetch'> = {
 export function useHoroscopeTrends(
   zodiacSign: ZodiacSign | null,
   period: TrendsPeriod,
+  compareSign: ZodiacSign | null = null,
 ): HoroscopeTrendsState {
   const [state, setState] = useState<Omit<HoroscopeTrendsState, 'refetch'>>(EMPTY_STATE);
   const [reloadToken, setReloadToken] = useState(0);
@@ -116,6 +119,12 @@ export function useHoroscopeTrends(
               .map((row) => ({ date: row.date, rank: row.rank }))
           : [];
 
+        const comparePoints: RankPoint[] = compareSign
+          ? allRows
+              .filter((row) => row.zodiac_sign === compareSign)
+              .map((row) => ({ date: row.date, rank: row.rank }))
+          : [];
+
         const ranks = points.map((p) => p.rank);
         const averageRank = ranks.length ? Math.round(average(ranks) * 10) / 10 : null;
         const minRank = ranks.length ? Math.min(...ranks) : null;
@@ -137,7 +146,16 @@ export function useHoroscopeTrends(
           .sort((a, b) => a.averageRank - b.averageRank);
 
         if (isMounted) {
-          setState({ points, averageRank, minRank, maxRank, signAverages, loading: false, error: null });
+          setState({
+            points,
+            comparePoints,
+            averageRank,
+            minRank,
+            maxRank,
+            signAverages,
+            loading: false,
+            error: null,
+          });
         }
       } catch (err) {
         if (isMounted) {
@@ -151,7 +169,7 @@ export function useHoroscopeTrends(
     return () => {
       isMounted = false;
     };
-  }, [zodiacSign, period, reloadToken]);
+  }, [zodiacSign, period, compareSign, reloadToken]);
 
   return { ...state, refetch: () => setReloadToken((t) => t + 1) };
 }
