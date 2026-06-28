@@ -234,7 +234,6 @@ const styles = StyleSheet.create({
     gap: 20,
   },
   summary: {
-    paddingBottom: 16,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
     paddingHorizontal: 8,
