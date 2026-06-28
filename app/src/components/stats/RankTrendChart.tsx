@@ -11,20 +11,24 @@ interface RankTrendChartProps {
   height?: number;
 }
 
-const PADDING_Y = 14;
-const PADDING_X = 16;
+const PADDING_RIGHT = 8;
+const PADDING_LEFT = 32;
+const LABEL_X = 2;
+const PADDING_TOP = 24;
+const PADDING_BOTTOM = 20;
 const MIN_RANK = 1;
 const MAX_RANK = 12;
 const MARKER_TARGET = 6;
 const DATE_LABEL_TARGET = 6;
+const DATE_LABEL_WIDTH = 40;
 
 function yScale(rank: number, height: number): number {
-  return PADDING_Y + ((rank - MIN_RANK) / (MAX_RANK - MIN_RANK)) * (height - 2 * PADDING_Y);
+  return PADDING_TOP + ((rank - MIN_RANK) / (MAX_RANK - MIN_RANK)) * (height - PADDING_TOP - PADDING_BOTTOM);
 }
 
 function xScale(index: number, count: number, width: number): number {
   const span = count > 1 ? count - 1 : 1;
-  return PADDING_X + (index / span) * (width - 2 * PADDING_X);
+  return PADDING_LEFT + (index / span) * (width - PADDING_LEFT - PADDING_RIGHT);
 }
 
 function formatDateLabel(dateStr: string): string {
@@ -75,7 +79,7 @@ export function RankTrendChart({ points, width, height = 160 }: RankTrendChartPr
   const lastIndex = coords.length - 1;
   const baselineY = yScale(OVERALL_AVERAGE_RANK, height);
   const markerIndices = sampleMarkerIndices(coords.length, MARKER_TARGET);
-  const dateLabelStep = Math.max(1, Math.ceil(points.length / DATE_LABEL_TARGET));
+  const dateLabelIndices = sampleMarkerIndices(coords.length, DATE_LABEL_TARGET);
 
   return (
     <View>
@@ -89,32 +93,19 @@ export function RankTrendChart({ points, width, height = 160 }: RankTrendChartPr
         </Defs>
 
         <Line
-          x1={PADDING_X}
+          x1={PADDING_LEFT}
           y1={baselineY}
-          x2={width - PADDING_X}
+          x2={width - PADDING_RIGHT}
           y2={baselineY}
           stroke={colors.chartBaseline}
           strokeWidth={1}
           strokeDasharray="2,5"
         />
-        <SvgText x={width - PADDING_X} y={baselineY - 4} fontSize={9} fill={colors.textSoft} textAnchor="end">
-          전체 평균 {OVERALL_AVERAGE_RANK}위
-        </SvgText>
-
-        <SvgText x={PADDING_X} y={PADDING_Y - 4} fontSize={9} fill={colors.textSoft} textAnchor="start">
-          1위 · 좋아요
-        </SvgText>
-        <SvgText x={PADDING_X} y={yScale(6, height) + 3} fontSize={9} fill={colors.textSoft} textAnchor="start">
-          6위
-        </SvgText>
-        <SvgText x={PADDING_X} y={height - 2} fontSize={9} fill={colors.textSoft} textAnchor="start">
-          12위
-        </SvgText>
 
         {coords.length >= 2 && (
           <>
             <Path
-              d={`${buildSmoothPath(coords)} L ${coords[lastIndex].x} ${height - PADDING_Y} L ${coords[0].x} ${height - PADDING_Y} Z`}
+              d={`${buildSmoothPath(coords)} L ${coords[lastIndex].x} ${height - PADDING_BOTTOM} L ${coords[0].x} ${height - PADDING_BOTTOM} Z`}
               fill="url(#areaFill)"
             />
             <Path
@@ -127,6 +118,20 @@ export function RankTrendChart({ points, width, height = 160 }: RankTrendChartPr
             />
           </>
         )}
+
+        <SvgText x={width - PADDING_RIGHT} y={baselineY - 4} fontSize={9} fill={colors.textSoft} textAnchor="end">
+          전체 평균 {OVERALL_AVERAGE_RANK}위
+        </SvgText>
+
+        <SvgText x={LABEL_X} y={10} fontSize={9} fill={colors.textSoft} textAnchor="start">
+          1위
+        </SvgText>
+        <SvgText x={LABEL_X} y={yScale(6, height) + 3} fontSize={9} fill={colors.textSoft} textAnchor="start">
+          6위
+        </SvgText>
+        <SvgText x={LABEL_X} y={height - 4} fontSize={9} fill={colors.textSoft} textAnchor="start">
+          12위
+        </SvgText>
 
         {markerIndices.map((i) => {
           const c = coords[i];
@@ -143,12 +148,13 @@ export function RankTrendChart({ points, width, height = 160 }: RankTrendChartPr
           오늘
         </SvgText>
       </Svg>
-      <View style={[styles.dateLabelRow, { paddingHorizontal: PADDING_X }]}>
-        {points.map((p, i) => {
-          const showLabel = i % dateLabelStep === 0 || i === lastIndex;
+      <View style={[styles.dateLabelRow, { width }]}>
+        {dateLabelIndices.map((i) => {
+          const left = coords[i].x - DATE_LABEL_WIDTH / 2;
+
           return (
-            <Text key={p.date} style={styles.dateLabel}>
-              {showLabel ? formatDateLabel(p.date) : ''}
+            <Text key={points[i].date} style={[styles.dateLabel, { left }]}>
+              {formatDateLabel(points[i].date)}
             </Text>
           );
         })}
@@ -159,11 +165,12 @@ export function RankTrendChart({ points, width, height = 160 }: RankTrendChartPr
 
 const styles = StyleSheet.create({
   dateLabelRow: {
-    flexDirection: 'row',
+    height: 14,
     marginTop: 4,
   },
   dateLabel: {
-    flex: 1,
+    position: 'absolute',
+    width: DATE_LABEL_WIDTH,
     fontSize: 10,
     lineHeight: 14,
     fontFamily: 'NotoSansKR_400Regular',
