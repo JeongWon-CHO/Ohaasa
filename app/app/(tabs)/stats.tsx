@@ -14,9 +14,9 @@ import { LinearGradient } from "expo-linear-gradient";
 
 import { AverageRankRow } from "@/src/components/final/AverageRankRow";
 import { ConstellationBadge } from "@/src/components/final/ConstellationBadge";
+import { FinalHeader } from "@/src/components/final/FinalHeader";
 import { PeriodSelector } from "@/src/components/stats/PeriodSelector";
 import { RankTrendChart } from "@/src/components/stats/RankTrendChart";
-import { StatisticsHeader } from "@/src/components/stats/StatisticsHeader";
 import { colors, gradients } from "@/src/constants/design";
 import { ZODIAC_MAP } from "@/src/constants/zodiac";
 import { getSummaryComment, useHoroscopeTrends, type TrendsPeriod } from "@/src/hooks/useHoroscopeTrends";
@@ -41,7 +41,9 @@ export default function StatsScreen() {
 
   return (
     <LinearGradient colors={gradients.screen} style={styles.fill}>
-      <StatisticsHeader />
+      <View style={styles.headerSpacer}>
+        <FinalHeader subtitle="운세 흐름" />
+      </View>
 
       {loading ? (
         <View style={styles.loadingBox}>
@@ -173,6 +175,9 @@ const styles = StyleSheet.create({
   fill: {
     flex: 1,
   },
+  headerSpacer: {
+    paddingBottom: 18,
+  },
   loadingBox: {
     flex: 1,
     alignItems: "center",
@@ -226,7 +231,6 @@ const styles = StyleSheet.create({
   },
   list: {
     paddingHorizontal: 24,
-    paddingTop: 16,
     gap: 20,
   },
   summary: {
