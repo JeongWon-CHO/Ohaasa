@@ -1,10 +1,11 @@
-import { format, parseISO, subDays } from 'date-fns';
+import { format, subDays } from 'date-fns';
 import { useEffect, useState } from 'react';
 
 import { supabase } from '@/src/lib/supabase';
 import type { ZodiacSign } from '@/src/constants/zodiac';
 
 export type TrendsPeriod = '7d' | '30d';
+export type Trend = 'up' | 'down' | 'flat';
 
 export interface RankPoint {
   date: string;
@@ -14,6 +15,7 @@ export interface RankPoint {
 export interface SignAverage {
   sign: ZodiacSign;
   averageRank: number;
+  trend: Trend;
 }
 
 export interface HoroscopeTrendsState {
@@ -24,25 +26,37 @@ export interface HoroscopeTrendsState {
   signAverages: SignAverage[];
   loading: boolean;
   error: string | null;
+  refetch: () => void;
 }
 
-const TREND_SENTENCE_THRESHOLD = 1;
+// 하루 12개 별자리가 1~12위를 한 번씩 나눠 가지므로 전체 평균은 항상 6.5(수학적 고정값)
+export const OVERALL_AVERAGE_RANK = 6.5;
+
+const TREND_THRESHOLD = 1;
 
 function average(values: number[]): number {
   return values.reduce((sum, v) => sum + v, 0) / values.length;
 }
 
-export function getTrendSentence(points: RankPoint[]): string {
-  if (points.length < 2) return '아직 데이터가 부족해요';
+function computeTrend(ranks: number[]): Trend {
+  if (ranks.length < 2) return 'flat';
 
-  const mid = Math.floor(points.length / 2);
-  const firstHalfAvg = average(points.slice(0, mid).map((p) => p.rank));
-  const secondHalfAvg = average(points.slice(mid).map((p) => p.rank));
+  const mid = Math.floor(ranks.length / 2);
+  const firstHalfAvg = average(ranks.slice(0, mid));
+  const secondHalfAvg = average(ranks.slice(mid));
   const diff = firstHalfAvg - secondHalfAvg; // 양수면 후반에 순위 숫자가 작아짐(개선)
 
-  if (diff > TREND_SENTENCE_THRESHOLD) return '이번 주는 갈수록 좋은 흐름이에요';
-  if (diff < -TREND_SENTENCE_THRESHOLD) return '이번 주는 후반에 다소 주춤했어요';
-  return '이번 주는 전체적으로 평이한 흐름이에요';
+  if (diff > TREND_THRESHOLD) return 'up';
+  if (diff < -TREND_THRESHOLD) return 'down';
+  return 'flat';
+}
+
+export function getSummaryComment(averageRank: number | null): string {
+  if (averageRank === null) return '아직 데이터가 부족해요';
+  if (averageRank <= 3.5) return '요즘 흐름이 정말 좋아요 ✦';
+  if (averageRank <= 6) return '점점 좋아지고 있어요';
+  if (averageRank <= 9) return '조금씩 올라오는 중이에요';
+  return '곧 더 좋은 날이 찾아올 거예요';
 }
 
 function getCutoffDate(period: TrendsPeriod): string {
@@ -54,7 +68,7 @@ function getErrorMessage(err: unknown): string {
   return err instanceof Error ? err.message : '운세 추이를 불러오지 못했습니다.';
 }
 
-const EMPTY_STATE: HoroscopeTrendsState = {
+const EMPTY_STATE: Omit<HoroscopeTrendsState, 'refetch'> = {
   points: [],
   averageRank: null,
   minRank: null,
@@ -68,7 +82,8 @@ export function useHoroscopeTrends(
   zodiacSign: ZodiacSign | null,
   period: TrendsPeriod,
 ): HoroscopeTrendsState {
-  const [state, setState] = useState<HoroscopeTrendsState>(EMPTY_STATE);
+  const [state, setState] = useState<Omit<HoroscopeTrendsState, 'refetch'>>(EMPTY_STATE);
+  const [reloadToken, setReloadToken] = useState(0);
 
   useEffect(() => {
     let isMounted = true;
@@ -77,14 +92,11 @@ export function useHoroscopeTrends(
 
     async function load() {
       try {
-        let query = supabase
+        const { data: rows, error } = await supabase
           .from('horoscopes')
           .select('date, zodiac_sign, rank')
+          .gte('date', getCutoffDate(period))
           .order('date', { ascending: true });
-
-        query = query.gte('date', getCutoffDate(period));
-
-        const { data: rows, error } = await query;
 
         if (error) throw error;
 
@@ -112,6 +124,7 @@ export function useHoroscopeTrends(
           .map(([sign, signRanks]) => ({
             sign,
             averageRank: Math.round(average(signRanks) * 10) / 10,
+            trend: computeTrend(signRanks),
           }))
           .sort((a, b) => a.averageRank - b.averageRank);
 
@@ -130,12 +143,7 @@ export function useHoroscopeTrends(
     return () => {
       isMounted = false;
     };
-  }, [zodiacSign, period]);
+  }, [zodiacSign, period, reloadToken]);
 
-  return state;
-}
-
-export function formatDateLabel(dateStr: string): string {
-  const d = parseISO(dateStr);
-  return format(d, 'M/d');
+  return { ...state, refetch: () => setReloadToken((t) => t + 1) };
 }

@@ -1,8 +1,7 @@
-import { StyleSheet, Text, View } from 'react-native';
-import Svg, { Circle, Line, Polyline, Text as SvgText } from 'react-native-svg';
+import Svg, { Circle, Defs, LinearGradient, Line, Path, Stop, Text as SvgText } from 'react-native-svg';
 
 import { colors } from '@/src/constants/design';
-import { formatDateLabel, type RankPoint } from '@/src/hooks/useHoroscopeTrends';
+import { OVERALL_AVERAGE_RANK, type RankPoint } from '@/src/hooks/useHoroscopeTrends';
 
 interface RankTrendChartProps {
   points: RankPoint[];
@@ -11,11 +10,10 @@ interface RankTrendChartProps {
 }
 
 const PADDING_Y = 14;
-const PADDING_LEFT = 26;
-const PADDING_RIGHT = 10;
+const PADDING_X = 16;
 const MIN_RANK = 1;
 const MAX_RANK = 12;
-const MAX_DATE_LABELS = 6;
+const MARKER_TARGET = 6;
 
 function yScale(rank: number, height: number): number {
   return PADDING_Y + ((rank - MIN_RANK) / (MAX_RANK - MIN_RANK)) * (height - 2 * PADDING_Y);
@@ -23,7 +21,40 @@ function yScale(rank: number, height: number): number {
 
 function xScale(index: number, count: number, width: number): number {
   const span = count > 1 ? count - 1 : 1;
-  return PADDING_LEFT + (index / span) * (width - PADDING_LEFT - PADDING_RIGHT);
+  return PADDING_X + (index / span) * (width - 2 * PADDING_X);
+}
+
+function buildSmoothPath(coords: { x: number; y: number }[]): string {
+  if (coords.length < 2) return '';
+  if (coords.length === 2) {
+    return `M ${coords[0].x} ${coords[0].y} L ${coords[1].x} ${coords[1].y}`;
+  }
+
+  let d = `M ${coords[0].x} ${coords[0].y}`;
+  for (let i = 0; i < coords.length - 1; i++) {
+    const p0 = coords[i - 1] ?? coords[i];
+    const p1 = coords[i];
+    const p2 = coords[i + 1];
+    const p3 = coords[i + 2] ?? p2;
+    const cp1x = p1.x + (p2.x - p0.x) / 6;
+    const cp1y = p1.y + (p2.y - p0.y) / 6;
+    const cp2x = p2.x - (p3.x - p1.x) / 6;
+    const cp2y = p2.y - (p3.y - p1.y) / 6;
+    d += ` C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${p2.x} ${p2.y}`;
+  }
+  return d;
+}
+
+function sampleMarkerIndices(count: number, target: number): number[] {
+  if (count <= target + 1) return Array.from({ length: count }, (_, i) => i);
+
+  const step = (count - 1) / (target - 1);
+  const indices = new Set<number>();
+  for (let i = 0; i < target; i++) {
+    indices.add(Math.round(i * step));
+  }
+  indices.add(count - 1);
+  return Array.from(indices).sort((a, b) => a - b);
 }
 
 export function RankTrendChart({ points, width, height = 160 }: RankTrendChartProps) {
@@ -34,84 +65,71 @@ export function RankTrendChart({ points, width, height = 160 }: RankTrendChartPr
     y: yScale(p.rank, height),
   }));
 
-  const labelStep = Math.max(1, Math.ceil(points.length / MAX_DATE_LABELS));
+  const lastIndex = coords.length - 1;
+  const baselineY = yScale(OVERALL_AVERAGE_RANK, height);
+  const markerIndices = sampleMarkerIndices(coords.length, MARKER_TARGET);
 
   return (
-    <View>
-      <Svg width={width} height={height}>
-        <Line
-          x1={PADDING_LEFT}
-          y1={yScale(MIN_RANK, height)}
-          x2={width - PADDING_RIGHT}
-          y2={yScale(MIN_RANK, height)}
-          stroke={colors.border}
-          strokeWidth={1}
-        />
-        <Line
-          x1={PADDING_LEFT}
-          y1={yScale(MAX_RANK, height)}
-          x2={width - PADDING_RIGHT}
-          y2={yScale(MAX_RANK, height)}
-          stroke={colors.border}
-          strokeWidth={1}
-        />
-        <SvgText
-          x={PADDING_LEFT - 6}
-          y={yScale(MIN_RANK, height) + 3}
-          fontSize={9}
-          fill={colors.textSoft}
-          textAnchor="end"
-        >
-          1위
-        </SvgText>
-        <SvgText
-          x={PADDING_LEFT - 6}
-          y={yScale(MAX_RANK, height) + 3}
-          fontSize={9}
-          fill={colors.textSoft}
-          textAnchor="end"
-        >
-          12위
-        </SvgText>
-        {coords.length > 1 && (
-          <Polyline
-            points={coords.map((c) => `${c.x},${c.y}`).join(' ')}
+    <Svg width={width} height={height}>
+      <Defs>
+        <LinearGradient id="areaFill" x1="0" y1="0" x2="0" y2="1">
+          <Stop offset="0" stopColor={colors.apricot} stopOpacity={0.42} />
+          <Stop offset="0.55" stopColor={colors.yellow} stopOpacity={0.18} />
+          <Stop offset="1" stopColor={colors.yellow} stopOpacity={0} />
+        </LinearGradient>
+      </Defs>
+
+      <Line
+        x1={PADDING_X}
+        y1={baselineY}
+        x2={width - PADDING_X}
+        y2={baselineY}
+        stroke={colors.chartBaseline}
+        strokeWidth={1}
+        strokeDasharray="2,5"
+      />
+      <SvgText x={width - PADDING_X} y={baselineY - 4} fontSize={9} fill={colors.textSoft} textAnchor="end">
+        전체 평균
+      </SvgText>
+
+      <SvgText x={PADDING_X} y={PADDING_Y - 4} fontSize={9} fill={colors.textSoft} textAnchor="start">
+        1위 · 좋아요
+      </SvgText>
+      <SvgText x={PADDING_X} y={height - 2} fontSize={9} fill={colors.textSoft} textAnchor="start">
+        12위
+      </SvgText>
+
+      {coords.length >= 2 && (
+        <>
+          <Path
+            d={`${buildSmoothPath(coords)} L ${coords[lastIndex].x} ${height - PADDING_Y} L ${coords[0].x} ${height - PADDING_Y} Z`}
+            fill="url(#areaFill)"
+          />
+          <Path
+            d={buildSmoothPath(coords)}
             fill="none"
             stroke={colors.apricotDark}
-            strokeWidth={2}
-            strokeLinejoin="round"
+            strokeWidth={2.6}
             strokeLinecap="round"
+            strokeLinejoin="round"
           />
-        )}
-        {coords.map((c, i) => (
-          <Circle key={points[i].date} cx={c.x} cy={c.y} r={4} fill={colors.apricotDark} />
-        ))}
-      </Svg>
-      <View style={[styles.labelRow, { paddingLeft: PADDING_LEFT, paddingRight: PADDING_RIGHT }]}>
-        {points.map((p, i) => {
-          const showLabel = i % labelStep === 0 || i === points.length - 1;
+        </>
+      )}
+
+      {markerIndices.map((i) => {
+        const c = coords[i];
+        const isToday = i === lastIndex;
+        if (isToday) {
           return (
-            <Text key={p.date} style={styles.label}>
-              {showLabel ? formatDateLabel(p.date) : ''}
-            </Text>
+            <Circle key={points[i].date} cx={c.x} cy={c.y} r={7} fill={colors.apricotDark} opacity={0.16} />
           );
-        })}
-      </View>
-    </View>
+        }
+        return <Circle key={points[i].date} cx={c.x} cy={c.y} r={3} fill="#FFFFFF" stroke={colors.apricotDark} strokeWidth={1.8} />;
+      })}
+      <Circle cx={coords[lastIndex].x} cy={coords[lastIndex].y} r={4} fill={colors.apricotDark} />
+      <SvgText x={coords[lastIndex].x} y={coords[lastIndex].y - 14} fontSize={10} fill={colors.apricotDark} textAnchor="middle">
+        오늘
+      </SvgText>
+    </Svg>
   );
 }
-
-const styles = StyleSheet.create({
-  labelRow: {
-    flexDirection: 'row',
-    marginTop: 4,
-  },
-  label: {
-    flex: 1,
-    fontSize: 10,
-    lineHeight: 14,
-    fontFamily: 'NotoSansKR_400Regular',
-    color: colors.textSoft,
-    textAlign: 'center',
-  },
-});

@@ -4,12 +4,26 @@ import { ConstellationBadge } from '@/src/components/final/ConstellationBadge';
 import { colors, zodiacColors } from '@/src/constants/design';
 import { ZODIAC_MAP } from '@/src/constants/zodiac';
 import type { ZodiacSign } from '@/src/constants/zodiac';
+import type { Trend } from '@/src/hooks/useHoroscopeTrends';
 
 interface AverageRankRowProps {
   sign: ZodiacSign;
   averageRank: number;
   rank: number;
+  trend: Trend;
   isMine: boolean;
+}
+
+const TREND_SYMBOL: Record<Trend, string> = {
+  up: '▲',
+  down: '▼',
+  flat: '–',
+};
+
+function getTrendColor(trend: Trend): string {
+  if (trend === 'up') return colors.trendUp;
+  if (trend === 'down') return colors.trendDown;
+  return colors.textSoft;
 }
 
 // 1위 금, 2위 은, 3위 동 — RankingRow와 동일 규칙
@@ -23,12 +37,12 @@ function getRankColor(rank: number): string {
   return RANK_COLORS[rank] ?? colors.textSoft;
 }
 
-export function AverageRankRow({ sign, averageRank, rank, isMine }: AverageRankRowProps) {
+export function AverageRankRow({ sign, averageRank, rank, trend, isMine }: AverageRankRowProps) {
   const zodiac = ZODIAC_MAP[sign];
   const signColor = zodiacColors[sign];
 
   return (
-    <View style={[styles.row, isMine && { borderColor: signColor, backgroundColor: `${signColor}33` }]}>
+    <View style={[styles.row, isMine && { backgroundColor: signColor }]}>
       <View style={styles.rankWrap}>
         <Text style={[styles.rankNumber, { color: getRankColor(rank) }]}>{rank}</Text>
       </View>
@@ -46,6 +60,7 @@ export function AverageRankRow({ sign, averageRank, rank, isMine }: AverageRankR
         )}
       </View>
 
+      <Text style={[styles.trendSymbol, { color: getTrendColor(trend) }]}>{TREND_SYMBOL[trend]}</Text>
       <Text style={styles.average}>{averageRank.toFixed(1)}위</Text>
     </View>
   );
@@ -57,9 +72,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 10,
     borderRadius: 14,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: 'rgba(255,253,249,0.6)',
     paddingVertical: 9,
     paddingHorizontal: 14,
   },
@@ -111,6 +123,11 @@ const styles = StyleSheet.create({
     includeFontPadding: false,
     letterSpacing: 0.54,
   },
+  trendSymbol: {
+    fontSize: 11,
+    lineHeight: 18,
+    flexShrink: 0,
+  },
   average: {
     fontSize: 12.5,
     lineHeight: 18,
@@ -118,5 +135,7 @@ const styles = StyleSheet.create({
     includeFontPadding: false,
     color: colors.textMid,
     flexShrink: 0,
+    minWidth: 32,
+    textAlign: 'right',
   },
 });

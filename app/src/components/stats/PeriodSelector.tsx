@@ -1,6 +1,6 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { colors } from '@/src/constants/design';
+import { colors, shadows } from '@/src/constants/design';
 import type { TrendsPeriod } from '@/src/hooks/useHoroscopeTrends';
 
 interface PeriodSelectorProps {
@@ -15,14 +15,14 @@ const OPTIONS: { value: TrendsPeriod; label: string }[] = [
 
 export function PeriodSelector({ value, onChange }: PeriodSelectorProps) {
   return (
-    <View style={styles.row}>
+    <View style={styles.track}>
       {OPTIONS.map((option) => {
         const active = option.value === value;
         return (
           <Pressable
             key={option.value}
             onPress={() => onChange(option.value)}
-            style={[styles.pill, active && styles.pillActive]}
+            style={[styles.segment, active && styles.segmentActive]}
           >
             <Text style={[styles.label, active && styles.labelActive]}>{option.label}</Text>
           </Pressable>
@@ -33,26 +33,30 @@ export function PeriodSelector({ value, onChange }: PeriodSelectorProps) {
 }
 
 const styles = StyleSheet.create({
-  row: {
+  track: {
     flexDirection: 'row',
-    gap: 8,
+    borderRadius: 14,
+    backgroundColor: colors.segmentTrack,
+    padding: 4,
   },
-  pill: {
-    borderRadius: 20,
-    paddingVertical: 6,
-    paddingHorizontal: 14,
-    backgroundColor: 'rgba(184,216,232,0.45)',
+  segment: {
+    flex: 1,
+    alignItems: 'center',
+    paddingVertical: 8,
+    borderRadius: 12,
   },
-  pillActive: {
-    backgroundColor: colors.apricotDark,
+  segmentActive: {
+    backgroundColor: colors.cardSolid,
+    ...shadows.card,
   },
   label: {
-    fontSize: 12,
-    lineHeight: 16,
+    fontSize: 13,
+    lineHeight: 18,
     fontFamily: 'NotoSansKR_500Medium',
-    color: colors.skyDark,
+    color: colors.textMid,
   },
   labelActive: {
-    color: '#FFFFFF',
+    fontFamily: 'NotoSansKR_700Bold',
+    color: colors.apricotDark,
   },
 });
