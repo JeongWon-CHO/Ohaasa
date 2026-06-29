@@ -138,18 +138,22 @@ export default function StatsScreen() {
               {canShare && (
                 <View style={styles.chartActions}>
                   <Pressable onPress={saveImage} disabled={saving || sharing} hitSlop={8}>
-                    {saving ? (
-                      <ActivityIndicator size="small" color={colors.apricotDark} />
-                    ) : (
-                      <Feather name="download" size={16} color={colors.apricotDark} />
-                    )}
+                    <View style={styles.chartActionIcon}>
+                      {saving ? (
+                        <ActivityIndicator size="small" color={colors.apricotDark} />
+                      ) : (
+                        <Feather name="download" size={16} color={colors.apricotDark} />
+                      )}
+                    </View>
                   </Pressable>
                   <Pressable onPress={share} disabled={saving || sharing} hitSlop={8}>
-                    {sharing ? (
-                      <ActivityIndicator size="small" color={colors.apricotDark} />
-                    ) : (
-                      <Feather name="share-2" size={16} color={colors.apricotDark} />
-                    )}
+                    <View style={styles.chartActionIcon}>
+                      {sharing ? (
+                        <ActivityIndicator size="small" color={colors.apricotDark} />
+                      ) : (
+                        <Feather name="share-2" size={16} color={colors.apricotDark} />
+                      )}
+                    </View>
                   </Pressable>
                 </View>
               )}
@@ -446,6 +450,12 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 16,
+  },
+  chartActionIcon: {
+    width: 16,
+    height: 16,
+    alignItems: "center",
+    justifyContent: "center",
   },
   chartTitle: {
     fontSize: 14,
