@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import {
   ActivityIndicator,
   StyleSheet,
@@ -16,6 +17,7 @@ interface FinalHeaderProps {
   sharing?: boolean;
   onSavePress?: () => void;
   saving?: boolean;
+  rightSlot?: ReactNode;
 }
 
 export function FinalHeader({
@@ -24,6 +26,7 @@ export function FinalHeader({
   sharing = false,
   onSavePress,
   saving = false,
+  rightSlot,
 }: FinalHeaderProps) {
   const insets = useSafeAreaInsets();
   return (
@@ -63,6 +66,7 @@ export function FinalHeader({
             </View>
           </TouchableOpacity>
         )}
+        {rightSlot}
       </View>
     </View>
   );

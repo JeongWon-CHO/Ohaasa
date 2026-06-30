@@ -36,6 +36,7 @@ export default function TabLayout() {
         getNotificationsEnabled(),
       ]);
 
+      // const upsertStart = Date.now();
       await upsertDevice({
         deviceId,
         zodiacSign: zodiac,
@@ -43,6 +44,7 @@ export default function TabLayout() {
         platform,
         notificationsEnabled,
       });
+      // console.log(`[stats] device upsert: ${Date.now() - upsertStart}ms`);
     })();
   }, []);
 
@@ -83,6 +85,15 @@ export default function TabLayout() {
           title: "전체",
           tabBarIcon: ({ color }) => (
             <TabBarIcon name="list-ol" color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="stats"
+        options={{
+          title: "통계",
+          tabBarIcon: ({ color }) => (
+            <TabBarIcon name="bar-chart" color={color} />
           ),
         }}
       />

@@ -15,6 +15,11 @@ export const colors = {
   textSoft: '#9C8B78',
   card: 'rgba(255,253,249,0.75)',
   border: 'rgba(237,227,214,0.7)',
+  trendUp: '#5BA17A',
+  trendDown: '#CC8F86',
+  cardSolid: '#FFFDF9',
+  chartBaseline: 'rgba(156,139,120,0.5)',
+  segmentTrack: 'rgba(240,184,154,0.22)',
 } as const;
 
 export const gradients = {
