@@ -4,7 +4,11 @@ import { Feather } from "@expo/vector-icons";
 import { ConstellationBadge } from "@/src/components/final/ConstellationBadge";
 import { colors } from "@/src/constants/design";
 import type { ZodiacInfo } from "@/src/constants/zodiac";
-import { getSummaryComment, periodLabel, type TrendsPeriod } from "@/src/hooks/useHoroscopeTrends";
+import {
+  getSummaryComment,
+  periodLabel,
+  type TrendsPeriod,
+} from "@/src/hooks/useHoroscopeTrends";
 
 interface SummaryCardProps {
   zodiac: ZodiacInfo | null;
@@ -38,13 +42,19 @@ export function SummaryCard({
                   <Text style={styles.mineBadgeText}>내 별자리</Text>
                 </View>
               </View>
-              <Text style={styles.summarySubtitle}>{periodLabel(period)} 운세 흐름</Text>
+              <Text style={styles.summarySubtitle}>
+                {periodLabel(period)} 운세 흐름
+              </Text>
             </View>
             <View style={styles.averageBlock}>
               <Text style={styles.averageLabel}>평균</Text>
               <View style={styles.averageValueRow}>
                 <Text style={styles.averageValue}>
-                  {averageRank === null ? "-" : detailMode ? averageRank.toFixed(1) : Math.round(averageRank)}
+                  {averageRank === null
+                    ? "-"
+                    : detailMode
+                      ? averageRank.toFixed(1)
+                      : Math.round(averageRank)}
                 </Text>
                 <Text style={styles.averageUnit}>위</Text>
               </View>
@@ -56,13 +66,17 @@ export function SummaryCard({
                 최고 {minRank}위 · 최저 {maxRank}위
               </Text>
               <Pressable onPress={onToggleDetailMode} hitSlop={6}>
-                <Text style={styles.detailLink}>{detailMode ? "간단히 보기" : "자세히 보기"}</Text>
+                <Text style={styles.detailLink}>
+                  {detailMode ? "간단히 보기" : "자세히 보기"}
+                </Text>
               </Pressable>
             </View>
           )}
           <View style={styles.commentBox}>
             <Feather name="sun" size={14} color={colors.apricotDark} />
-            <Text style={styles.commentText}>{getSummaryComment(averageRank)}</Text>
+            <Text style={styles.commentText}>
+              {getSummaryComment(averageRank)}
+            </Text>
           </View>
         </>
       ) : (
@@ -166,7 +180,7 @@ const styles = StyleSheet.create({
     lineHeight: 16,
     includeFontPadding: false,
     fontFamily: "NotoSansKR_400Regular",
-    color: colors.apricotDark,
+    color: colors.textSoft,
     textDecorationLine: "underline",
   },
   commentBox: {
