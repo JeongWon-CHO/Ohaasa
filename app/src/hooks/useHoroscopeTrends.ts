@@ -60,6 +60,10 @@ function computeRoundedRankMap(sorted: { sign: ZodiacSign; averageRank: number }
   return map;
 }
 
+export function periodLabel(period: TrendsPeriod): string {
+  return period === '7d' ? '최근 7일' : '최근 30일';
+}
+
 export function getSummaryComment(averageRank: number | null): string {
   if (averageRank === null) return '며칠만 더 모이면 흐름을 보여드릴게요';
 
