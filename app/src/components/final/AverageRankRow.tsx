@@ -1,4 +1,4 @@
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
 import { ConstellationBadge } from '@/src/components/final/ConstellationBadge';
 import { colors, zodiacColors } from '@/src/constants/design';
@@ -11,9 +11,10 @@ interface AverageRankRowProps {
   averageRank: number;
   rank: number;
   trend: Trend;
+  rankDiff: number;
   isMine: boolean;
   isComparing?: boolean;
-  onPress?: (sign: ZodiacSign) => void;
+  detailMode?: boolean;
 }
 
 const TREND_SYMBOL: Record<Trend, string> = {
@@ -44,14 +45,15 @@ export function AverageRankRow({
   averageRank,
   rank,
   trend,
+  rankDiff,
   isMine,
   isComparing = false,
-  onPress,
+  detailMode = false,
 }: AverageRankRowProps) {
   const zodiac = ZODIAC_MAP[sign];
   const signColor = zodiacColors[sign];
 
-  const content = (
+  return (
     <View
       style={[
         styles.row,
@@ -81,17 +83,14 @@ export function AverageRankRow({
         )}
       </View>
 
-      <Text style={[styles.trendSymbol, { color: getTrendColor(trend) }]}>{TREND_SYMBOL[trend]}</Text>
-      <Text style={styles.average}>{averageRank.toFixed(1)}위</Text>
+      <View style={styles.trendWrap}>
+        <Text style={[styles.trendSymbol, { color: getTrendColor(trend) }]}>{TREND_SYMBOL[trend]}</Text>
+        {trend !== 'flat' && (
+          <Text style={[styles.trendDiff, { color: getTrendColor(trend) }]}>{rankDiff}</Text>
+        )}
+      </View>
+      <Text style={styles.average}>{detailMode ? averageRank.toFixed(1) : Math.round(averageRank)}위</Text>
     </View>
-  );
-
-  if (isMine || !onPress) return content;
-
-  return (
-    <Pressable onPress={() => onPress(sign)} accessibilityRole="button">
-      {content}
-    </Pressable>
   );
 }
 
@@ -170,11 +169,22 @@ const styles = StyleSheet.create({
     includeFontPadding: false,
     letterSpacing: 0.54,
   },
+  trendWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 1,
+    flexShrink: 0,
+  },
   trendSymbol: {
     fontSize: 11,
     lineHeight: 18,
     includeFontPadding: false,
-    flexShrink: 0,
+  },
+  trendDiff: {
+    fontSize: 10.5,
+    lineHeight: 14,
+    fontFamily: 'NotoSansKR_500Medium',
+    includeFontPadding: false,
   },
   average: {
     fontSize: 12.5,

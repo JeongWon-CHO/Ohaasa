@@ -36,6 +36,7 @@ export default function TabLayout() {
         getNotificationsEnabled(),
       ]);
 
+      // const upsertStart = Date.now();
       await upsertDevice({
         deviceId,
         zodiacSign: zodiac,
@@ -43,6 +44,7 @@ export default function TabLayout() {
         platform,
         notificationsEnabled,
       });
+      // console.log(`[stats] device upsert: ${Date.now() - upsertStart}ms`);
     })();
   }, []);
 

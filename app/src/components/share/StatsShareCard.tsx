@@ -80,7 +80,7 @@ export const StatsShareCard = forwardRef<View, StatsShareCardProps>(
                 </Text>
                 <View style={styles.metricValueRow}>
                   <Text style={[styles.metricValue, styles.metricValueAccent]} allowFontScaling={false}>
-                    {averageRank.toFixed(1)}
+                    {Math.round(averageRank)}
                   </Text>
                   <Text style={styles.metricUnit} allowFontScaling={false}>
                     위
