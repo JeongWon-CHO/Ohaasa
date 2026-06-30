@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   LayoutChangeEvent,
+  Linking,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -9,35 +10,64 @@ import {
   View,
 } from "react-native";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
+import { useFocusEffect } from "@react-navigation/native";
 import { Feather } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 
 import { AverageRankRow } from "@/src/components/final/AverageRankRow";
 import { ConstellationBadge } from "@/src/components/final/ConstellationBadge";
 import { FinalHeader } from "@/src/components/final/FinalHeader";
+import { MediaDeniedSheet } from "@/src/components/MediaDeniedSheet";
+import { Toast } from "@/src/components/common/Toast";
+import { StatsShareCard } from "@/src/components/share/StatsShareCard";
+import { FloatingBadge } from "@/src/components/stats/FloatingBadge";
 import { PeriodSelector } from "@/src/components/stats/PeriodSelector";
 import { RankTrendChart } from "@/src/components/stats/RankTrendChart";
+import { StatsLoadingState } from "@/src/components/stats/StatsLoadingState";
+import { ZodiacSelectBottomSheet } from "@/src/components/stats/ZodiacSelectBottomSheet";
 import { colors, gradients } from "@/src/constants/design";
 import { ZODIAC_MAP } from "@/src/constants/zodiac";
+import type { ZodiacSign } from "@/src/constants/zodiac";
 import { getSummaryComment, useHoroscopeTrends, type TrendsPeriod } from "@/src/hooks/useHoroscopeTrends";
+import { useShareHoroscope } from "@/src/hooks/useShareHoroscope";
+import { useToast } from "@/src/hooks/useToast";
 import { useZodiac } from "@/src/hooks/useZodiac";
 
-const PERIOD_DAYS: Record<TrendsPeriod, number> = { "7d": 7, "30d": 30 };
+function periodLabel(period: TrendsPeriod): string {
+  return period === "7d" ? "최근 7일" : "최근 30일";
+}
 
 export default function StatsScreen() {
   const tabBarHeight = useBottomTabBarHeight();
   const { zodiacSign } = useZodiac();
   const [period, setPeriod] = useState<TrendsPeriod>("7d");
-  const { points, averageRank, minRank, maxRank, signAverages, loading, error, refetch } =
-    useHoroscopeTrends(zodiacSign, period);
+  const [detailMode, setDetailMode] = useState(false);
+  const [compareId, setCompareId] = useState<ZodiacSign | null>(null);
+  const [compareSheetOpen, setCompareSheetOpen] = useState(false);
+  const { points, comparePoints, averageRank, minRank, maxRank, signAverages, loading, error, refetch } =
+    useHoroscopeTrends(zodiacSign, period, compareId);
+
+  useEffect(() => {
+    setCompareId(null);
+  }, [zodiacSign]);
+
+  const scrollRef = useRef<ScrollView>(null);
+  useFocusEffect(() => {
+    scrollRef.current?.scrollTo({ y: 0, animated: false });
+  });
 
   const [chartWidth, setChartWidth] = useState(0);
   const onChartLayout = (e: LayoutChangeEvent) => {
     setChartWidth(e.nativeEvent.layout.width);
   };
 
+  const { showToast, toastProps } = useToast();
+  const { cardRef, share, sharing, saveImage, saving, mediaDeniedSheetVisible, closeMediaDeniedSheet } =
+    useShareHoroscope({ showToast });
+
   const zodiac = zodiacSign ? ZODIAC_MAP[zodiacSign] : null;
-  const periodDays = PERIOD_DAYS[period];
+  const compareSign = compareId ? ZODIAC_MAP[compareId] : null;
+  const canShare = !!zodiac && points.length >= 7 && averageRank !== null;
 
   return (
     <LinearGradient colors={gradients.screen} style={styles.fill}>
@@ -46,12 +76,15 @@ export default function StatsScreen() {
       </View>
 
       {loading ? (
-        <View style={styles.loadingBox}>
-          <ActivityIndicator color={colors.apricotDark} size="large" />
-          <Text style={styles.loadingText}>운세 흐름을 불러오는 중이에요…</Text>
-        </View>
+        <StatsLoadingState />
       ) : error ? (
         <View style={styles.emptyWrap}>
+          <View style={styles.errorIllustration}>
+            <ConstellationBadge sign={zodiacSign ?? undefined} size={64} />
+            <View style={styles.errorCloud}>
+              <Feather name="cloud" size={20} color={colors.textSoft} />
+            </View>
+          </View>
           <Text style={styles.errorTitle}>운세 흐름을 불러오지 못했어요</Text>
           <Text style={styles.errorSubtitle}>잠시 후 다시 시도해 주세요</Text>
           <Pressable style={styles.retryButton} onPress={refetch}>
@@ -60,6 +93,7 @@ export default function StatsScreen() {
         </View>
       ) : (
         <ScrollView
+          ref={scrollRef}
           contentContainerStyle={[styles.list, { paddingBottom: tabBarHeight + 16 }]}
           showsVerticalScrollIndicator={false}
           style={styles.scroll}
@@ -67,106 +101,183 @@ export default function StatsScreen() {
           {/* 기간 선택 */}
           <PeriodSelector value={period} onChange={setPeriod} />
 
-          {/* 내 별자리 요약 (오픈 레이아웃) */}
-          <View style={styles.summary}>
-            {zodiac ? (
-              <>
-                <View style={styles.summaryTopRow}>
-                  <ConstellationBadge sign={zodiacSign ?? undefined} size={44} />
-                  <View style={styles.summaryNameBlock}>
-                    <View style={styles.summaryNameRow}>
-                      <Text style={styles.zodiacName}>{zodiac.ko}</Text>
-                      <View style={styles.mineBadge}>
-                        <Text style={styles.mineBadgeText}>내 별자리</Text>
+          <View style={styles.contentBlock}>
+            {/* 내 별자리 요약 (오픈 레이아웃) */}
+            <View style={styles.summary}>
+              {zodiac ? (
+                <>
+                  <View style={styles.summaryTopRow}>
+                    <ConstellationBadge sign={zodiacSign ?? undefined} size={44} />
+                    <View style={styles.summaryNameBlock}>
+                      <View style={styles.summaryNameRow}>
+                        <Text style={styles.zodiacName}>{zodiac.ko}</Text>
+                        <View style={styles.mineBadge}>
+                          <Text style={styles.mineBadgeText}>내 별자리</Text>
+                        </View>
+                      </View>
+                      <Text style={styles.summarySubtitle}>{periodLabel(period)} 운세 흐름</Text>
+                    </View>
+                    <View style={styles.averageBlock}>
+                      <Text style={styles.averageLabel}>평균</Text>
+                      <View style={styles.averageValueRow}>
+                        <Text style={styles.averageValue}>
+                          {averageRank === null ? "-" : detailMode ? averageRank.toFixed(1) : Math.round(averageRank)}
+                        </Text>
+                        <Text style={styles.averageUnit}>위</Text>
                       </View>
                     </View>
-                    <Text style={styles.summarySubtitle}>최근 {periodDays}일 운세 흐름</Text>
                   </View>
-                  <View style={styles.averageBlock}>
-                    <Text style={styles.averageLabel}>평균</Text>
-                    <View style={styles.averageValueRow}>
-                      <Text style={styles.averageValue}>{averageRank?.toFixed(1) ?? "–"}</Text>
-                      <Text style={styles.averageUnit}>위</Text>
+                  {minRank !== null && maxRank !== null && (
+                    <View style={styles.bestWorstRow}>
+                      <Text style={styles.bestWorst}>
+                        최고 {minRank}위 · 최저 {maxRank}위
+                      </Text>
+                      <Pressable onPress={() => setDetailMode((v) => !v)} hitSlop={6}>
+                        <Text style={styles.detailLink}>{detailMode ? "간단히 보기" : "자세히 보기"}</Text>
+                      </Pressable>
                     </View>
+                  )}
+                  <View style={styles.commentBox}>
+                    <Feather name="sun" size={14} color={colors.apricotDark} />
+                    <Text style={styles.commentText}>{getSummaryComment(averageRank)}</Text>
                   </View>
-                </View>
-                {minRank !== null && maxRank !== null && (
-                  <Text style={styles.bestWorst}>
-                    최고 {minRank}위 · 최저 {maxRank}위
-                  </Text>
-                )}
-                <View style={styles.commentBox}>
-                  <Feather name="sun" size={14} color={colors.apricotDark} />
-                  <Text style={styles.commentText}>{getSummaryComment(averageRank)}</Text>
-                </View>
-              </>
-            ) : (
-              <Text style={styles.noZodiacText}>별자리를 먼저 선택해주세요.</Text>
-            )}
-          </View>
-
-          {/* 그래프 카드 */}
-          <View style={styles.chartCard}>
-            <View style={styles.chartTitleRow}>
-              <Text style={styles.chartTitle}>순위 흐름</Text>
-              <Pressable onPress={() => {}}>
-                <Feather name="upload" size={16} color={colors.apricotDark} />
-              </Pressable>
-            </View>
-
-            {zodiac && (
-              <View style={styles.compareRow}>
-                <View style={styles.compareChip}>
-                  <View style={[styles.compareSwatch, { backgroundColor: colors.apricotDark }]} />
-                  <Text style={styles.compareChipText}>{zodiac.ko}</Text>
-                </View>
-                <View style={styles.addCompareChip}>
-                  <Text style={styles.addCompareChipText}>+ 다른 별자리와 비교</Text>
-                </View>
-              </View>
-            )}
-
-            <View style={styles.chartBody} onLayout={onChartLayout}>
-              {points.length === 0 ? (
-                <View style={styles.chartPlaceholder}>
-                  <Text style={styles.placeholderText}>데이터가 아직 없어요</Text>
-                </View>
-              ) : points.length < 7 ? (
-                <View style={styles.chartPlaceholder}>
-                  <Text style={styles.placeholderTitle}>아직 흐름을 보여드리기엔 일러요</Text>
-                  <Text style={styles.placeholderText}>며칠만 더 운세를 모으면 예쁜 흐름을 보여드릴게요</Text>
-                  <View style={styles.progressTrack}>
-                    <View style={[styles.progressFill, { width: `${(points.length / 7) * 100}%` }]} />
-                  </View>
-                  <Text style={styles.progressLabel}>{points.length}일째 기록 중 · 7일부터 그래프 등장 ✦</Text>
-                </View>
+                </>
               ) : (
-                chartWidth > 0 && <RankTrendChart points={points} width={chartWidth} />
+                <Text style={styles.noZodiacText}>별자리를 먼저 선택해주세요.</Text>
               )}
             </View>
-          </View>
 
-          {/* 별자리별 평균 순위 */}
-          <View style={styles.rankingCard}>
-            <View style={styles.rankingTitleRow}>
-              <Text style={styles.sectionTitle}>별자리별 평균 순위</Text>
-              <Text style={styles.rankingPeriodLabel}>최근 {periodDays}일</Text>
+            {/* 그래프 카드 */}
+            <View style={styles.chartCard}>
+              <View style={styles.chartTitleRow}>
+                <Text style={styles.chartTitle}>순위 흐름</Text>
+                {canShare && (
+                  <View style={styles.chartActions}>
+                    <Pressable onPress={saveImage} disabled={saving || sharing} hitSlop={8}>
+                      <View style={styles.chartActionIcon}>
+                        {saving ? (
+                          <ActivityIndicator size="small" color={colors.apricotDark} />
+                        ) : (
+                          <Feather name="download" size={16} color={colors.apricotDark} />
+                        )}
+                      </View>
+                    </Pressable>
+                    <Pressable onPress={share} disabled={saving || sharing} hitSlop={8}>
+                      <View style={styles.chartActionIcon}>
+                        {sharing ? (
+                          <ActivityIndicator size="small" color={colors.apricotDark} />
+                        ) : (
+                          <Feather name="share-2" size={16} color={colors.apricotDark} />
+                        )}
+                      </View>
+                    </Pressable>
+                  </View>
+                )}
+              </View>
+
+              {zodiac && (
+                <View style={styles.compareRow}>
+                  <View style={styles.compareChip}>
+                    <View style={[styles.compareSwatch, { backgroundColor: colors.apricotDark }]} />
+                    <Text style={styles.compareChipText}>{zodiac.ko}</Text>
+                  </View>
+
+                  {compareSign ? (
+                    <>
+                      <View style={[styles.compareChip, styles.compareChipSky]}>
+                        <View style={[styles.compareSwatch, { backgroundColor: colors.skyDark }]} />
+                        <Text style={styles.compareChipText}>{compareSign.ko}</Text>
+                        <Pressable onPress={() => setCompareId(null)} hitSlop={8}>
+                          <Feather name="x" size={12} color={colors.skyDark} />
+                        </Pressable>
+                      </View>
+                      <Pressable style={styles.changeCompareChip} onPress={() => setCompareSheetOpen(true)}>
+                        <Text style={styles.changeCompareChipText}>변경</Text>
+                      </Pressable>
+                    </>
+                  ) : (
+                    <Pressable style={styles.addCompareChip} onPress={() => setCompareSheetOpen(true)}>
+                      <Text style={styles.addCompareChipText}>+ 다른 별자리와 비교</Text>
+                    </Pressable>
+                  )}
+                </View>
+              )}
+              {compareSign && comparePoints.length < 2 && (
+                <Text style={styles.compareInsufficientText}>이 별자리는 아직 데이터가 부족해요</Text>
+              )}
+
+              <View style={styles.chartBody} onLayout={onChartLayout}>
+                {points.length < 7 ? (
+                  <View style={styles.chartPlaceholder}>
+                    <FloatingBadge sign={zodiacSign ?? undefined} size={56} />
+                    <Text style={styles.placeholderTitle}>아직 흐름을 보여드리기엔 일러요</Text>
+                    <Text style={styles.placeholderText}>며칠만 더 운세를 모으면 예쁜 흐름을 보여드릴게요</Text>
+                    <View style={styles.progressTrack}>
+                      <View style={[styles.progressFill, { width: `${(points.length / 7) * 100}%` }]} />
+                    </View>
+                    <Text style={styles.progressLabel}>{points.length}일째 기록 중 · 7일부터 그래프 등장 ✦</Text>
+                  </View>
+                ) : (
+                  chartWidth > 0 && (
+                    <RankTrendChart points={points} comparePoints={comparePoints} width={chartWidth} />
+                  )
+                )}
+              </View>
             </View>
-            <View style={styles.rankingList}>
-              {signAverages.map((item, index) => (
-                <AverageRankRow
-                  key={item.sign}
-                  sign={item.sign}
-                  averageRank={item.averageRank}
-                  rank={index + 1}
-                  trend={item.trend}
-                  isMine={item.sign === zodiacSign}
-                />
-              ))}
+
+            {/* 별자리별 평균 순위 */}
+            <View style={styles.rankingCard}>
+              <View style={styles.rankingTitleRow}>
+                <Text style={styles.sectionTitle}>별자리별 평균 순위</Text>
+                <Text style={styles.rankingPeriodLabel}>{periodLabel(period)}</Text>
+              </View>
+              <Text style={styles.rankingCaption}>화살표는 전날 대비 등수 변화예요</Text>
+              <View style={styles.rankingList}>
+                {signAverages.map((item) => (
+                  <AverageRankRow
+                    key={item.sign}
+                    sign={item.sign}
+                    averageRank={item.averageRank}
+                    rank={detailMode ? item.exactRank : item.roundedRank}
+                    trend={item.trend}
+                    rankDiff={item.rankDiff}
+                    isMine={item.sign === zodiacSign}
+                    isComparing={item.sign === compareId}
+                    detailMode={detailMode}
+                  />
+                ))}
+              </View>
             </View>
           </View>
         </ScrollView>
       )}
+
+      <ZodiacSelectBottomSheet
+        visible={compareSheetOpen}
+        mySign={zodiacSign}
+        selectedId={compareId}
+        onClose={() => setCompareSheetOpen(false)}
+        onSelect={(sign) => {
+          setCompareId(sign);
+          setCompareSheetOpen(false);
+        }}
+      />
+
+      {canShare && zodiac && (
+        <View style={styles.offscreen} pointerEvents="none" collapsable={false}>
+          <StatsShareCard ref={cardRef} zodiac={zodiac} period={period} points={points} averageRank={averageRank!} />
+        </View>
+      )}
+
+      <MediaDeniedSheet
+        visible={mediaDeniedSheetVisible}
+        onClose={closeMediaDeniedSheet}
+        onOpenSettings={() => {
+          Linking.openSettings();
+          closeMediaDeniedSheet();
+        }}
+      />
+      <Toast {...toastProps} />
     </LinearGradient>
   );
 }
@@ -178,24 +289,24 @@ const styles = StyleSheet.create({
   headerSpacer: {
     paddingBottom: 18,
   },
-  loadingBox: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 12,
-  },
-  loadingText: {
-    fontSize: 13,
-    lineHeight: 18,
-    includeFontPadding: false,
-    color: colors.textSoft,
-  },
   emptyWrap: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: 24,
     gap: 6,
+  },
+  errorIllustration: {
+    marginBottom: 8,
+    opacity: 0.55,
+  },
+  errorCloud: {
+    position: "absolute",
+    right: -8,
+    bottom: -4,
+    borderRadius: 12,
+    backgroundColor: colors.cardSolid,
+    padding: 4,
   },
   errorTitle: {
     fontSize: 15,
@@ -231,7 +342,18 @@ const styles = StyleSheet.create({
   },
   list: {
     paddingHorizontal: 24,
+    gap: 12,
+  },
+  contentBlock: {
     gap: 20,
+  },
+  detailLink: {
+    fontSize: 12,
+    lineHeight: 16,
+    includeFontPadding: false,
+    fontFamily: "NotoSansKR_400Regular",
+    color: colors.apricotDark,
+    textDecorationLine: "underline",
   },
   summary: {
     borderBottomWidth: 1,
@@ -308,19 +430,24 @@ const styles = StyleSheet.create({
     color: colors.textMid,
     marginBottom: 4,
   },
+  bestWorstRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginTop: 12,
+  },
   bestWorst: {
     fontSize: 12,
     lineHeight: 18,
     includeFontPadding: false,
     fontFamily: "NotoSansKR_400Regular",
     color: colors.textSoft,
-    marginTop: 12,
   },
   commentBox: {
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
-    marginTop: 10,
+    marginTop: 16,
     borderRadius: 14,
     backgroundColor: "rgba(245,217,139,0.25)",
     paddingHorizontal: 14,
@@ -353,6 +480,17 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
+  },
+  chartActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 16,
+  },
+  chartActionIcon: {
+    width: 16,
+    height: 16,
+    alignItems: "center",
+    justifyContent: "center",
   },
   chartTitle: {
     fontSize: 14,
@@ -387,6 +525,21 @@ const styles = StyleSheet.create({
     fontFamily: "NotoSansKR_500Medium",
     color: colors.text,
   },
+  compareChipSky: {
+    backgroundColor: "rgba(123,174,199,0.16)",
+  },
+  changeCompareChip: {
+    borderRadius: 14,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  changeCompareChipText: {
+    fontSize: 11.5,
+    lineHeight: 15,
+    includeFontPadding: false,
+    fontFamily: "NotoSansKR_500Medium",
+    color: colors.textSoft,
+  },
   addCompareChip: {
     borderRadius: 14,
     backgroundColor: "rgba(184,216,232,0.35)",
@@ -399,6 +552,13 @@ const styles = StyleSheet.create({
     includeFontPadding: false,
     fontFamily: "NotoSansKR_400Regular",
     color: colors.skyDark,
+  },
+  compareInsufficientText: {
+    fontSize: 11,
+    lineHeight: 15,
+    includeFontPadding: false,
+    color: colors.textSoft,
+    marginTop: 6,
   },
   chartBody: {
     marginTop: 16,
@@ -472,7 +632,19 @@ const styles = StyleSheet.create({
     includeFontPadding: false,
     color: colors.textSoft,
   },
+  rankingCaption: {
+    fontSize: 10.5,
+    lineHeight: 14,
+    includeFontPadding: false,
+    color: colors.textSoft,
+    marginBottom: 8,
+  },
   rankingList: {
     gap: 2,
+  },
+  offscreen: {
+    position: "absolute",
+    left: -9999,
+    top: 0,
   },
 });

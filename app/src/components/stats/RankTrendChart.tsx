@@ -7,6 +7,7 @@ import { OVERALL_AVERAGE_RANK, type RankPoint } from '@/src/hooks/useHoroscopeTr
 
 interface RankTrendChartProps {
   points: RankPoint[];
+  comparePoints?: RankPoint[];
   width: number;
   height?: number;
 }
@@ -68,7 +69,7 @@ function sampleMarkerIndices(count: number, target: number): number[] {
   return Array.from(indices).sort((a, b) => a - b);
 }
 
-export function RankTrendChart({ points, width, height = 160 }: RankTrendChartProps) {
+export function RankTrendChart({ points, comparePoints = [], width, height = 160 }: RankTrendChartProps) {
   if (points.length === 0) return null;
 
   const coords = points.map((p, i) => ({
@@ -76,7 +77,14 @@ export function RankTrendChart({ points, width, height = 160 }: RankTrendChartPr
     y: yScale(p.rank, height),
   }));
 
+  const compareCoords = comparePoints.reduce<{ x: number; y: number }[]>((acc, p) => {
+    const i = points.findIndex((mp) => mp.date === p.date);
+    if (i !== -1) acc.push({ x: xScale(i, points.length, width), y: yScale(p.rank, height) });
+    return acc;
+  }, []);
+
   const lastIndex = coords.length - 1;
+  const lastPointLabel = points[lastIndex].date === format(new Date(), 'yyyy-MM-dd') ? '오늘' : '최근';
   const baselineY = yScale(OVERALL_AVERAGE_RANK, height);
   const markerIndices = sampleMarkerIndices(coords.length, MARKER_TARGET);
   const dateLabelIndices = sampleMarkerIndices(coords.length, DATE_LABEL_TARGET);
@@ -102,6 +110,23 @@ export function RankTrendChart({ points, width, height = 160 }: RankTrendChartPr
           strokeDasharray="2,5"
         />
 
+        {compareCoords.length >= 2 && (
+          <>
+            <Path
+              d={buildSmoothPath(compareCoords)}
+              fill="none"
+              stroke={colors.skyDark}
+              strokeWidth={2}
+              strokeDasharray="4,4"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+            {compareCoords.map((c, i) => (
+              <Circle key={`compare-${i}`} cx={c.x} cy={c.y} r={2.6} fill="#FFFFFF" stroke={colors.skyDark} strokeWidth={1.6} />
+            ))}
+          </>
+        )}
+
         {coords.length >= 2 && (
           <>
             <Path
@@ -118,10 +143,6 @@ export function RankTrendChart({ points, width, height = 160 }: RankTrendChartPr
             />
           </>
         )}
-
-        <SvgText x={width - PADDING_RIGHT} y={baselineY - 4} fontSize={9} fill={colors.textSoft} textAnchor="end">
-          전체 평균 {OVERALL_AVERAGE_RANK}위
-        </SvgText>
 
         <SvgText x={LABEL_X} y={10} fontSize={9} fill={colors.textSoft} textAnchor="start">
           1위
@@ -145,7 +166,11 @@ export function RankTrendChart({ points, width, height = 160 }: RankTrendChartPr
         })}
         <Circle cx={coords[lastIndex].x} cy={coords[lastIndex].y} r={4} fill={colors.apricotDark} />
         <SvgText x={coords[lastIndex].x} y={coords[lastIndex].y - 14} fontSize={10} fill={colors.apricotDark} textAnchor="middle">
-          오늘
+          {lastPointLabel}
+        </SvgText>
+
+        <SvgText x={LABEL_X + 34} y={baselineY + 14} fontSize={9} fill={colors.textSoft} textAnchor="start">
+          전체 평균 {OVERALL_AVERAGE_RANK}위
         </SvgText>
       </Svg>
       <View style={[styles.dateLabelRow, { width }]}>
