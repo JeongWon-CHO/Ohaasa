@@ -464,7 +464,7 @@ export default function SettingsScreen() {
             <Text style={styles.footerLogo}>ohaasa ✦</Text>
           </View>
           <Text style={styles.footerJa}>おはあさ</Text>
-          <Text style={styles.footerCaption}>v1.1.0</Text>
+          <Text style={styles.footerCaption}>v1.2.0</Text>
         </View>
 
         <View style={styles.spacer} />
