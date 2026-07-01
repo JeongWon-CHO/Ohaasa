@@ -12,12 +12,12 @@ import {
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import { useFocusEffect } from "@react-navigation/native";
 import { LinearGradient } from "expo-linear-gradient";
-import Svg, { Path, Polygon } from "react-native-svg";
 import { useRouter } from "expo-router";
 
 import { NotificationDeniedSheet } from "@/src/components/NotificationDeniedSheet";
 import { ConstellationBadge } from "@/src/components/final/ConstellationBadge";
 import { FinalHeader } from "@/src/components/final/FinalHeader";
+import { CircleDeco, MoonDeco, StarDeco } from "@/src/components/final/ScreenDeco";
 import { SettingsRow } from "@/src/components/final/SettingsRow";
 import { SettingsSection } from "@/src/components/final/SettingsSection";
 import { Toggle } from "@/src/components/final/Toggle";
@@ -42,66 +42,6 @@ import {
   STORAGE_KEYS,
 } from "@/src/lib/storage";
 import { upsertDevice } from "@/src/lib/supabase";
-
-// ─── Background deco helpers (same pattern as F3/F4) ─────────
-
-type DecoProps = {
-  x: number;
-  y: number;
-  size: number;
-  color: string;
-  opacity: number;
-};
-
-function CircleDeco({ x, y, size, color, opacity }: DecoProps) {
-  return (
-    <View
-      pointerEvents="none"
-      style={{
-        position: "absolute",
-        left: x,
-        top: y,
-        width: size,
-        height: size,
-        borderRadius: size / 2,
-        backgroundColor: color,
-        opacity,
-      }}
-    />
-  );
-}
-
-function StarDeco({ x, y, size, color, opacity }: DecoProps) {
-  return (
-    <View
-      pointerEvents="none"
-      style={{ position: "absolute", left: x, top: y, opacity }}
-    >
-      <Svg width={size} height={size} viewBox="0 0 10 10">
-        <Polygon
-          points="5,0 6.2,3.8 10,3.8 7,6.2 8.2,10 5,7.8 1.8,10 3,6.2 0,3.8 3.8,3.8"
-          fill={color}
-        />
-      </Svg>
-    </View>
-  );
-}
-
-function MoonDeco({ x, y, size, color, opacity }: DecoProps) {
-  return (
-    <View
-      pointerEvents="none"
-      style={{ position: "absolute", left: x, top: y, opacity }}
-    >
-      <Svg width={size} height={size} viewBox="0 0 24 24">
-        <Path
-          d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"
-          fill={color}
-        />
-      </Svg>
-    </View>
-  );
-}
 
 // ─── Screen ───────────────────────────────────────────────────
 
@@ -524,7 +464,7 @@ export default function SettingsScreen() {
             <Text style={styles.footerLogo}>ohaasa ✦</Text>
           </View>
           <Text style={styles.footerJa}>おはあさ</Text>
-          <Text style={styles.footerCaption}>v1.1.0</Text>
+          <Text style={styles.footerCaption}>v1.2.0</Text>
         </View>
 
         <View style={styles.spacer} />

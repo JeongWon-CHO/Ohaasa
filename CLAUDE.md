@@ -41,6 +41,7 @@ app/
 │       ├── _layout.tsx        # 탭 진입 시 device registration (fire-and-forget)
 │       ├── index.tsx          # 오늘의 운세 + PushPermissionSheet (최초 알림 권한 요청)
 │       ├── rankings.tsx       # 전체 순위
+│       ├── stats.tsx          # 운세 통계 (기간 선택 · 그래프 · 별자리 비교 · 순위 목록) — orchestration only
 │       └── settings.tsx       # 알림 토글 · 별자리 변경 · NotificationDeniedSheet
 └── src/
     ├── context/ZodiacContext.tsx     # 별자리 전역 상태 (ZodiacProvider · useZodiacContext)
@@ -48,12 +49,24 @@ app/
     │   ├── storage.ts                # device_id · zodiac · pushToken · platform · notificationsEnabled · hasAskedPushPermission
     │   ├── supabase.ts               # anon client + upsertDevice()
     │   └── notifications.ts          # requestPushToken() · checkPermissionStatus() · setupForegroundHandler() — dynamic import
-    ├── hooks/                        # useZodiac · useHoroscope · useShareHoroscope · useToast
+    ├── hooks/
+    │   ├── useZodiac · useHoroscope · useShareHoroscope · useToast
+    │   └── useHoroscopeTrends.ts     # 통계 데이터 훅 — periodLabel · getSummaryComment · SignAverage 타입 export
     └── components/
         ├── PushPermissionSheet.tsx   # 최초 알림 권한 요청 바텀시트
         ├── NotificationDeniedSheet.tsx  # 알림 거부 후 시스템 설정 유도
         ├── common/BottomSheet.tsx    # 공통 바텀시트 (슬라이드 애니메이션)
-        └── final/Toggle.tsx          # disabled prop 지원
+        ├── final/Toggle.tsx          # disabled prop 지원
+        └── stats/                    # 통계 화면 전용 컴포넌트
+            ├── SummaryCard.tsx       # 내 별자리 요약 (평균 · 최고·최저 · 자세히 토글)
+            ├── ChartCard.tsx         # 순위 흐름 그래프 + 별자리 비교 + 공유 버튼
+            ├── RankingCard.tsx       # 별자리별 평균 순위 리스트
+            ├── ErrorState.tsx        # 에러 일러스트 + 재시도
+            ├── PeriodSelector.tsx    # 7일/30일 세그먼트 컨트롤
+            ├── RankTrendChart.tsx    # SVG 라인 차트
+            ├── StatsLoadingState.tsx # 로딩 스켈레톤
+            ├── FloatingBadge.tsx     # 별자리 아이콘 (placeholder용)
+            └── ZodiacSelectBottomSheet.tsx  # 비교 별자리 선택
 backend/src/
 ├── crawler/   fetcher · parser (31 tests)
 ├── translator/translate.ts    # GPT 번역
@@ -109,7 +122,7 @@ CREATE POLICY "user_devices_anon_select" ON public.user_devices FOR SELECT  TO a
 
 - 개인정보처리방침 URL: `https://jeongwon-cho.github.io/Ohaasa/privacy-policy.html`
 - `google-services.json`: 커밋 대상(앱 수신용) · Firebase service account JSON은 커밋 금지
-- 현재 버전: v1.1.0
+- 현재 버전: v1.2.0
 
 ---
 
@@ -143,6 +156,19 @@ CREATE POLICY "user_devices_anon_select" ON public.user_devices FOR SELECT  TO a
   - `canAskAgain = true` → 네이티브 권한 다이얼로그
   - `canAskAgain = false` → `NotificationDeniedSheet` → `Linking.openSettings()` → 복귀 시 `pendingActivationRef`로 자동 활성화
   - 시스템 권한 철회 시 토글 강제 `false` 동기화
+
+### 통계 화면 (stats.tsx)
+
+- **구조**: `stats.tsx`는 orchestration(훅 호출 + state + 카드 조합)만 담당. 각 UI 섹션은 `src/components/stats/`의 독립 컴포넌트가 담당한다 — `SummaryCard`, `ChartCard`, `RankingCard`, `ErrorState`.
+- **데이터 훅**: `useHoroscopeTrends(zodiacSign, period, compareSign?)` — Supabase에서 기간 내 전체 별자리 rank rows를 한 번에 가져와 클라이언트에서 가공. `CUTOFF_BUFFER_DAYS = 3`으로 버퍼를 두어 크론 미실행 날 대응.
+- **등수(rank) 표시 두 가지 모드**:
+  - 기본(반올림): `roundedRank` — 반올림값이 같으면 공동 등수 부여 후 다음 번호 스킵 (예: 3.4→3위, 6.1→6위, 6.8→6위 → 1/2/2/4위)
+  - 자세히(소수점): `exactRank` — 순차 등수, `averageRank.toFixed(1)` 표시
+  - 모드 전환 토글(`detailMode`)은 **저장하지 않음** — 화면 재진입 시 항상 기본 모드로 리셋
+  - 공유 카드(`StatsShareCard`)는 토글 무관하게 항상 정수 표시
+- **화살표 트렌드 기준**: 그날의 원본 운세 순위(1~12)가 아니라 **기간 평균 기준 공동 등수(`roundedRank`)의 어제 대비 변화**. 어제 시점 윈도우 = `signRanks.slice(0, -1).slice(-targetCount)` 로 동일 길이 기간을 하루 앞당겨 재계산.
+- **`periodLabel` 위치**: `useHoroscopeTrends.ts`에서 export — `TrendsPeriod`와 묶인 순수 함수라 훅 파일에 둔다.
+- **별자리 비교**: `compareId` state로 관리. `zodiacSign` 변경 시 `useEffect`로 `compareId` 초기화.
 
 ### 이미지 저장 / SNS 공유
 
