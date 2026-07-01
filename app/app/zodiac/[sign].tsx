@@ -325,7 +325,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     paddingVertical: 4,
     paddingHorizontal: 18,
-    marginBottom: 18,
+    marginBottom: 16,
     shadowColor: colors.apricot,
     shadowOpacity: 0.5,
     shadowRadius: 7,
@@ -342,7 +342,7 @@ const styles = StyleSheet.create({
   circleOuter: {
     width: 100,
     height: 100,
-    marginVertical: 20,
+    marginVertical: 12,
   },
   circleDash: {
     position: "absolute",
@@ -366,7 +366,7 @@ const styles = StyleSheet.create({
   },
   zodiacText: {
     alignItems: "center",
-    marginTop: 16,
+    marginTop: 10,
   },
   zodiacName: {
     fontSize: 20,
