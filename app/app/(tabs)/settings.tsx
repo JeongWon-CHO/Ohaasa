@@ -15,6 +15,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 
 import { NotificationDeniedSheet } from "@/src/components/NotificationDeniedSheet";
+import { ResponsiveContainer } from "@/src/components/common/ResponsiveContainer";
 import { ConstellationBadge } from "@/src/components/final/ConstellationBadge";
 import { FinalHeader } from "@/src/components/final/FinalHeader";
 import { CircleDeco, MoonDeco, StarDeco } from "@/src/components/final/ScreenDeco";
@@ -39,6 +40,7 @@ import {
   getPlatform,
   setPushToken,
   setPlatform,
+  clearZodiacSign,
   STORAGE_KEYS,
 } from "@/src/lib/storage";
 import { upsertDevice } from "@/src/lib/supabase";
@@ -257,6 +259,7 @@ export default function SettingsScreen() {
         opacity={0.17}
       />
 
+      <ResponsiveContainer>
       {/* Header */}
       <FinalHeader subtitle="설정" />
 
@@ -439,6 +442,16 @@ export default function SettingsScreen() {
                 setNotificationsEnabledState(false);
                 Alert.alert("완료", "앱을 리로드하면 첫 설치 상태로 동작합니다.");
               }}
+              style={[styles.aboutRow, styles.rowBorder]}
+            />
+            <SettingsRow
+              title="온보딩으로 돌아가기"
+              description="별자리 초기화 → 맨처음 화면으로 이동"
+              showChevron
+              onPress={async () => {
+                await clearZodiacSign();
+                router.replace("/");
+              }}
               style={styles.aboutRow}
             />
           </SettingsSection>
@@ -469,6 +482,7 @@ export default function SettingsScreen() {
 
         <View style={styles.spacer} />
       </ScrollView>
+      </ResponsiveContainer>
 
       <NotificationDeniedSheet
         visible={deniedSheetVisible}

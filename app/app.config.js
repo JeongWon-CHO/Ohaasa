@@ -26,6 +26,9 @@ module.exports = {
     ios: {
       supportsTablet: true,
       bundleIdentifier: packageName,
+      config: {
+        usesNonExemptEncryption: false,
+      },
     },
     android: {
       adaptiveIcon: {

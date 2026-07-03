@@ -26,6 +26,11 @@ export const gradients = {
   screen: ['#FAF6F0', '#F5EBD8', '#EDD9C4', '#EAD5CE'] as const,
 } as const;
 
+export const layout = {
+  // maxContentWidth: 480,
+  maxContentWidth: 600,
+} as const;
+
 export const spacing = {
   xs: 4,
   sm: 8,

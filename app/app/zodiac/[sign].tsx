@@ -25,6 +25,7 @@ import { CircleDeco, MoonDeco, StarDeco } from "@/src/components/final/ScreenDec
 import { DatePill } from "@/src/components/final/DatePill";
 import { GogoInfoGrid } from "@/src/components/final/GogoInfoGrid";
 import { HoroscopeCard } from "@/src/components/HoroscopeCard";
+import { ResponsiveContainer } from "@/src/components/common/ResponsiveContainer";
 import { useHoroscopeDateContext } from "@/src/context/HoroscopeDateContext";
 import { colors, gradients } from "@/src/constants/design";
 import { ZODIAC_MAP, type ZodiacSign } from "@/src/constants/zodiac";
@@ -95,6 +96,7 @@ export default function ZodiacDetailScreen() {
         opacity={0.18}
       />
 
+      <ResponsiveContainer>
       {/* 헤더 */}
       <View style={[styles.backRow, { paddingTop: insets.top + 14 }]}>
         <TouchableOpacity
@@ -240,6 +242,7 @@ export default function ZodiacDetailScreen() {
 
         <View style={styles.spacer} />
       </ScrollView>
+      </ResponsiveContainer>
 
       {/* 오프스크린 캡처용 ShareCard */}
       {horoscope && zodiac && (
