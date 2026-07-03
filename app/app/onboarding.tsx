@@ -590,7 +590,8 @@ const styles = StyleSheet.create({
     marginBottom: 52,
   },
   introButton: {
-    alignSelf: "stretch",
+    width: "100%",
+    maxWidth: 400,
     backgroundColor: colors.text,
     borderRadius: 28,
     paddingVertical: 18,

@@ -39,6 +39,7 @@ import {
   getPlatform,
   setPushToken,
   setPlatform,
+  clearZodiacSign,
   STORAGE_KEYS,
 } from "@/src/lib/storage";
 import { upsertDevice } from "@/src/lib/supabase";
@@ -438,6 +439,16 @@ export default function SettingsScreen() {
                 setStoredPushToken(null);
                 setNotificationsEnabledState(false);
                 Alert.alert("완료", "앱을 리로드하면 첫 설치 상태로 동작합니다.");
+              }}
+              style={[styles.aboutRow, styles.rowBorder]}
+            />
+            <SettingsRow
+              title="온보딩으로 돌아가기"
+              description="별자리 초기화 → 맨처음 화면으로 이동"
+              showChevron
+              onPress={async () => {
+                await clearZodiacSign();
+                router.replace("/");
               }}
               style={styles.aboutRow}
             />

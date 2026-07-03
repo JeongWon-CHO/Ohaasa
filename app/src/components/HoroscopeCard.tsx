@@ -42,6 +42,7 @@ export function HoroscopeCard({ advice, style }: HoroscopeCardProps) {
           styles.advice,
           { fontSize: cfg.fontSize, lineHeight: cfg.lineHeight },
         ]}
+        lineBreakStrategyIOS="hangul-word"
       >
         {advice}
       </Text>
