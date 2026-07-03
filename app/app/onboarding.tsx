@@ -34,7 +34,7 @@ import {
   type ZodiacInfo,
   type ZodiacSign,
 } from "@/src/constants/zodiac";
-import { colors, gradients } from "@/src/constants/design";
+import { colors, gradients, layout } from "@/src/constants/design";
 import { useZodiac } from "@/src/hooks/useZodiac";
 import {
   getOrCreateDeviceId,
@@ -547,6 +547,9 @@ function SelectedZodiacBar({
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
+    width: "100%",
+    maxWidth: layout.maxContentWidth,
+    alignSelf: "center",
   },
   fill: {
     flex: 1,

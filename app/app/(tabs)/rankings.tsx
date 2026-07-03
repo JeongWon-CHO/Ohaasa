@@ -16,6 +16,7 @@ import { FinalHeader } from "@/src/components/final/FinalHeader";
 import { HoroscopeDateSheet } from "@/src/components/HoroscopeDateSheet";
 import { RankingRow } from "@/src/components/final/RankingRow";
 import { CircleDeco, MoonDeco, StarDeco } from "@/src/components/final/ScreenDeco";
+import { ResponsiveContainer } from "@/src/components/common/ResponsiveContainer";
 import { useHoroscopeDateContext } from "@/src/context/HoroscopeDateContext";
 import { colors, gradients } from "@/src/constants/design";
 import { useAllHoroscopes } from "@/src/hooks/useHoroscope";
@@ -91,78 +92,80 @@ export default function RankingsScreen() {
         opacity={0.18}
       />
 
-      {/* Header */}
-      <FinalHeader subtitle="12개 별자리 오하아사 순위" />
+      <ResponsiveContainer>
+        {/* Header */}
+        <FinalHeader subtitle="12개 별자리 오하아사 순위" />
 
-      {/* DatePill */}
-      <View style={styles.pillWrap}>
-        <DatePill
-          dateText={broadcastDate ?? ""}
-          onPress={() => setDateSheetVisible(true)}
-        />
-      </View>
+        {/* DatePill */}
+        <View style={styles.pillWrap}>
+          <DatePill
+            dateText={broadcastDate ?? ""}
+            onPress={() => setDateSheetVisible(true)}
+          />
+        </View>
 
-      {/* Section title */}
-      <View style={styles.titleWrap}>
-        <Text style={styles.sectionTitle}>{sectionTitle}</Text>
-      </View>
+        {/* Section title */}
+        <View style={styles.titleWrap}>
+          <Text style={styles.sectionTitle}>{sectionTitle}</Text>
+        </View>
 
-      {loading ? (
-        <View style={styles.loadingBox}>
-          <ActivityIndicator color={colors.apricotDark} size="large" />
-        </View>
-      ) : error ? (
-        <View style={styles.emptyWrap}>
-          <Text style={styles.errorText}>{error}</Text>
-        </View>
-      ) : horoscopes.length === 0 ? (
-        <View style={styles.emptyWrap}>
-          <Text style={styles.emptyText}>{noDataText}</Text>
-        </View>
-      ) : (
-        <ScrollView
-          ref={scrollRef}
-          onTouchStart={(e) => {
-            if (e.nativeEvent.touches.length > 1) {
-              multiTouchRef.current = true;
-            }
-          }}
-          onTouchEnd={(e) => {
-            const remaining = e.nativeEvent.touches.length - e.nativeEvent.changedTouches.length;
-            if (remaining <= 0) {
-              requestAnimationFrame(() => {
-                multiTouchRef.current = false;
-              });
-            }
-          }}
-          contentContainerStyle={[
-            styles.list,
-            { paddingBottom: tabBarHeight + 16 },
-          ]}
-          showsVerticalScrollIndicator={false}
-          style={styles.scroll}
-        >
-          {horoscopes.map((horoscope) => (
-            <RankingRow
-              horoscope={horoscope}
-              isMine={horoscope.zodiac_sign === zodiacSign}
-              key={horoscope.zodiac_sign}
-              onPress={() => {
-                if (navigatingRef.current || multiTouchRef.current) return;
-                navigatingRef.current = true;
-                router.push({
-                  pathname: "/zodiac/[sign]",
-                  params: {
-                    sign: horoscope.zodiac_sign,
-                    ...(selectedDate ? { date: selectedDate } : {}),
-                  },
+        {loading ? (
+          <View style={styles.loadingBox}>
+            <ActivityIndicator color={colors.apricotDark} size="large" />
+          </View>
+        ) : error ? (
+          <View style={styles.emptyWrap}>
+            <Text style={styles.errorText}>{error}</Text>
+          </View>
+        ) : horoscopes.length === 0 ? (
+          <View style={styles.emptyWrap}>
+            <Text style={styles.emptyText}>{noDataText}</Text>
+          </View>
+        ) : (
+          <ScrollView
+            ref={scrollRef}
+            onTouchStart={(e) => {
+              if (e.nativeEvent.touches.length > 1) {
+                multiTouchRef.current = true;
+              }
+            }}
+            onTouchEnd={(e) => {
+              const remaining = e.nativeEvent.touches.length - e.nativeEvent.changedTouches.length;
+              if (remaining <= 0) {
+                requestAnimationFrame(() => {
+                  multiTouchRef.current = false;
                 });
-              }}
-            />
-          ))}
-          <View style={styles.spacer} />
-        </ScrollView>
-      )}
+              }
+            }}
+            contentContainerStyle={[
+              styles.list,
+              { paddingBottom: tabBarHeight + 16 },
+            ]}
+            showsVerticalScrollIndicator={false}
+            style={styles.scroll}
+          >
+            {horoscopes.map((horoscope) => (
+              <RankingRow
+                horoscope={horoscope}
+                isMine={horoscope.zodiac_sign === zodiacSign}
+                key={horoscope.zodiac_sign}
+                onPress={() => {
+                  if (navigatingRef.current || multiTouchRef.current) return;
+                  navigatingRef.current = true;
+                  router.push({
+                    pathname: "/zodiac/[sign]",
+                    params: {
+                      sign: horoscope.zodiac_sign,
+                      ...(selectedDate ? { date: selectedDate } : {}),
+                    },
+                  });
+                }}
+              />
+            ))}
+            <View style={styles.spacer} />
+          </ScrollView>
+        )}
+      </ResponsiveContainer>
 
       <HoroscopeDateSheet
         visible={dateSheetVisible}

@@ -22,7 +22,7 @@ import { PushPermissionSheet } from "@/src/components/PushPermissionSheet";
 import { ShareCard } from "@/src/components/share/ShareCard";
 import { Toast } from "@/src/components/common/Toast";
 import { useHoroscopeDateContext } from "@/src/context/HoroscopeDateContext";
-import { colors, gradients } from "@/src/constants/design";
+import { colors, gradients, layout } from "@/src/constants/design";
 import { ZODIAC_MAP } from "@/src/constants/zodiac";
 import { useAllHoroscopes } from "@/src/hooks/useHoroscope";
 import { usePushPermissionPrompt } from "@/src/hooks/usePushPermissionPrompt";
@@ -215,6 +215,9 @@ const styles = StyleSheet.create({
   },
   scroll: {
     flex: 1,
+    width: "100%",
+    maxWidth: layout.maxContentWidth,
+    alignSelf: "center",
   },
   content: {},
 

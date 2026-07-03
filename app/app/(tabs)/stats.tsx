@@ -5,6 +5,7 @@ import { useFocusEffect } from "@react-navigation/native";
 import { LinearGradient } from "expo-linear-gradient";
 
 import { FinalHeader } from "@/src/components/final/FinalHeader";
+import { ResponsiveContainer } from "@/src/components/common/ResponsiveContainer";
 import { MediaDeniedSheet } from "@/src/components/MediaDeniedSheet";
 import { Toast } from "@/src/components/common/Toast";
 import { StatsShareCard } from "@/src/components/share/StatsShareCard";
@@ -52,59 +53,61 @@ export default function StatsScreen() {
 
   return (
     <LinearGradient colors={gradients.screen} style={styles.fill}>
-      <View style={styles.headerSpacer}>
-        <FinalHeader subtitle="운세 흐름" />
-      </View>
+      <ResponsiveContainer>
+        <View style={styles.headerSpacer}>
+          <FinalHeader subtitle="운세 흐름" />
+        </View>
 
-      {loading ? (
-        <StatsLoadingState />
-      ) : error ? (
-        <ErrorState zodiacSign={zodiacSign} onRetry={refetch} />
-      ) : (
-        <ScrollView
-          ref={scrollRef}
-          contentContainerStyle={[styles.list, { paddingBottom: tabBarHeight + 16 }]}
-          showsVerticalScrollIndicator={false}
-          style={styles.scroll}
-        >
-          {/* 기간 선택 */}
-          <PeriodSelector value={period} onChange={setPeriod} />
+        {loading ? (
+          <StatsLoadingState />
+        ) : error ? (
+          <ErrorState zodiacSign={zodiacSign} onRetry={refetch} />
+        ) : (
+          <ScrollView
+            ref={scrollRef}
+            contentContainerStyle={[styles.list, { paddingBottom: tabBarHeight + 16 }]}
+            showsVerticalScrollIndicator={false}
+            style={styles.scroll}
+          >
+            {/* 기간 선택 */}
+            <PeriodSelector value={period} onChange={setPeriod} />
 
-          <View style={styles.contentBlock}>
-            <SummaryCard
-              zodiac={zodiac}
-              period={period}
-              averageRank={averageRank}
-              minRank={minRank}
-              maxRank={maxRank}
-              detailMode={detailMode}
-              onToggleDetailMode={() => setDetailMode((v) => !v)}
-            />
+            <View style={styles.contentBlock}>
+              <SummaryCard
+                zodiac={zodiac}
+                period={period}
+                averageRank={averageRank}
+                minRank={minRank}
+                maxRank={maxRank}
+                detailMode={detailMode}
+                onToggleDetailMode={() => setDetailMode((v) => !v)}
+              />
 
-            <ChartCard
-              zodiac={zodiac}
-              compareSign={compareSign}
-              points={points}
-              comparePoints={comparePoints}
-              canShare={canShare}
-              saving={saving}
-              sharing={sharing}
-              onSave={saveImage}
-              onShare={share}
-              onOpenCompareSheet={() => setCompareSheetOpen(true)}
-              onRemoveCompare={() => setCompareId(null)}
-            />
+              <ChartCard
+                zodiac={zodiac}
+                compareSign={compareSign}
+                points={points}
+                comparePoints={comparePoints}
+                canShare={canShare}
+                saving={saving}
+                sharing={sharing}
+                onSave={saveImage}
+                onShare={share}
+                onOpenCompareSheet={() => setCompareSheetOpen(true)}
+                onRemoveCompare={() => setCompareId(null)}
+              />
 
-            <RankingCard
-              period={period}
-              signAverages={signAverages}
-              detailMode={detailMode}
-              zodiacSign={zodiacSign}
-              compareId={compareId}
-            />
-          </View>
-        </ScrollView>
-      )}
+              <RankingCard
+                period={period}
+                signAverages={signAverages}
+                detailMode={detailMode}
+                zodiacSign={zodiacSign}
+                compareId={compareId}
+              />
+            </View>
+          </ScrollView>
+        )}
+      </ResponsiveContainer>
 
       <ZodiacSelectBottomSheet
         visible={compareSheetOpen}

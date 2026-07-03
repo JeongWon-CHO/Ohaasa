@@ -15,6 +15,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 
 import { NotificationDeniedSheet } from "@/src/components/NotificationDeniedSheet";
+import { ResponsiveContainer } from "@/src/components/common/ResponsiveContainer";
 import { ConstellationBadge } from "@/src/components/final/ConstellationBadge";
 import { FinalHeader } from "@/src/components/final/FinalHeader";
 import { CircleDeco, MoonDeco, StarDeco } from "@/src/components/final/ScreenDeco";
@@ -258,6 +259,7 @@ export default function SettingsScreen() {
         opacity={0.17}
       />
 
+      <ResponsiveContainer>
       {/* Header */}
       <FinalHeader subtitle="설정" />
 
@@ -480,6 +482,7 @@ export default function SettingsScreen() {
 
         <View style={styles.spacer} />
       </ScrollView>
+      </ResponsiveContainer>
 
       <NotificationDeniedSheet
         visible={deniedSheetVisible}
