@@ -111,6 +111,9 @@ export const StatsShareCard = forwardRef<View, StatsShareCardProps>(
               <Text style={styles.calloutText} allowFontScaling={false} numberOfLines={2}>
                 {comment}
               </Text>
+              <Text style={[styles.calloutEmoji, styles.calloutEmojiSpacer]} allowFontScaling={false}>
+                🌤️
+              </Text>
             </View>
 
             {/* 그래프 카드 */}
@@ -179,7 +182,7 @@ const styles = StyleSheet.create({
     fontFamily: "NotoSansKR_400Regular",
     includeFontPadding: false,
     color: colors.textSoft,
-    letterSpacing: 3.7,
+    letterSpacing: 1,
     textAlign: "center",
   },
   footerAccent: {
@@ -239,7 +242,7 @@ const styles = StyleSheet.create({
     lineHeight: 52,
     fontFamily: "NotoSansKR_700Bold",
     includeFontPadding: false,
-    color: colors.text,
+    color: colors.textMid,
   },
   metricValueAccent: {
     color: colors.apricotDark,
@@ -266,6 +269,9 @@ const styles = StyleSheet.create({
   },
   calloutEmoji: {
     fontSize: 14,
+  },
+  calloutEmojiSpacer: {
+    opacity: 0,
   },
   calloutText: {
     flex: 1,
