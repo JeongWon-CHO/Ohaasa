@@ -7,6 +7,7 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { layout } from "@/src/constants/design";
 
 interface BottomSheetProps {
   visible: boolean;
@@ -98,6 +99,9 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(44,36,22,0.45)",
   },
   sheet: {
+    width: "100%",
+    maxWidth: layout.maxContentWidth,
+    alignSelf: "center",
     backgroundColor: "#FFFDF9",
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,

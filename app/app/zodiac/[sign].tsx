@@ -15,81 +15,21 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import Svg, {
   Circle,
   Defs,
-  Path,
-  Polygon,
   RadialGradient,
   Stop,
 } from "react-native-svg";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { ConstellationBadge } from "@/src/components/final/ConstellationBadge";
+import { CircleDeco, MoonDeco, StarDeco } from "@/src/components/final/ScreenDeco";
 import { DatePill } from "@/src/components/final/DatePill";
 import { GogoInfoGrid } from "@/src/components/final/GogoInfoGrid";
 import { HoroscopeCard } from "@/src/components/HoroscopeCard";
+import { ResponsiveContainer } from "@/src/components/common/ResponsiveContainer";
 import { useHoroscopeDateContext } from "@/src/context/HoroscopeDateContext";
 import { colors, gradients } from "@/src/constants/design";
 import { ZODIAC_MAP, type ZodiacSign } from "@/src/constants/zodiac";
 import { useAllHoroscopes } from "@/src/hooks/useHoroscope";
-
-// ─── Background decoration helpers ───────────────────────────
-
-type DecoProps = {
-  x: number;
-  y: number;
-  size: number;
-  color: string;
-  opacity: number;
-};
-
-function CircleDeco({ x, y, size, color, opacity }: DecoProps) {
-  return (
-    <View
-      pointerEvents="none"
-      style={{
-        position: "absolute",
-        left: x,
-        top: y,
-        width: size,
-        height: size,
-        borderRadius: size / 2,
-        backgroundColor: color,
-        opacity,
-      }}
-    />
-  );
-}
-
-function StarDeco({ x, y, size, color, opacity }: DecoProps) {
-  return (
-    <View
-      pointerEvents="none"
-      style={{ position: "absolute", left: x, top: y, opacity }}
-    >
-      <Svg width={size} height={size} viewBox="0 0 10 10">
-        <Polygon
-          points="5,0 6.2,3.8 10,3.8 7,6.2 8.2,10 5,7.8 1.8,10 3,6.2 0,3.8 3.8,3.8"
-          fill={color}
-        />
-      </Svg>
-    </View>
-  );
-}
-
-function MoonDeco({ x, y, size, color, opacity }: DecoProps) {
-  return (
-    <View
-      pointerEvents="none"
-      style={{ position: "absolute", left: x, top: y, opacity }}
-    >
-      <Svg width={size} height={size} viewBox="0 0 24 24">
-        <Path
-          d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"
-          fill={color}
-        />
-      </Svg>
-    </View>
-  );
-}
 
 // ─── Screen ───────────────────────────────────────────────────
 
@@ -156,6 +96,7 @@ export default function ZodiacDetailScreen() {
         opacity={0.18}
       />
 
+      <ResponsiveContainer>
       {/* 헤더 */}
       <View style={[styles.backRow, { paddingTop: insets.top + 14 }]}>
         <TouchableOpacity
@@ -238,8 +179,8 @@ export default function ZodiacDetailScreen() {
 
               <View style={styles.circleOuter}>
                 <Svg
-                  width={150}
-                  height={150}
+                  width={128}
+                  height={128}
                   style={{ position: "absolute", top: -16, left: -16 }}
                 >
                   <Defs>
@@ -268,15 +209,15 @@ export default function ZodiacDetailScreen() {
                     </RadialGradient>
                   </Defs>
                   <Circle
-                    cx={75}
-                    cy={75}
-                    r={75}
+                    cx={64}
+                    cy={64}
+                    r={64}
                     fill="url(#detailCircleGlow)"
                   />
                 </Svg>
                 <View style={styles.circleDash} />
                 <View style={styles.circleBadge}>
-                  <ConstellationBadge sign={zodiac.sign} size={90} />
+                  <ConstellationBadge sign={zodiac.sign} size={76} />
                 </View>
               </View>
 
@@ -301,6 +242,7 @@ export default function ZodiacDetailScreen() {
 
         <View style={styles.spacer} />
       </ScrollView>
+      </ResponsiveContainer>
 
       {/* 오프스크린 캡처용 ShareCard */}
       {horoscope && zodiac && (
@@ -386,7 +328,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     paddingVertical: 4,
     paddingHorizontal: 18,
-    marginBottom: 18,
+    marginBottom: 16,
     shadowColor: colors.apricot,
     shadowOpacity: 0.5,
     shadowRadius: 7,
@@ -401,9 +343,9 @@ const styles = StyleSheet.create({
     letterSpacing: 0.66,
   },
   circleOuter: {
-    width: 118,
-    height: 118,
-    marginVertical: 20,
+    width: 100,
+    height: 100,
+    marginVertical: 12,
   },
   circleDash: {
     position: "absolute",
@@ -411,7 +353,7 @@ const styles = StyleSheet.create({
     bottom: -8,
     left: -8,
     right: -8,
-    borderRadius: 67,
+    borderRadius: 56,
     borderWidth: 1,
     borderStyle: "dashed",
     borderColor: "rgba(217,138,104,0.32)",
@@ -427,7 +369,7 @@ const styles = StyleSheet.create({
   },
   zodiacText: {
     alignItems: "center",
-    marginTop: 16,
+    marginTop: 10,
   },
   zodiacName: {
     fontSize: 20,
