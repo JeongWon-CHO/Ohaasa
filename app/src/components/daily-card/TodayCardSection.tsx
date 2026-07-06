@@ -1,4 +1,4 @@
-import { Image, StyleSheet, Text, TouchableOpacity, View, type StyleProp, type ViewStyle } from 'react-native';
+import { Image, Pressable, StyleSheet, Text, TouchableOpacity, View, type StyleProp, type ViewStyle } from 'react-native';
 
 import { type DailyCard } from '@/src/constants/dailyCards';
 import { colors, radius, shadows, spacing, typography } from '@/src/constants/design';
@@ -7,17 +7,18 @@ interface TodayCardSectionProps {
   card: DailyCard | null;
   isOpened: boolean;
   onOpenPress: () => void;
+  onViewPress?: () => void;
   style?: StyleProp<ViewStyle>;
 }
 
-export function TodayCardSection({ card, isOpened, onOpenPress, style }: TodayCardSectionProps) {
+export function TodayCardSection({ card, isOpened, onOpenPress, onViewPress, style }: TodayCardSectionProps) {
   return (
     <View style={[styles.container, style]}>
       <Text style={styles.sectionLabel}>오늘의 카드</Text>
 
       <View style={[styles.callout, shadows.card]}>
         {isOpened && card ? (
-          <OpenedCallout card={card} />
+          <OpenedCallout card={card} onViewPress={onViewPress} />
         ) : (
           <UnopenedCallout onOpenPress={onOpenPress} />
         )}
@@ -44,15 +45,15 @@ function UnopenedCallout({ onOpenPress }: { onOpenPress: () => void }) {
   );
 }
 
-function OpenedCallout({ card }: { card: DailyCard }) {
+function OpenedCallout({ card, onViewPress }: { card: DailyCard; onViewPress?: () => void }) {
   return (
-    <>
+    <Pressable style={styles.openedRow} onPress={onViewPress}>
       <View style={styles.openedDot} />
       <Text style={styles.openedName}>{card.name}</Text>
       <Text style={styles.openedSpell} numberOfLines={1}>
         {card.spell}
       </Text>
-    </>
+    </Pressable>
   );
 }
 
@@ -106,6 +107,12 @@ const styles = StyleSheet.create({
   },
 
   // Opened
+  openedRow: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
   openedDot: {
     width: 7,
     height: 7,

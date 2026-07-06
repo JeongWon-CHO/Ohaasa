@@ -28,10 +28,11 @@ interface CardRevealOverlayProps {
   card: DailyCard;
   zodiacSign?: ZodiacSign;
   onRevealComplete: () => void;
+  alreadyOpened?: boolean;
 }
 
-const CARD_WIDTH = 220;
-const CARD_HEIGHT = 308;
+const CARD_WIDTH = 270;
+const CARD_HEIGHT = 378;
 
 const ZODIAC_IMAGE: Record<ZodiacSign, ImageSourcePropType> = {
   aries:       require('@/assets/images/zodiac/aries.png'),
@@ -48,7 +49,7 @@ const ZODIAC_IMAGE: Record<ZodiacSign, ImageSourcePropType> = {
   pisces:      require('@/assets/images/zodiac/pisces.png'),
 };
 
-export function CardRevealOverlay({ visible, card, zodiacSign, onRevealComplete }: CardRevealOverlayProps) {
+export function CardRevealOverlay({ visible, card, zodiacSign, onRevealComplete, alreadyOpened }: CardRevealOverlayProps) {
   const dimOpacity = useSharedValue(0);
   const envelopeOpacity = useSharedValue(0);
   const envelopeScale = useSharedValue(0.85);
@@ -59,17 +60,25 @@ export function CardRevealOverlay({ visible, card, zodiacSign, onRevealComplete 
 
   useEffect(() => {
     if (visible) {
-      dimOpacity.value = withTiming(1, { duration: 300 });
-      envelopeOpacity.value = withTiming(1, { duration: 300 });
-      envelopeScale.value = withTiming(1, { duration: 350, easing: Easing.out(Easing.cubic) });
+      if (alreadyOpened) {
+        dimOpacity.value = withTiming(1, { duration: 250 });
+        cardTranslateY.value = 0;
+        cardOpacity.value = withTiming(1, { duration: 300 });
+        flipProgress.value = 1;
+        hintOpacity.value = withDelay(300, withTiming(1, { duration: 200 }));
+      } else {
+        dimOpacity.value = withTiming(1, { duration: 300 });
+        envelopeOpacity.value = withTiming(1, { duration: 300 });
+        envelopeScale.value = withTiming(1, { duration: 350, easing: Easing.out(Easing.cubic) });
 
-      cardOpacity.value = withDelay(500, withTiming(1, { duration: 200 }));
-      cardTranslateY.value = withDelay(500, withTiming(0, { duration: 450, easing: Easing.out(Easing.cubic) }));
-      envelopeOpacity.value = withDelay(500, withTiming(0, { duration: 350 }));
+        cardOpacity.value = withDelay(500, withTiming(1, { duration: 200 }));
+        cardTranslateY.value = withDelay(500, withTiming(0, { duration: 450, easing: Easing.out(Easing.cubic) }));
+        envelopeOpacity.value = withDelay(500, withTiming(0, { duration: 350 }));
 
-      flipProgress.value = withDelay(950, withTiming(1, { duration: 600, easing: Easing.inOut(Easing.cubic) }));
+        flipProgress.value = withDelay(950, withTiming(1, { duration: 600, easing: Easing.inOut(Easing.cubic) }));
 
-      hintOpacity.value = withDelay(1650, withTiming(1, { duration: 300 }));
+        hintOpacity.value = withDelay(1650, withTiming(1, { duration: 300 }));
+      }
     } else {
       dimOpacity.value = 0;
       envelopeOpacity.value = 0;
@@ -152,7 +161,7 @@ export function CardRevealOverlay({ visible, card, zodiacSign, onRevealComplete 
           </Animated.View>
 
           <Animated.View style={hintStyle} pointerEvents="none">
-            <Text style={styles.tapHint}>화면 밖을 터치하면 닫혀요</Text>
+            <Text style={styles.tapHint}>화면을 터치하면 닫혀요</Text>
           </Animated.View>
         </View>
       </Pressable>
@@ -300,7 +309,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     padding: spacing.xxl,
-    gap: spacing.md,
+    gap: spacing.lg,
   },
   frontLabel: {
     ...typography.label,

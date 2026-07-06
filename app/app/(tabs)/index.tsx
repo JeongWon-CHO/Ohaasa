@@ -177,6 +177,7 @@ export default function TodayScreen() {
               card={card}
               isOpened={isOpened}
               onOpenPress={() => setCardRevealVisible(true)}
+              onViewPress={() => setCardRevealVisible(true)}
               style={styles.cardSection}
             />
           </>
@@ -221,6 +222,7 @@ export default function TodayScreen() {
           visible={cardRevealVisible}
           card={card}
           zodiacSign={zodiacSign ?? undefined}
+          alreadyOpened={isOpened}
           onRevealComplete={async () => {
             await markOpened();
             setCardRevealVisible(false);
