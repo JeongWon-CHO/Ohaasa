@@ -418,33 +418,6 @@ export default function SettingsScreen() {
               style={[styles.aboutRow, styles.rowBorder]}
             />
             <SettingsRow
-              title="권한 요청 시트 초기화"
-              description="플래그 리셋 → 앱 리로드하면 시트 재표시"
-              showChevron
-              onPress={async () => {
-                await AsyncStorage.removeItem(STORAGE_KEYS.hasAskedPushPermission);
-                Alert.alert("완료", "Metro 터미널에서 'r' 눌러 리로드하면 시트가 다시 표시됩니다.");
-              }}
-              style={[styles.aboutRow, styles.rowBorder]}
-            />
-            <SettingsRow
-              title="첫 설치 상태 초기화"
-              description="토큰·권한 플래그 전체 삭제 → 알림 바텀시트 재현"
-              showChevron
-              onPress={async () => {
-                await Promise.all([
-                  AsyncStorage.removeItem(STORAGE_KEYS.pushToken),
-                  AsyncStorage.removeItem(STORAGE_KEYS.platform),
-                  AsyncStorage.removeItem(STORAGE_KEYS.hasAskedPushPermission),
-                  AsyncStorage.removeItem(STORAGE_KEYS.notificationsEnabled),
-                ]);
-                setStoredPushToken(null);
-                setNotificationsEnabledState(false);
-                Alert.alert("완료", "앱을 리로드하면 첫 설치 상태로 동작합니다.");
-              }}
-              style={[styles.aboutRow, styles.rowBorder]}
-            />
-            <SettingsRow
               title="오늘의 카드 초기화"
               description="개봉 기록 삭제 → 카드 미개봉 상태로 복원"
               showChevron
