@@ -7,6 +7,9 @@ import {
   Text,
   View,
 } from "react-native";
+import { CardRevealOverlay } from "@/src/components/daily-card/CardRevealOverlay";
+import { TodayCardSection } from "@/src/components/daily-card/TodayCardSection";
+import { useDailyCard } from "@/src/hooks/useDailyCard";
 import { useFocusEffect } from "@react-navigation/native";
 import { LinearGradient } from "expo-linear-gradient";
 
@@ -83,6 +86,9 @@ export default function TodayScreen() {
     usePushPermissionPrompt({ loading, zodiacSign });
 
   const [dateSheetVisible, setDateSheetVisible] = useState(false);
+  const [cardRevealVisible, setCardRevealVisible] = useState(false);
+
+  const { card, isOpened, markOpened } = useDailyCard(horoscope?.rank, broadcastDate);
 
   const rankPillText = isLatest
     ? `오늘의 운세 ${horoscope?.rank}위`
@@ -166,6 +172,13 @@ export default function TodayScreen() {
             />
 
             <GogoInfoGrid horoscope={horoscope} style={styles.infoGrid} />
+
+            <TodayCardSection
+              card={card}
+              isOpened={isOpened}
+              onOpenPress={() => setCardRevealVisible(true)}
+              style={styles.cardSection}
+            />
           </>
         ) : (
           <View style={styles.emptyWrap}>
@@ -202,6 +215,18 @@ export default function TodayScreen() {
         selectedDate={selectedDate}
         onSelect={setSelectedDate}
       />
+
+      {card && (
+        <CardRevealOverlay
+          visible={cardRevealVisible}
+          card={card}
+          zodiacSign={zodiacSign ?? undefined}
+          onRevealComplete={async () => {
+            await markOpened();
+            setCardRevealVisible(false);
+          }}
+        />
+      )}
     </LinearGradient>
   );
 }
@@ -242,6 +267,9 @@ const styles = StyleSheet.create({
     gap: 10,
     marginTop: 12,
     marginHorizontal: 24,
+  },
+  cardSection: {
+    marginBottom: 8,
   },
 
   emptyWrap: {

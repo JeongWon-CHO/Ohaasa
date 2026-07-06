@@ -445,6 +445,16 @@ export default function SettingsScreen() {
               style={[styles.aboutRow, styles.rowBorder]}
             />
             <SettingsRow
+              title="오늘의 카드 초기화"
+              description="개봉 기록 삭제 → 카드 미개봉 상태로 복원"
+              showChevron
+              onPress={async () => {
+                await AsyncStorage.removeItem(STORAGE_KEYS.cardOpenedDate);
+                Alert.alert("완료", "오늘의 카드가 초기화되었습니다. 홈 화면으로 이동하면 다시 열 수 있어요.");
+              }}
+              style={[styles.aboutRow, styles.rowBorder]}
+            />
+            <SettingsRow
               title="온보딩으로 돌아가기"
               description="별자리 초기화 → 맨처음 화면으로 이동"
               showChevron
