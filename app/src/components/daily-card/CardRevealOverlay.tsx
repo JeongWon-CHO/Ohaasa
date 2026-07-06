@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useCallback, useEffect } from 'react';
 import {
   Image,
   Modal,
@@ -122,11 +122,18 @@ export function CardRevealOverlay({ visible, card, zodiacSign, onRevealComplete,
 
   const hintStyle = useAnimatedStyle(() => ({ opacity: hintOpacity.value }));
 
+  const handleDismiss = useCallback(() => {
+    dimOpacity.value = withTiming(0, { duration: 220 });
+    cardOpacity.value = withTiming(0, { duration: 180 });
+    hintOpacity.value = withTiming(0, { duration: 120 });
+    setTimeout(onRevealComplete, 230);
+  }, [onRevealComplete]);
+
   if (!visible) return null;
 
   return (
     <Modal transparent animationType="none" visible={visible} statusBarTranslucent>
-      <Pressable style={styles.fill} onPress={onRevealComplete}>
+      <Pressable style={styles.fill} onPress={handleDismiss}>
         {/* Blur + dim background */}
         <Animated.View style={[StyleSheet.absoluteFillObject, dimStyle]}>
           <BlurView
