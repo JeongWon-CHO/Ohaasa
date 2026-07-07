@@ -12,12 +12,13 @@ import {
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import { useFocusEffect } from "@react-navigation/native";
 import { LinearGradient } from "expo-linear-gradient";
-import Svg, { Path, Polygon } from "react-native-svg";
 import { useRouter } from "expo-router";
 
 import { NotificationDeniedSheet } from "@/src/components/NotificationDeniedSheet";
+import { ResponsiveContainer } from "@/src/components/common/ResponsiveContainer";
 import { ConstellationBadge } from "@/src/components/final/ConstellationBadge";
 import { FinalHeader } from "@/src/components/final/FinalHeader";
+import { CircleDeco, MoonDeco, StarDeco } from "@/src/components/final/ScreenDeco";
 import { SettingsRow } from "@/src/components/final/SettingsRow";
 import { SettingsSection } from "@/src/components/final/SettingsSection";
 import { Toggle } from "@/src/components/final/Toggle";
@@ -39,69 +40,10 @@ import {
   getPlatform,
   setPushToken,
   setPlatform,
+  clearZodiacSign,
   STORAGE_KEYS,
 } from "@/src/lib/storage";
 import { upsertDevice } from "@/src/lib/supabase";
-
-// ─── Background deco helpers (same pattern as F3/F4) ─────────
-
-type DecoProps = {
-  x: number;
-  y: number;
-  size: number;
-  color: string;
-  opacity: number;
-};
-
-function CircleDeco({ x, y, size, color, opacity }: DecoProps) {
-  return (
-    <View
-      pointerEvents="none"
-      style={{
-        position: "absolute",
-        left: x,
-        top: y,
-        width: size,
-        height: size,
-        borderRadius: size / 2,
-        backgroundColor: color,
-        opacity,
-      }}
-    />
-  );
-}
-
-function StarDeco({ x, y, size, color, opacity }: DecoProps) {
-  return (
-    <View
-      pointerEvents="none"
-      style={{ position: "absolute", left: x, top: y, opacity }}
-    >
-      <Svg width={size} height={size} viewBox="0 0 10 10">
-        <Polygon
-          points="5,0 6.2,3.8 10,3.8 7,6.2 8.2,10 5,7.8 1.8,10 3,6.2 0,3.8 3.8,3.8"
-          fill={color}
-        />
-      </Svg>
-    </View>
-  );
-}
-
-function MoonDeco({ x, y, size, color, opacity }: DecoProps) {
-  return (
-    <View
-      pointerEvents="none"
-      style={{ position: "absolute", left: x, top: y, opacity }}
-    >
-      <Svg width={size} height={size} viewBox="0 0 24 24">
-        <Path
-          d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"
-          fill={color}
-        />
-      </Svg>
-    </View>
-  );
-}
 
 // ─── Screen ───────────────────────────────────────────────────
 
@@ -317,6 +259,7 @@ export default function SettingsScreen() {
         opacity={0.17}
       />
 
+      <ResponsiveContainer>
       {/* Header */}
       <FinalHeader subtitle="설정" />
 
@@ -475,29 +418,22 @@ export default function SettingsScreen() {
               style={[styles.aboutRow, styles.rowBorder]}
             />
             <SettingsRow
-              title="권한 요청 시트 초기화"
-              description="플래그 리셋 → 앱 리로드하면 시트 재표시"
+              title="오늘의 카드 초기화"
+              description="개봉 기록 삭제 → 카드 미개봉 상태로 복원"
               showChevron
               onPress={async () => {
-                await AsyncStorage.removeItem(STORAGE_KEYS.hasAskedPushPermission);
-                Alert.alert("완료", "Metro 터미널에서 'r' 눌러 리로드하면 시트가 다시 표시됩니다.");
+                await AsyncStorage.removeItem(STORAGE_KEYS.cardOpenedDate);
+                Alert.alert("완료", "오늘의 카드가 초기화되었습니다. 홈 화면으로 이동하면 다시 열 수 있어요.");
               }}
               style={[styles.aboutRow, styles.rowBorder]}
             />
             <SettingsRow
-              title="첫 설치 상태 초기화"
-              description="토큰·권한 플래그 전체 삭제 → 알림 바텀시트 재현"
+              title="온보딩으로 돌아가기"
+              description="별자리 초기화 → 맨처음 화면으로 이동"
               showChevron
               onPress={async () => {
-                await Promise.all([
-                  AsyncStorage.removeItem(STORAGE_KEYS.pushToken),
-                  AsyncStorage.removeItem(STORAGE_KEYS.platform),
-                  AsyncStorage.removeItem(STORAGE_KEYS.hasAskedPushPermission),
-                  AsyncStorage.removeItem(STORAGE_KEYS.notificationsEnabled),
-                ]);
-                setStoredPushToken(null);
-                setNotificationsEnabledState(false);
-                Alert.alert("완료", "앱을 리로드하면 첫 설치 상태로 동작합니다.");
+                await clearZodiacSign();
+                router.replace("/");
               }}
               style={styles.aboutRow}
             />
@@ -524,11 +460,12 @@ export default function SettingsScreen() {
             <Text style={styles.footerLogo}>ohaasa ✦</Text>
           </View>
           <Text style={styles.footerJa}>おはあさ</Text>
-          <Text style={styles.footerCaption}>v1.1.0</Text>
+          <Text style={styles.footerCaption}>v1.2.1</Text>
         </View>
 
         <View style={styles.spacer} />
       </ScrollView>
+      </ResponsiveContainer>
 
       <NotificationDeniedSheet
         visible={deniedSheetVisible}

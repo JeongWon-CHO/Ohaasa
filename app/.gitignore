@@ -47,3 +47,4 @@ yarn-error.*
 # build files
 *.apk
 *.aab
+*.ipa

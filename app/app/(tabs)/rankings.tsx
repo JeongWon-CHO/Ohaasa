@@ -10,76 +10,17 @@ import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import { useFocusEffect } from "@react-navigation/native";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
-import Svg, { Path, Polygon } from "react-native-svg";
 
 import { DatePill } from "@/src/components/final/DatePill";
 import { FinalHeader } from "@/src/components/final/FinalHeader";
 import { HoroscopeDateSheet } from "@/src/components/HoroscopeDateSheet";
 import { RankingRow } from "@/src/components/final/RankingRow";
+import { CircleDeco, MoonDeco, StarDeco } from "@/src/components/final/ScreenDeco";
+import { ResponsiveContainer } from "@/src/components/common/ResponsiveContainer";
 import { useHoroscopeDateContext } from "@/src/context/HoroscopeDateContext";
 import { colors, gradients } from "@/src/constants/design";
 import { useAllHoroscopes } from "@/src/hooks/useHoroscope";
 import { useZodiac } from "@/src/hooks/useZodiac";
-
-// ─── Background decoration helpers ───────────────────────────
-
-type DecoProps = {
-  x: number;
-  y: number;
-  size: number;
-  color: string;
-  opacity: number;
-};
-
-function CircleDeco({ x, y, size, color, opacity }: DecoProps) {
-  return (
-    <View
-      pointerEvents="none"
-      style={{
-        position: "absolute",
-        left: x,
-        top: y,
-        width: size,
-        height: size,
-        borderRadius: size / 2,
-        backgroundColor: color,
-        opacity,
-      }}
-    />
-  );
-}
-
-function StarDeco({ x, y, size, color, opacity }: DecoProps) {
-  return (
-    <View
-      pointerEvents="none"
-      style={{ position: "absolute", left: x, top: y, opacity }}
-    >
-      <Svg width={size} height={size} viewBox="0 0 10 10">
-        <Polygon
-          points="5,0 6.2,3.8 10,3.8 7,6.2 8.2,10 5,7.8 1.8,10 3,6.2 0,3.8 3.8,3.8"
-          fill={color}
-        />
-      </Svg>
-    </View>
-  );
-}
-
-function MoonDeco({ x, y, size, color, opacity }: DecoProps) {
-  return (
-    <View
-      pointerEvents="none"
-      style={{ position: "absolute", left: x, top: y, opacity }}
-    >
-      <Svg width={size} height={size} viewBox="0 0 24 24">
-        <Path
-          d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"
-          fill={color}
-        />
-      </Svg>
-    </View>
-  );
-}
 
 // ─── Screen ───────────────────────────────────────────────────
 
@@ -151,78 +92,80 @@ export default function RankingsScreen() {
         opacity={0.18}
       />
 
-      {/* Header */}
-      <FinalHeader subtitle="12개 별자리 오하아사 순위" />
+      <ResponsiveContainer>
+        {/* Header */}
+        <FinalHeader subtitle="12개 별자리 오하아사 순위" />
 
-      {/* DatePill */}
-      <View style={styles.pillWrap}>
-        <DatePill
-          dateText={broadcastDate ?? ""}
-          onPress={() => setDateSheetVisible(true)}
-        />
-      </View>
+        {/* DatePill */}
+        <View style={styles.pillWrap}>
+          <DatePill
+            dateText={broadcastDate ?? ""}
+            onPress={() => setDateSheetVisible(true)}
+          />
+        </View>
 
-      {/* Section title */}
-      <View style={styles.titleWrap}>
-        <Text style={styles.sectionTitle}>{sectionTitle}</Text>
-      </View>
+        {/* Section title */}
+        <View style={styles.titleWrap}>
+          <Text style={styles.sectionTitle}>{sectionTitle}</Text>
+        </View>
 
-      {loading ? (
-        <View style={styles.loadingBox}>
-          <ActivityIndicator color={colors.apricotDark} size="large" />
-        </View>
-      ) : error ? (
-        <View style={styles.emptyWrap}>
-          <Text style={styles.errorText}>{error}</Text>
-        </View>
-      ) : horoscopes.length === 0 ? (
-        <View style={styles.emptyWrap}>
-          <Text style={styles.emptyText}>{noDataText}</Text>
-        </View>
-      ) : (
-        <ScrollView
-          ref={scrollRef}
-          onTouchStart={(e) => {
-            if (e.nativeEvent.touches.length > 1) {
-              multiTouchRef.current = true;
-            }
-          }}
-          onTouchEnd={(e) => {
-            const remaining = e.nativeEvent.touches.length - e.nativeEvent.changedTouches.length;
-            if (remaining <= 0) {
-              requestAnimationFrame(() => {
-                multiTouchRef.current = false;
-              });
-            }
-          }}
-          contentContainerStyle={[
-            styles.list,
-            { paddingBottom: tabBarHeight + 16 },
-          ]}
-          showsVerticalScrollIndicator={false}
-          style={styles.scroll}
-        >
-          {horoscopes.map((horoscope) => (
-            <RankingRow
-              horoscope={horoscope}
-              isMine={horoscope.zodiac_sign === zodiacSign}
-              key={horoscope.zodiac_sign}
-              onPress={() => {
-                if (navigatingRef.current || multiTouchRef.current) return;
-                navigatingRef.current = true;
-                router.push({
-                  pathname: "/zodiac/[sign]",
-                  params: {
-                    sign: horoscope.zodiac_sign,
-                    ...(selectedDate ? { date: selectedDate } : {}),
-                  },
+        {loading ? (
+          <View style={styles.loadingBox}>
+            <ActivityIndicator color={colors.apricotDark} size="large" />
+          </View>
+        ) : error ? (
+          <View style={styles.emptyWrap}>
+            <Text style={styles.errorText}>{error}</Text>
+          </View>
+        ) : horoscopes.length === 0 ? (
+          <View style={styles.emptyWrap}>
+            <Text style={styles.emptyText}>{noDataText}</Text>
+          </View>
+        ) : (
+          <ScrollView
+            ref={scrollRef}
+            onTouchStart={(e) => {
+              if (e.nativeEvent.touches.length > 1) {
+                multiTouchRef.current = true;
+              }
+            }}
+            onTouchEnd={(e) => {
+              const remaining = e.nativeEvent.touches.length - e.nativeEvent.changedTouches.length;
+              if (remaining <= 0) {
+                requestAnimationFrame(() => {
+                  multiTouchRef.current = false;
                 });
-              }}
-            />
-          ))}
-          <View style={styles.spacer} />
-        </ScrollView>
-      )}
+              }
+            }}
+            contentContainerStyle={[
+              styles.list,
+              { paddingBottom: tabBarHeight + 16 },
+            ]}
+            showsVerticalScrollIndicator={false}
+            style={styles.scroll}
+          >
+            {horoscopes.map((horoscope) => (
+              <RankingRow
+                horoscope={horoscope}
+                isMine={horoscope.zodiac_sign === zodiacSign}
+                key={horoscope.zodiac_sign}
+                onPress={() => {
+                  if (navigatingRef.current || multiTouchRef.current) return;
+                  navigatingRef.current = true;
+                  router.push({
+                    pathname: "/zodiac/[sign]",
+                    params: {
+                      sign: horoscope.zodiac_sign,
+                      ...(selectedDate ? { date: selectedDate } : {}),
+                    },
+                  });
+                }}
+              />
+            ))}
+            <View style={styles.spacer} />
+          </ScrollView>
+        )}
+      </ResponsiveContainer>
 
       <HoroscopeDateSheet
         visible={dateSheetVisible}
