@@ -1,4 +1,5 @@
 import { useCallback, useRef, useState } from "react";
+import { router } from "expo-router";
 import {
   ActivityIndicator,
   Linking,
@@ -9,6 +10,7 @@ import {
 } from "react-native";
 import { CardRevealOverlay } from "@/src/components/daily-card/CardRevealOverlay";
 import { TodayCardSection } from "@/src/components/daily-card/TodayCardSection";
+import { DailyReviewEntryCard } from "@/src/components/daily-review/DailyReviewEntryCard";
 import { useDailyCard } from "@/src/hooks/useDailyCard";
 import { useFocusEffect } from "@react-navigation/native";
 import { LinearGradient } from "expo-linear-gradient";
@@ -87,6 +89,7 @@ export default function TodayScreen() {
 
   const [dateSheetVisible, setDateSheetVisible] = useState(false);
   const [cardRevealVisible, setCardRevealVisible] = useState(false);
+  const [hasReview] = useState(false); // mock — 실제 저장 로직 구현 전까지 고정
 
   const { card, isOpened, markOpened } = useDailyCard(horoscope?.rank, broadcastDate);
 
@@ -180,6 +183,13 @@ export default function TodayScreen() {
               onViewPress={() => setCardRevealVisible(true)}
               style={styles.cardSection}
             />
+
+            <DailyReviewEntryCard
+              hasReview={hasReview}
+              rating={3}
+              onPress={() => router.push("/daily-review")}
+              style={styles.reviewEntryCard}
+            />
           </>
         ) : (
           <View style={styles.emptyWrap}>
@@ -271,6 +281,9 @@ const styles = StyleSheet.create({
     marginHorizontal: 24,
   },
   cardSection: {
+    marginBottom: 8,
+  },
+  reviewEntryCard: {
     marginBottom: 8,
   },
 

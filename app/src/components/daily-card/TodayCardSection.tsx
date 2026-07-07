@@ -1,4 +1,5 @@
-import { Image, Pressable, StyleSheet, Text, TouchableOpacity, View, type StyleProp, type ViewStyle } from 'react-native';
+import { AntDesign, Feather } from "@expo/vector-icons";
+import { Pressable, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
 
 import { type DailyCard } from '@/src/constants/dailyCards';
 import { colors, radius, shadows, spacing, typography } from '@/src/constants/design';
@@ -12,48 +13,37 @@ interface TodayCardSectionProps {
 }
 
 export function TodayCardSection({ card, isOpened, onOpenPress, onViewPress, style }: TodayCardSectionProps) {
+  const handlePress = isOpened ? onViewPress : onOpenPress;
+
   return (
     <View style={[styles.container, style]}>
       <Text style={styles.sectionLabel}>오늘의 카드</Text>
 
-      <View style={[styles.callout, shadows.card]}>
-        {isOpened && card ? (
-          <OpenedCallout card={card} onViewPress={onViewPress} />
-        ) : (
-          <UnopenedCallout onOpenPress={onOpenPress} />
-        )}
-      </View>
+      <Pressable
+        style={({ pressed }) => [styles.card, shadows.card, pressed && styles.cardPressed]}
+        onPress={handlePress}
+      >
+        <View style={styles.iconWrap}>
+          <AntDesign name="crown" size={18} color={colors.apricotDark} />
+        </View>
+
+        <View style={styles.textWrap}>
+          {isOpened && card ? (
+            <>
+              <Text style={styles.title}>{card.name}</Text>
+              <Text style={styles.subtitle} numberOfLines={1}>{card.spell}</Text>
+            </>
+          ) : (
+            <>
+              <Text style={styles.title}>오늘의 운세 카드가 도착했어요</Text>
+              <Text style={styles.subtitle}>열어보면 오늘의 카드가 펼쳐져요</Text>
+            </>
+          )}
+        </View>
+
+        <Feather name="chevron-right" size={16} color={colors.textSoft} />
+      </Pressable>
     </View>
-  );
-}
-
-function UnopenedCallout({ onOpenPress }: { onOpenPress: () => void }) {
-  return (
-    <>
-      <Image
-        source={require('@/assets/images/card/envelope.png')}
-        style={styles.icon}
-        resizeMode="contain"
-      />
-      <Text style={styles.calloutText} numberOfLines={1}>
-        오늘의 운세 카드가 도착했어요!
-      </Text>
-      <TouchableOpacity style={styles.openButton} onPress={onOpenPress} activeOpacity={0.75}>
-        <Text style={styles.openButtonText}>열기</Text>
-      </TouchableOpacity>
-    </>
-  );
-}
-
-function OpenedCallout({ card, onViewPress }: { card: DailyCard; onViewPress?: () => void }) {
-  return (
-    <Pressable style={styles.openedRow} onPress={onViewPress}>
-      <View style={styles.openedDot} />
-      <Text style={styles.openedName}>{card.name}</Text>
-      <Text style={styles.openedSpell} numberOfLines={1}>
-        {card.spell}
-      </Text>
-    </Pressable>
   );
 }
 
@@ -68,69 +58,46 @@ const styles = StyleSheet.create({
     marginLeft: 2,
   },
 
-  callout: {
+  card: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.sm,
+    gap: spacing.md,
     borderWidth: 1.5,
     borderColor: colors.border,
     borderRadius: radius.lg,
     backgroundColor: colors.card,
     paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
+    paddingVertical: spacing.md + 2,
+  },
+  cardPressed: {
+    opacity: 0.72,
   },
 
-  // Unopened
-  icon: {
-    width: 32,
-    height: 26,
-    flexShrink: 0,
-  },
-  calloutText: {
-    flex: 1,
-    fontSize: 13,
-    fontFamily: 'NotoSansKR_400Regular',
-    color: colors.textMid,
-    lineHeight: 18,
-  },
-  openButton: {
-    backgroundColor: 'rgba(240,184,154,0.35)',
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs + 2,
-    borderRadius: radius.pill,
-    flexShrink: 0,
-  },
-  openButtonText: {
-    fontSize: 12,
-    fontFamily: 'NotoSansKR_500Medium',
-    color: colors.apricotDark,
-  },
-
-  // Opened
-  openedRow: {
-    flex: 1,
-    flexDirection: 'row',
+  iconWrap: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(240,184,154,0.5)',
+    backgroundColor: 'rgba(240,184,154,0.1)',
     alignItems: 'center',
-    gap: spacing.sm,
-  },
-  openedDot: {
-    width: 7,
-    height: 7,
-    borderRadius: radius.pill,
-    backgroundColor: colors.apricot,
+    justifyContent: 'center',
     flexShrink: 0,
   },
-  openedName: {
-    fontSize: 14,
+  textWrap: {
+    flex: 1,
+    gap: 2,
+  },
+  title: {
+    fontSize: 13,
     fontFamily: 'NotoSansKR_500Medium',
     color: colors.text,
-    flexShrink: 0,
+    lineHeight: 19,
   },
-  openedSpell: {
-    flex: 1,
+  subtitle: {
     fontSize: 12,
     fontFamily: 'NotoSansKR_300Light',
     color: colors.textSoft,
-    lineHeight: 18,
+    lineHeight: 17,
   },
 });
