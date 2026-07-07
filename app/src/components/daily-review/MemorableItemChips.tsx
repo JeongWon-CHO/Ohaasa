@@ -1,6 +1,5 @@
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
-import { FinalCard } from "@/src/components/final/FinalCard";
 import { colors, radius, spacing } from "@/src/constants/design";
 
 const BASE_ITEMS = ["한 줄 운세", "오늘의 운", "행운 장소", "행운 컬러", "행운 아이템"] as const;
@@ -28,7 +27,7 @@ export function MemorableItemChips({
   }
 
   return (
-    <FinalCard style={styles.card}>
+    <View style={styles.card}>
       <Text style={styles.question}>무엇이 가장 기억에 남았나요?</Text>
       <View style={styles.chips}>
         {items.map((item) => {
@@ -46,7 +45,7 @@ export function MemorableItemChips({
           );
         })}
       </View>
-    </FinalCard>
+    </View>
   );
 }
 
@@ -55,9 +54,9 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   question: {
-    fontSize: 14,
-    fontFamily: "NotoSansKR_500Medium",
-    color: colors.text,
+    fontSize: 12,
+    fontFamily: "NotoSansKR_400Regular",
+    color: colors.textMid,
   },
   chips: {
     flexDirection: "row",
@@ -69,7 +68,8 @@ const styles = StyleSheet.create({
     paddingVertical: 7,
     borderRadius: radius.pill,
     borderWidth: 1.5,
-    borderColor: colors.border,
+    borderColor: colors.cream3,
+    backgroundColor: colors.cardSolid,
   },
   chipActive: {
     backgroundColor: "rgba(240,184,154,0.18)",

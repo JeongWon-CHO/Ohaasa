@@ -225,7 +225,7 @@ export function BoardingPassNoteInput({
 }
 
 const styles = StyleSheet.create({
-  container: { gap: spacing.md },
+  container: { gap: spacing.md, marginTop: spacing.lg },
   sectionTitle: {
     fontSize: 12,
     fontFamily: "NotoSansKR_400Regular",
@@ -278,7 +278,7 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontFamily: "NotoSansKR_400Regular",
     lineHeight: 28,
-    color: colors.text,
+    color: colors.apricotDark,
     letterSpacing: -0.5,
   },
 
