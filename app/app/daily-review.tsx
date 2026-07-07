@@ -1,63 +1,234 @@
 import { Feather } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { useState } from "react";
+import {
+  Keyboard,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableWithoutFeedback,
+  View,
+} from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { colors, gradients, typography } from "@/src/constants/design";
+import { BoardingPassNoteInput } from "@/src/components/daily-review/BoardingPassNoteInput";
+import { MemorableItemChips } from "@/src/components/daily-review/MemorableItemChips";
+import { StarRatingInput } from "@/src/components/daily-review/StarRatingInput";
+import { ZODIAC_MAP } from "@/src/constants/zodiac";
+import { useHoroscopeDateContext } from "@/src/context/HoroscopeDateContext";
+import { useAllHoroscopes } from "@/src/hooks/useHoroscope";
+import { useZodiac } from "@/src/hooks/useZodiac";
+import { colors, gradients, spacing } from "@/src/constants/design";
+
+type ReviewFormState = {
+  rating: number | null;
+  memorableItems: string[];
+  note: string;
+};
+
+function formatKoreanDate(dateStr: string | null): string {
+  if (!dateStr) {
+    const now = new Date();
+    return `${now.getFullYear()}년 ${now.getMonth() + 1}월 ${now.getDate()}일`;
+  }
+  const [y, m, d] = dateStr.split("-").map(Number);
+  return `${y}년 ${m}월 ${d}일`;
+}
+
+function formatShortDate(dateStr: string | null): string {
+  if (!dateStr) {
+    const now = new Date();
+    return `${now.getFullYear()}.${now.getMonth() + 1}.${now.getDate()}`;
+  }
+  const [y, m, d] = dateStr.split("-").map(Number);
+  return `${y}.${m}.${d}`;
+}
 
 export default function DailyReviewScreen() {
+  const insets = useSafeAreaInsets();
+  const { zodiacSign } = useZodiac();
+  const { selectedDate } = useHoroscopeDateContext();
+  const { horoscopes } = useAllHoroscopes({ date: selectedDate });
+
+  const zodiac = zodiacSign ? ZODIAC_MAP[zodiacSign] : null;
+  const horoscope = zodiacSign
+    ? (horoscopes.find((h) => h.zodiac_sign === zodiacSign) ?? null)
+    : null;
+
+  const horoscopeDate = horoscope?.date ?? null;
+
+  const metaParts = [
+    formatKoreanDate(horoscopeDate),
+    zodiac?.ko,
+    horoscope ? `오늘의 운세 ${horoscope.rank}위` : null,
+  ].filter(Boolean) as string[];
+
+  const [form, setForm] = useState<ReviewFormState>({
+    rating: null,
+    memorableItems: [],
+    note: "",
+  });
+
+  const canSave = form.rating !== null && form.note.trim().length > 0;
+
+  function handleSave() {
+    console.log({ rating: form.rating, memorableItems: form.memorableItems, note: form.note });
+    router.back();
+  }
+
   return (
     <LinearGradient colors={gradients.screen} style={styles.fill}>
-      <View style={styles.header}>
-        <Pressable
-          onPress={() => router.back()}
-          style={({ pressed }) => [styles.backButton, pressed && { opacity: 0.6 }]}
-          hitSlop={12}
+      <View style={styles.inner}>
+        {/* ── 스크롤 컨텐츠 ── */}
+        <ScrollView
+          style={styles.scroll}
+          contentContainerStyle={[
+            styles.content,
+            { paddingTop: insets.top + 16, paddingBottom: 32 },
+          ]}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
         >
-          <Feather name="chevron-left" size={24} color={colors.text} />
-        </Pressable>
-        <Text style={styles.title}>오늘의 운세 리뷰</Text>
-        <View style={styles.backButton} />
-      </View>
+          <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+            <View>
+              {/* 헤더 */}
+              <View style={styles.header}>
+                <Pressable
+                  onPress={() => router.back()}
+                  style={({ pressed }) => [styles.headerBtn, pressed && { opacity: 0.6 }]}
+                  hitSlop={12}
+                >
+                  <Feather name="chevron-left" size={24} color={colors.text} />
+                </Pressable>
 
-      <View style={styles.body}>
-        <Text style={styles.placeholder}>기록 작성 화면 (준비 중)</Text>
+                <View style={styles.headerCenter}>
+                  <Text style={styles.headerTitle}>오늘의 운세 리뷰</Text>
+                  {metaParts.length > 0 && (
+                    <Text style={styles.headerMeta} numberOfLines={1}>
+                      {metaParts.join(" · ")}
+                    </Text>
+                  )}
+                </View>
+
+                {/* 우측 균형용 빈 영역 */}
+                <View style={styles.headerBtn} />
+              </View>
+
+              {/* 섹션들 */}
+              <View style={styles.sections}>
+                <StarRatingInput
+                  rating={form.rating}
+                  onChange={(rating) => setForm((f) => ({ ...f, rating }))}
+                />
+                <MemorableItemChips
+                  selected={form.memorableItems}
+                  onChange={(memorableItems) => setForm((f) => ({ ...f, memorableItems }))}
+                  showCardChip={false}
+                />
+                <BoardingPassNoteInput
+                  value={form.note}
+                  onChange={(note) => setForm((f) => ({ ...f, note }))}
+                  dateLabel={formatShortDate(horoscopeDate)}
+                  zodiacLabel={zodiac?.ko ?? ""}
+                  rank={horoscope?.rank ?? null}
+                />
+              </View>
+            </View>
+          </TouchableWithoutFeedback>
+        </ScrollView>
+
+        {/* ── 하단 저장 영역 (스크롤 밖, 고정) ── */}
+        <View style={[styles.saveArea, { paddingBottom: insets.bottom + 16 }]}>
+          {!canSave && (
+            <Text style={styles.saveHint}>
+              별점과 한 줄 기록을 남기면 저장할 수 있어요
+            </Text>
+          )}
+          <Pressable
+            onPress={handleSave}
+            disabled={!canSave}
+            style={({ pressed }) => [
+              styles.saveBtn,
+              !canSave && styles.saveBtnDisabled,
+              pressed && canSave && { opacity: 0.8 },
+            ]}
+          >
+            <Text style={styles.saveBtnText}>저장하기</Text>
+          </Pressable>
+        </View>
       </View>
     </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
-  fill: {
-    flex: 1,
+  fill: { flex: 1 },
+  inner: { flex: 1 },
+  scroll: { flex: 1 },
+  content: {
+    paddingHorizontal: 24,
   },
+
   header: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
-    paddingTop: 60,
-    paddingHorizontal: 16,
-    paddingBottom: 16,
+    gap: spacing.sm,
+    marginBottom: 24,
   },
-  backButton: {
+  headerBtn: {
     width: 36,
     height: 36,
     alignItems: "center",
     justifyContent: "center",
+    flexShrink: 0,
   },
-  title: {
-    ...typography.sectionTitle,
-    fontSize: 17,
-    fontFamily: "NotoSansKR_500Medium",
-  },
-  body: {
+  headerCenter: {
     flex: 1,
     alignItems: "center",
-    justifyContent: "center",
+    gap: 4,
   },
-  placeholder: {
-    fontSize: 14,
+  headerTitle: {
+    fontSize: 16,
+    fontFamily: "NotoSansKR_600SemiBold",
+    color: colors.text,
+  },
+  headerMeta: {
+    fontSize: 11,
     fontFamily: "NotoSansKR_300Light",
     color: colors.textSoft,
+  },
+
+  sections: {
+    gap: 16,
+  },
+
+  saveArea: {
+    paddingHorizontal: 24,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+    gap: spacing.sm,
+  },
+  saveHint: {
+    fontSize: 12,
+    fontFamily: "NotoSansKR_300Light",
+    color: colors.textSoft,
+    textAlign: "center",
+  },
+  saveBtn: {
+    backgroundColor: colors.apricotDark,
+    paddingVertical: 15,
+    borderRadius: 14,
+    alignItems: "center",
+  },
+  saveBtnDisabled: {
+    backgroundColor: "rgba(217,138,104,0.32)",
+  },
+  saveBtnText: {
+    fontSize: 15,
+    fontFamily: "NotoSansKR_500Medium",
+    color: "#FFFDF5",
   },
 });

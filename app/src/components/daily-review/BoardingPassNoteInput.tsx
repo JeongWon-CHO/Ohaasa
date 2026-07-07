@@ -1,0 +1,387 @@
+import { useRef, useState } from "react";
+import {
+  Animated,
+  Easing,
+  Keyboard,
+  Platform,
+  Pressable,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from "react-native";
+
+import { colors, radius, spacing } from "@/src/constants/design";
+
+const MAX_LENGTH = 100;
+const PASS_BG = "#FFFDF5";
+const BORDER_COLOR = "rgba(205,185,155,0.55)";
+const SCREEN_BG = "#EDD9C4";
+const CARD_HEIGHT = 172;
+const STUB_WIDTH = 44;
+const DASH_W = 8;
+const NOTCH = 16;
+const NOTCH_RIGHT = STUB_WIDTH + DASH_W / 2 - NOTCH / 2; // 40
+
+interface BoardingPassNoteInputProps {
+  value: string;
+  onChange: (text: string) => void;
+  dateLabel: string;
+  zodiacLabel: string;
+  rank?: number | null;
+}
+
+function VerticalDashLine() {
+  return (
+    <View style={vd.line}>
+      {Array.from({ length: 50 }).map((_, i) => (
+        <View key={i} style={vd.tick} />
+      ))}
+    </View>
+  );
+}
+
+const vd = StyleSheet.create({
+  line: {
+    width: DASH_W,
+    alignSelf: "stretch",
+    flexDirection: "column",
+    alignItems: "center",
+    overflow: "hidden",
+  },
+  tick: {
+    width: 1,
+    height: 4,
+    backgroundColor: BORDER_COLOR,
+    marginBottom: 3,
+  },
+});
+
+export function BoardingPassNoteInput({
+  value,
+  onChange,
+  dateLabel,
+  zodiacLabel,
+  rank,
+}: BoardingPassNoteInputProps) {
+  const [isFlipped, setIsFlipped] = useState(false);
+  const anim = useRef(new Animated.Value(0)).current;
+  const inputRef = useRef<TextInput>(null);
+
+  const frontRotate = anim.interpolate({
+    inputRange: [0, 180],
+    outputRange: ["0deg", "180deg"],
+  });
+  const backRotate = anim.interpolate({
+    inputRange: [0, 180],
+    outputRange: ["180deg", "360deg"],
+  });
+  const frontOpacity = anim.interpolate({
+    inputRange: [89, 90],
+    outputRange: [1, 0],
+    extrapolate: "clamp",
+  });
+  const backOpacity = anim.interpolate({
+    inputRange: [89, 90],
+    outputRange: [0, 1],
+    extrapolate: "clamp",
+  });
+
+  function flip(toBack: boolean) {
+    if (toBack) setIsFlipped(true);
+    Animated.timing(anim, {
+      toValue: toBack ? 180 : 0,
+      duration: 420,
+      easing: Easing.out(Easing.ease),
+      useNativeDriver: true,
+    }).start(() => {
+      if (!toBack) setIsFlipped(false);
+      if (toBack) inputRef.current?.focus();
+    });
+  }
+
+  const hasNote = value.trim().length > 0;
+
+  return (
+    <View style={styles.container}>
+      <Text style={styles.sectionTitle}>오늘의 운세 티켓</Text>
+
+      <View style={styles.cardWrapper}>
+        {/* ── 앞면: 공연 티켓 ── */}
+        <Animated.View
+          pointerEvents={isFlipped ? "none" : "auto"}
+          style={[
+            styles.face,
+            {
+              opacity: frontOpacity,
+              transform: [{ perspective: 1200 }, { rotateY: frontRotate }],
+            },
+          ]}
+        >
+          <Pressable onPress={() => flip(true)} style={styles.faceInner}>
+            <View style={styles.ticketRow}>
+              {/* 메인 영역 */}
+              <View style={styles.ticketMain}>
+                {/* 공연 이름 (subtitle) */}
+                <Text style={styles.eventSubtitle}>✦  오늘의 별자리</Text>
+
+                {/* 메인: 별자리 이름 */}
+                <Text style={styles.eventTitle}>{zodiacLabel}</Text>
+
+                {/* DATE + RANKING */}
+                <View style={styles.infoRow}>
+                  <View style={styles.infoField}>
+                    <Text style={styles.fieldLabel}>DATE</Text>
+                    <Text style={styles.infoValue}>{dateLabel}</Text>
+                  </View>
+                  {rank != null && (
+                    <View style={styles.infoField}>
+                      <Text style={styles.fieldLabel}>RANKING</Text>
+                      <Text style={styles.infoValue}>{rank}번</Text>
+                    </View>
+                  )}
+                </View>
+
+                {/* 힌트 or 기록 미리보기 */}
+                {hasNote ? (
+                  <Text style={styles.notePreview} numberOfLines={1}>
+                    "{value}"
+                  </Text>
+                ) : (
+                  <Text style={styles.tapHint}>탭하여 오늘을 기록해요 →</Text>
+                )}
+              </View>
+
+              {/* 세로 절취선 */}
+              <VerticalDashLine />
+
+              {/* 스텁: ADMIT ONE 세로 */}
+              <View style={styles.stub}>
+                {"ADMIT ONE".split("").map((char, i) => (
+                  <Text key={i} style={styles.admitChar}>
+                    {char}
+                  </Text>
+                ))}
+              </View>
+            </View>
+
+            {/* notch 원 */}
+            <View style={[styles.notchCircle, styles.notchTop]} />
+            <View style={[styles.notchCircle, styles.notchBottom]} />
+          </Pressable>
+        </Animated.View>
+
+        {/* ── 뒷면: 입력 ── */}
+        <Animated.View
+          pointerEvents={isFlipped ? "auto" : "none"}
+          style={[
+            styles.face,
+            {
+              opacity: backOpacity,
+              transform: [{ perspective: 1200 }, { rotateY: backRotate }],
+            },
+          ]}
+        >
+          <View style={styles.faceInner}>
+            <View style={styles.backHeader}>
+              <Text style={styles.backMeta}>
+                {dateLabel} · {zodiacLabel}
+              </Text>
+              <Pressable
+                onPress={() => {
+                  Keyboard.dismiss();
+                  flip(false);
+                }}
+                hitSlop={12}
+              >
+                <Text style={styles.doneBtn}>완료</Text>
+              </Pressable>
+            </View>
+
+            <View style={styles.divider} />
+
+            <View style={styles.backBody}>
+              <TextInput
+                ref={inputRef}
+                style={styles.input}
+                value={value}
+                onChangeText={(t) => onChange(t.slice(0, MAX_LENGTH))}
+                placeholder="오늘의 별 조각을 남겨보세요"
+                placeholderTextColor={colors.textSoft}
+                multiline
+                textAlignVertical="top"
+                scrollEnabled
+                autoFocus={false}
+              />
+              <Text style={styles.charCount}>
+                {value.length}/{MAX_LENGTH}
+              </Text>
+            </View>
+          </View>
+        </Animated.View>
+      </View>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: { gap: spacing.md },
+  sectionTitle: {
+    fontSize: 12,
+    fontFamily: "NotoSansKR_400Regular",
+    color: colors.textMid,
+  },
+
+  cardWrapper: {
+    height: CARD_HEIGHT,
+  },
+
+  face: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: PASS_BG,
+    borderWidth: 1,
+    borderColor: BORDER_COLOR,
+    borderRadius: radius.md,
+    backfaceVisibility: "hidden",
+    ...Platform.select({
+      ios: {
+        shadowColor: "#000",
+        shadowOpacity: 0.08,
+        shadowRadius: 14,
+        shadowOffset: { width: 0, height: 3 },
+      },
+      android: { elevation: 3 },
+    }),
+  },
+
+  faceInner: { flex: 1 },
+
+  // ── 앞면: 공연 티켓 ──
+  ticketRow: {
+    flex: 1,
+    flexDirection: "row",
+  },
+  ticketMain: {
+    flex: 1,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    justifyContent: "space-between",
+  },
+
+  eventSubtitle: {
+    fontSize: 8,
+    fontFamily: "NotoSansKR_500Medium",
+    color: colors.textSoft,
+    letterSpacing: 1.5,
+  },
+  eventTitle: {
+    fontSize: 20,
+    fontFamily: "NotoSansKR_400Regular",
+    lineHeight: 28,
+    color: colors.text,
+    letterSpacing: -0.5,
+  },
+
+  infoRow: {
+    flexDirection: "row",
+    gap: spacing.xl,
+  },
+  infoField: { gap: 2 },
+  fieldLabel: {
+    fontSize: 7,
+    fontFamily: "NotoSansKR_500Medium",
+    color: colors.textSoft,
+    letterSpacing: 1.5,
+  },
+  infoValue: {
+    fontSize: 12,
+    fontFamily: "NotoSansKR_500Medium",
+    color: colors.textMid,
+  },
+
+  notePreview: {
+    fontSize: 10,
+    fontFamily: "NotoSansKR_300Light",
+    color: colors.textMid,
+    fontStyle: "italic",
+  },
+  tapHint: {
+    fontSize: 10,
+    fontFamily: "NotoSansKR_300Light",
+    color: colors.textSoft,
+    letterSpacing: 0.3,
+  },
+
+  // 스텁
+  stub: {
+    width: STUB_WIDTH,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  admitChar: {
+    fontSize: 8,
+    fontFamily: "NotoSansKR_500Medium",
+    color: colors.textSoft,
+    lineHeight: 11,
+    letterSpacing: 0.5,
+    textAlign: "center",
+  },
+
+  // notch
+  notchCircle: {
+    position: "absolute",
+    width: NOTCH,
+    height: NOTCH,
+    borderRadius: NOTCH / 2,
+    backgroundColor: SCREEN_BG,
+    right: NOTCH_RIGHT,
+  },
+  notchTop: { top: -(NOTCH / 2) },
+  notchBottom: { bottom: -(NOTCH / 2) },
+
+  // ── 뒷면 ──
+  backHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm + 2,
+  },
+  backMeta: {
+    fontSize: 11,
+    fontFamily: "NotoSansKR_300Light",
+    color: colors.textSoft,
+    letterSpacing: 0.5,
+  },
+  doneBtn: {
+    fontSize: 12,
+    fontFamily: "NotoSansKR_500Medium",
+    color: colors.apricotDark,
+  },
+  divider: {
+    height: 1,
+    backgroundColor: BORDER_COLOR,
+  },
+  backBody: {
+    flex: 1,
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.md,
+    gap: spacing.xs,
+  },
+  input: {
+    flex: 1,
+    fontSize: 14,
+    fontFamily: "NotoSansKR_300Light",
+    color: colors.text,
+    lineHeight: 22,
+    includeFontPadding: false,
+    paddingTop: spacing.xs,
+  },
+  charCount: {
+    fontSize: 11,
+    fontFamily: "NotoSansKR_300Light",
+    color: colors.textSoft,
+    textAlign: "right",
+  },
+});
