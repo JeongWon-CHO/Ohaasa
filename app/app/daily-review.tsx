@@ -65,7 +65,13 @@ export default function DailyReviewScreen() {
     horoscopeRank: horoscope?.rank ?? null,
   });
 
-  const canSave = form.rating !== null && form.note.trim().length > 0;
+  const hasChanges = existingReview === null || (
+    form.rating !== existingReview.rating ||
+    form.note !== existingReview.note ||
+    JSON.stringify([...form.memorableItems].sort()) !== JSON.stringify([...existingReview.memorableItems].sort())
+  );
+
+  const canSave = form.rating !== null && form.note.trim().length > 0 && hasChanges;
 
   async function handleSave() {
     await save();
