@@ -57,6 +57,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontFamily: "NotoSansKR_400Regular",
     color: colors.textMid,
+    lineHeight: 18,
   },
   chips: {
     flexDirection: "row",
@@ -79,6 +80,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontFamily: "NotoSansKR_400Regular",
     color: colors.textSoft,
+    lineHeight: 18,
   },
   chipTextActive: {
     fontFamily: "NotoSansKR_500Medium",

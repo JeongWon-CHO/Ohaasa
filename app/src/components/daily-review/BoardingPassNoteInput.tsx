@@ -240,10 +240,14 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontFamily: "NotoSansKR_400Regular",
     color: colors.textMid,
+    lineHeight: 18,
   },
 
   cardWrapper: {
     height: CARD_HEIGHT,
+    ...Platform.select({
+      android: { elevation: 3 },
+    }),
   },
 
   face: {
@@ -260,7 +264,6 @@ const styles = StyleSheet.create({
         shadowRadius: 14,
         shadowOffset: { width: 0, height: 3 },
       },
-      android: { elevation: 3 },
     }),
   },
 
@@ -283,6 +286,7 @@ const styles = StyleSheet.create({
     fontFamily: "NotoSansKR_500Medium",
     color: colors.textSoft,
     letterSpacing: 1.5,
+    lineHeight: 12,
   },
   eventTitle: {
     fontSize: 20,
@@ -302,11 +306,13 @@ const styles = StyleSheet.create({
     fontFamily: "NotoSansKR_500Medium",
     color: colors.textSoft,
     letterSpacing: 1.5,
+    lineHeight: 11,
   },
   infoValue: {
     fontSize: 12,
     fontFamily: "NotoSansKR_500Medium",
     color: colors.textMid,
+    lineHeight: 18,
   },
 
   notePreview: {
@@ -314,12 +320,14 @@ const styles = StyleSheet.create({
     fontFamily: "NotoSansKR_300Light",
     color: colors.textMid,
     fontStyle: "italic",
+    lineHeight: 16,
   },
   tapHint: {
     fontSize: 10,
     fontFamily: "NotoSansKR_300Light",
     color: colors.textSoft,
     letterSpacing: 0.3,
+    lineHeight: 16,
   },
 
   // 스텁
@@ -373,11 +381,13 @@ const styles = StyleSheet.create({
     fontFamily: "NotoSansKR_300Light",
     color: colors.textSoft,
     letterSpacing: 0.5,
+    lineHeight: 17,
   },
   doneBtn: {
     fontSize: 12,
     fontFamily: "NotoSansKR_500Medium",
     color: colors.apricotDark,
+    lineHeight: 18,
   },
   divider: {
     height: 1,
@@ -404,5 +414,6 @@ const styles = StyleSheet.create({
     fontFamily: "NotoSansKR_300Light",
     color: colors.textSoft,
     textAlign: "right",
+    lineHeight: 17,
   },
 });

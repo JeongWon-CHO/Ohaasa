@@ -195,11 +195,13 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontFamily: "NotoSansKR_600SemiBold",
     color: colors.text,
+    lineHeight: 24,
   },
   headerMeta: {
     fontSize: 11,
     fontFamily: "NotoSansKR_300Light",
     color: colors.textSoft,
+    lineHeight: 17,
   },
 
   sections: {
@@ -218,6 +220,7 @@ const styles = StyleSheet.create({
     fontFamily: "NotoSansKR_300Light",
     color: colors.textSoft,
     textAlign: "center",
+    lineHeight: 18,
   },
   saveBtn: {
     backgroundColor: colors.apricotDark,
@@ -232,5 +235,6 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontFamily: "NotoSansKR_500Medium",
     color: "#FFFDF5",
+    lineHeight: 22,
   },
 });

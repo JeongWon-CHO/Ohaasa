@@ -23,12 +23,14 @@ export function StarRatingInput({ rating, onChange }: StarRatingInputProps) {
               hitSlop={10}
               style={styles.starBtn}
             >
-              <FontAwesome5
-                name="star"
-                size={34}
-                solid={filled}
-                color={filled ? colors.yellow : "rgba(156,139,120,0.25)"}
-              />
+              <View style={styles.starIcon}>
+                <FontAwesome5
+                  name="star"
+                  size={34}
+                  solid={filled}
+                  color={filled ? colors.yellow : "rgba(156,139,120,0.25)"}
+                />
+              </View>
             </Pressable>
           );
         })}
@@ -52,6 +54,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontFamily: "NotoSansKR_500Medium",
     color: colors.text,
+    lineHeight: 21,
   },
   starsRow: {
     flexDirection: "row",
@@ -59,6 +62,12 @@ const styles = StyleSheet.create({
   },
   starBtn: {
     padding: spacing.xs,
+  },
+  starIcon: {
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   labelsRow: {
     flexDirection: "row",
@@ -70,5 +79,6 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontFamily: "NotoSansKR_300Light",
     color: colors.textSoft,
+    lineHeight: 17,
   },
 });
