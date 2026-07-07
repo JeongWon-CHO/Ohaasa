@@ -1,7 +1,6 @@
 import { Feather } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
-import { useState } from "react";
 import {
   Keyboard,
   Pressable,
@@ -19,14 +18,9 @@ import { StarRatingInput } from "@/src/components/daily-review/StarRatingInput";
 import { ZODIAC_MAP } from "@/src/constants/zodiac";
 import { useHoroscopeDateContext } from "@/src/context/HoroscopeDateContext";
 import { useAllHoroscopes } from "@/src/hooks/useHoroscope";
+import { useDailyReview } from "@/src/hooks/useDailyReview";
 import { useZodiac } from "@/src/hooks/useZodiac";
 import { colors, gradients, spacing } from "@/src/constants/design";
-
-type ReviewFormState = {
-  rating: number | null;
-  memorableItems: string[];
-  note: string;
-};
 
 function formatKoreanDate(dateStr: string | null): string {
   if (!dateStr) {
@@ -65,16 +59,16 @@ export default function DailyReviewScreen() {
     horoscope ? `오늘의 운세 ${horoscope.rank}위` : null,
   ].filter(Boolean) as string[];
 
-  const [form, setForm] = useState<ReviewFormState>({
-    rating: null,
-    memorableItems: [],
-    note: "",
+  const { form, setForm, save, isSaving, existingReview } = useDailyReview({
+    date: horoscopeDate,
+    zodiacSign: zodiacSign ?? null,
+    horoscopeRank: horoscope?.rank ?? null,
   });
 
   const canSave = form.rating !== null && form.note.trim().length > 0;
 
-  function handleSave() {
-    console.log({ rating: form.rating, memorableItems: form.memorableItems, note: form.note });
+  async function handleSave() {
+    await save();
     router.back();
   }
 
@@ -148,14 +142,16 @@ export default function DailyReviewScreen() {
           )}
           <Pressable
             onPress={handleSave}
-            disabled={!canSave}
+            disabled={!canSave || isSaving}
             style={({ pressed }) => [
               styles.saveBtn,
-              !canSave && styles.saveBtnDisabled,
-              pressed && canSave && { opacity: 0.8 },
+              (!canSave || isSaving) && styles.saveBtnDisabled,
+              pressed && canSave && !isSaving && { opacity: 0.8 },
             ]}
           >
-            <Text style={styles.saveBtnText}>저장하기</Text>
+            <Text style={styles.saveBtnText}>
+              {isSaving ? "저장 중..." : existingReview ? "수정하기" : "저장하기"}
+            </Text>
           </Pressable>
         </View>
       </View>

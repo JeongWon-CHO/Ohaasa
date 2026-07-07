@@ -91,7 +91,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 13,
     fontFamily: 'NotoSansKR_500Medium',
-    color: colors.text,
+    color: colors.apricotDark,
     lineHeight: 19,
   },
   subtitle: {

@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { router } from "expo-router";
 import {
   ActivityIndicator,
@@ -30,6 +30,7 @@ import { useHoroscopeDateContext } from "@/src/context/HoroscopeDateContext";
 import { colors, gradients, layout } from "@/src/constants/design";
 import { ZODIAC_MAP } from "@/src/constants/zodiac";
 import { useAllHoroscopes } from "@/src/hooks/useHoroscope";
+import { getDailyReview, type DailyReview } from "@/src/lib/dailyReviews";
 import { usePushPermissionPrompt } from "@/src/hooks/usePushPermissionPrompt";
 import { useShareHoroscope } from "@/src/hooks/useShareHoroscope";
 import { useToast } from "@/src/hooks/useToast";
@@ -84,12 +85,25 @@ export default function TodayScreen() {
     scrollRef.current?.scrollTo({ y: 0, animated: false });
   }, []));
 
+  useEffect(() => {
+    if (!horoscope?.date || !zodiacSign) {
+      setCurrentReview(null);
+      return;
+    }
+    getDailyReview(horoscope.date, zodiacSign).then(setCurrentReview);
+  }, [horoscope?.date, zodiacSign]);
+
+  useFocusEffect(useCallback(() => {
+    if (!horoscope?.date || !zodiacSign) return;
+    getDailyReview(horoscope.date, zodiacSign).then(setCurrentReview);
+  }, [horoscope?.date, zodiacSign]));
+
   const { pushSheetVisible, handlePushAccept, handlePushDecline } =
     usePushPermissionPrompt({ loading, zodiacSign });
 
   const [dateSheetVisible, setDateSheetVisible] = useState(false);
   const [cardRevealVisible, setCardRevealVisible] = useState(false);
-  const [hasReview] = useState(false); // mock — 실제 저장 로직 구현 전까지 고정
+  const [currentReview, setCurrentReview] = useState<DailyReview | null>(null);
 
   const { card, isOpened, markOpened } = useDailyCard(horoscope?.rank, broadcastDate);
 
@@ -185,8 +199,8 @@ export default function TodayScreen() {
             />
 
             <DailyReviewEntryCard
-              hasReview={hasReview}
-              rating={3}
+              hasReview={currentReview !== null}
+              rating={currentReview?.rating}
               onPress={() => router.push("/daily-review")}
               style={styles.reviewEntryCard}
             />

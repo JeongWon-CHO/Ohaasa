@@ -1,4 +1,5 @@
 import { Feather } from "@expo/vector-icons";
+import FontAwesome5 from "@expo/vector-icons/FontAwesome5";
 import { Pressable, StyleSheet, Text, View, type StyleProp, type ViewStyle } from "react-native";
 
 import { colors, radius, shadows, spacing, typography } from "@/src/constants/design";
@@ -11,6 +12,8 @@ interface DailyReviewEntryCardProps {
 }
 
 export function DailyReviewEntryCard({ hasReview, rating = 0, onPress, style }: DailyReviewEntryCardProps) {
+  const filled = Math.round(Math.max(0, Math.min(5, rating)));
+
   return (
     <View style={[styles.container, style]}>
       <Text style={styles.sectionLabel}>오늘의 운세 리뷰</Text>
@@ -26,7 +29,20 @@ export function DailyReviewEntryCard({ hasReview, rating = 0, onPress, style }: 
         <View style={styles.textWrap}>
           {hasReview ? (
             <>
-              <Text style={styles.title}>{renderStars(rating)} 오늘의 별점을 남겼어요</Text>
+              <View style={styles.titleRow}>
+                <View style={styles.starsGroup}>
+                  {[1, 2, 3, 4, 5].map((n) => (
+                    <FontAwesome5
+                      key={n}
+                      name="star"
+                      size={11}
+                      solid={n <= filled}
+                      color={n <= filled ? colors.yellow : "rgba(156,139,120,0.28)"}
+                    />
+                  ))}
+                </View>
+                <Text style={[styles.title, styles.titleReview]}>오늘의 별점을 남겼어요</Text>
+              </View>
               <Text style={styles.subtitle}>기록을 다시 열어볼 수 있어요</Text>
             </>
           ) : (
@@ -41,11 +57,6 @@ export function DailyReviewEntryCard({ hasReview, rating = 0, onPress, style }: 
       </Pressable>
     </View>
   );
-}
-
-function renderStars(rating: number): string {
-  const filled = Math.round(Math.max(0, Math.min(5, rating)));
-  return "★".repeat(filled) + "☆".repeat(5 - filled);
 }
 
 const styles = StyleSheet.create({
@@ -90,11 +101,26 @@ const styles = StyleSheet.create({
     flex: 1,
     gap: 2,
   },
+  titleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  starsGroup: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 2,
+  },
   title: {
     fontSize: 13,
     fontFamily: "NotoSansKR_500Medium",
     color: colors.text,
     lineHeight: 19,
+  },
+  titleReview: {
+    fontSize: 12,
+    color: colors.apricot,
+    lineHeight: 17,
   },
   subtitle: {
     fontSize: 12,
