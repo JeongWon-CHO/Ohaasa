@@ -157,7 +157,7 @@ export function BoardingPassNoteInput({
 
               {/* 스텁: ADMIT ONE 세로 */}
               <View style={styles.stub}>
-                {"ADMIT ONE".split("").map((char, i) => (
+                {"OHAASA".split("").map((char, i) => (
                   <Text key={i} style={styles.admitChar}>
                     {char}
                   </Text>
@@ -183,40 +183,50 @@ export function BoardingPassNoteInput({
           ]}
         >
           <View style={styles.faceInner}>
-            <View style={styles.backHeader}>
-              <Text style={styles.backMeta}>
-                {dateLabel} · {zodiacLabel}
-              </Text>
-              <Pressable
-                onPress={() => {
-                  Keyboard.dismiss();
-                  flip(false);
-                }}
-                hitSlop={12}
-              >
-                <Text style={styles.doneBtn}>완료</Text>
-              </Pressable>
+            {/* 앞면과 동일한 티켓 외곽 구조 유지 */}
+            <View style={styles.ticketRow}>
+              <View style={styles.backMain}>
+                <TextInput
+                  ref={inputRef}
+                  style={styles.input}
+                  value={value}
+                  onChangeText={(t) => onChange(t.slice(0, MAX_LENGTH))}
+                  placeholder="오늘의 별 조각을 남겨보세요"
+                  placeholderTextColor={colors.textSoft}
+                  multiline
+                  textAlignVertical="top"
+                  scrollEnabled
+                  autoFocus={false}
+                />
+                <View style={styles.backFooter}>
+                  <Text style={styles.charCount}>
+                    {value.length}/{MAX_LENGTH}
+                  </Text>
+                  <Pressable
+                    onPress={() => {
+                      Keyboard.dismiss();
+                      flip(false);
+                    }}
+                    hitSlop={12}
+                  >
+                    <Text style={styles.doneBtn}>완료</Text>
+                  </Pressable>
+                </View>
+              </View>
+
+              <VerticalDashLine />
+
+              <View style={styles.stub}>
+                {"OHAASA".split("").map((char, i) => (
+                  <Text key={i} style={styles.admitChar}>
+                    {char}
+                  </Text>
+                ))}
+              </View>
             </View>
 
-            <View style={styles.divider} />
-
-            <View style={styles.backBody}>
-              <TextInput
-                ref={inputRef}
-                style={styles.input}
-                value={value}
-                onChangeText={(t) => onChange(t.slice(0, MAX_LENGTH))}
-                placeholder="오늘의 별 조각을 남겨보세요"
-                placeholderTextColor={colors.textSoft}
-                multiline
-                textAlignVertical="top"
-                scrollEnabled
-                autoFocus={false}
-              />
-              <Text style={styles.charCount}>
-                {value.length}/{MAX_LENGTH}
-              </Text>
-            </View>
+            <View style={[styles.notchCircle, styles.notchTop]} />
+            <View style={[styles.notchCircle, styles.notchBottom]} />
           </View>
         </Animated.View>
       </View>
@@ -340,6 +350,17 @@ const styles = StyleSheet.create({
   notchBottom: { bottom: -(NOTCH / 2) },
 
   // ── 뒷면 ──
+  backMain: {
+    flex: 1,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    gap: spacing.xs,
+  },
+  backFooter: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
   backHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
