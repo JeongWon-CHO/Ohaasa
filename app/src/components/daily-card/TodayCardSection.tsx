@@ -35,7 +35,7 @@ export function TodayCardSection({ card, isOpened, onOpenPress, onViewPress, sty
             </>
           ) : (
             <>
-              <Text style={styles.title}>오늘의 운세 카드가 도착했어요</Text>
+              <Text style={[styles.title, styles.titleDefault]}>오늘의 운세 카드가 도착했어요</Text>
               <Text style={styles.subtitle}>열어보면 오늘의 카드가 펼쳐져요</Text>
             </>
           )}
@@ -93,6 +93,9 @@ const styles = StyleSheet.create({
     fontFamily: 'NotoSansKR_400Regular',
     color: colors.apricotDark,
     lineHeight: 19,
+  },
+  titleDefault: {
+    color: colors.text,
   },
   subtitle: {
     fontSize: 11,
