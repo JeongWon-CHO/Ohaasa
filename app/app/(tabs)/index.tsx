@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { router } from "expo-router";
 import {
   ActivityIndicator,
@@ -80,30 +80,24 @@ export default function TodayScreen() {
         : COPY.noData;
 
   const scrollRef = useRef<ScrollView>(null);
+  const [dateSheetVisible, setDateSheetVisible] = useState(false);
+  const [cardRevealVisible, setCardRevealVisible] = useState(false);
+  const [currentReview, setCurrentReview] = useState<DailyReview | null>(null);
 
   useFocusEffect(useCallback(() => {
     scrollRef.current?.scrollTo({ y: 0, animated: false });
   }, []));
 
-  useEffect(() => {
+  useFocusEffect(useCallback(() => {
     if (!horoscope?.date || !zodiacSign) {
       setCurrentReview(null);
       return;
     }
     getDailyReview(horoscope.date, zodiacSign).then(setCurrentReview);
-  }, [horoscope?.date, zodiacSign]);
-
-  useFocusEffect(useCallback(() => {
-    if (!horoscope?.date || !zodiacSign) return;
-    getDailyReview(horoscope.date, zodiacSign).then(setCurrentReview);
   }, [horoscope?.date, zodiacSign]));
 
   const { pushSheetVisible, handlePushAccept, handlePushDecline } =
     usePushPermissionPrompt({ loading, zodiacSign });
-
-  const [dateSheetVisible, setDateSheetVisible] = useState(false);
-  const [cardRevealVisible, setCardRevealVisible] = useState(false);
-  const [currentReview, setCurrentReview] = useState<DailyReview | null>(null);
 
   const { card, isOpened, markOpened } = useDailyCard(horoscope?.rank, broadcastDate);
 
