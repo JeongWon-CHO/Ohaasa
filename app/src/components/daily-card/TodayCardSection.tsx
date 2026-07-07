@@ -90,12 +90,12 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 13,
-    fontFamily: 'NotoSansKR_500Medium',
+    fontFamily: 'NotoSansKR_400Regular',
     color: colors.apricotDark,
     lineHeight: 19,
   },
   subtitle: {
-    fontSize: 12,
+    fontSize: 11,
     fontFamily: 'NotoSansKR_300Light',
     color: colors.textSoft,
     lineHeight: 17,
