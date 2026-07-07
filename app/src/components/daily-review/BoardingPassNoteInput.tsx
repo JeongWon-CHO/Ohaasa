@@ -88,14 +88,19 @@ export function BoardingPassNoteInput({
   });
 
   function flip(toBack: boolean) {
-    if (toBack) setIsFlipped(true);
+    if (toBack) {
+      setIsFlipped(true);
+    }
     Animated.timing(anim, {
       toValue: toBack ? 180 : 0,
       duration: 420,
       easing: Easing.out(Easing.ease),
       useNativeDriver: true,
     }).start(() => {
-      if (!toBack) setIsFlipped(false);
+      if (!toBack) {
+        setIsFlipped(false);
+        inputRef.current?.blur();
+      }
       if (toBack) inputRef.current?.focus();
     });
   }

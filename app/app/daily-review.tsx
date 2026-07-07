@@ -3,6 +3,8 @@ import { router } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
 import {
   Keyboard,
+  KeyboardAvoidingView,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -10,6 +12,7 @@ import {
   TouchableWithoutFeedback,
   View,
 } from "react-native";
+import { useEffect, useRef } from "react";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { BoardingPassNoteInput } from "@/src/components/daily-review/BoardingPassNoteInput";
@@ -42,6 +45,14 @@ function formatShortDate(dateStr: string | null): string {
 
 export default function DailyReviewScreen() {
   const insets = useSafeAreaInsets();
+  const scrollRef = useRef<ScrollView>(null);
+
+  useEffect(() => {
+    const sub = Keyboard.addListener("keyboardDidShow", () => {
+      scrollRef.current?.scrollToEnd({ animated: true });
+    });
+    return () => sub.remove();
+  }, []);
   const { zodiacSign } = useZodiac();
   const { selectedDate } = useHoroscopeDateContext();
   const { horoscopes } = useAllHoroscopes({ date: selectedDate });
@@ -80,9 +91,14 @@ export default function DailyReviewScreen() {
 
   return (
     <LinearGradient colors={gradients.screen} style={styles.fill}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        style={styles.fill}
+      >
       <View style={styles.inner}>
         {/* ── 스크롤 컨텐츠 ── */}
         <ScrollView
+          ref={scrollRef}
           style={styles.scroll}
           contentContainerStyle={[
             styles.content,
@@ -161,6 +177,7 @@ export default function DailyReviewScreen() {
           </Pressable>
         </View>
       </View>
+      </KeyboardAvoidingView>
     </LinearGradient>
   );
 }
