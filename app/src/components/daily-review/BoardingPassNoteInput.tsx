@@ -386,36 +386,11 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
   },
-  backHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.sm + 2,
-  },
-  backMeta: {
-    fontSize: 11,
-    fontFamily: "NotoSansKR_300Light",
-    color: colors.textSoft,
-    letterSpacing: 0.5,
-    lineHeight: 17,
-  },
   doneBtn: {
     fontSize: 12,
     fontFamily: "NotoSansKR_500Medium",
     color: colors.apricotDark,
     lineHeight: 18,
-  },
-  divider: {
-    height: 1,
-    backgroundColor: BORDER_COLOR,
-  },
-  backBody: {
-    flex: 1,
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.sm,
-    paddingBottom: spacing.md,
-    gap: spacing.xs,
   },
   input: {
     flex: 1,
