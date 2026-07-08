@@ -65,44 +65,57 @@ export function BoardingPassNoteInput({
   rank,
 }: BoardingPassNoteInputProps) {
   const [isFlipped, setIsFlipped] = useState(false);
-  const anim = useRef(new Animated.Value(0)).current;
+  const frontAnim = useRef(new Animated.Value(0)).current;
+  const backAnim = useRef(new Animated.Value(0)).current;
   const inputRef = useRef<TextInput>(null);
 
-  const frontRotate = anim.interpolate({
-    inputRange: [0, 180],
-    outputRange: ["0deg", "180deg"],
+  const frontRotateY = frontAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: ["0deg", "-90deg"],
   });
-  const backRotate = anim.interpolate({
-    inputRange: [0, 180],
-    outputRange: ["180deg", "360deg"],
-  });
-  const frontOpacity = anim.interpolate({
-    inputRange: [89, 90],
-    outputRange: [1, 0],
-    extrapolate: "clamp",
-  });
-  const backOpacity = anim.interpolate({
-    inputRange: [89, 90],
-    outputRange: [0, 1],
-    extrapolate: "clamp",
+  const backRotateY = backAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: ["90deg", "0deg"],
   });
 
   function flip(toBack: boolean) {
     if (toBack) {
       setIsFlipped(true);
-    }
-    Animated.timing(anim, {
-      toValue: toBack ? 180 : 0,
-      duration: 420,
-      easing: Easing.out(Easing.ease),
-      useNativeDriver: true,
-    }).start(() => {
-      if (!toBack) {
+      Animated.sequence([
+        Animated.timing(frontAnim, {
+          toValue: 1,
+          duration: 210,
+          easing: Easing.in(Easing.ease),
+          useNativeDriver: true,
+        }),
+        Animated.timing(backAnim, {
+          toValue: 1,
+          duration: 210,
+          easing: Easing.out(Easing.ease),
+          useNativeDriver: true,
+        }),
+      ]).start(() => {
+        inputRef.current?.focus();
+      });
+    } else {
+      Animated.sequence([
+        Animated.timing(backAnim, {
+          toValue: 0,
+          duration: 210,
+          easing: Easing.in(Easing.ease),
+          useNativeDriver: true,
+        }),
+        Animated.timing(frontAnim, {
+          toValue: 0,
+          duration: 210,
+          easing: Easing.out(Easing.ease),
+          useNativeDriver: true,
+        }),
+      ]).start(() => {
         setIsFlipped(false);
         inputRef.current?.blur();
-      }
-      if (toBack) inputRef.current?.focus();
-    });
+      });
+    }
   }
 
   const hasNote = value.trim().length > 0;
@@ -118,8 +131,8 @@ export function BoardingPassNoteInput({
           style={[
             styles.face,
             {
-              opacity: frontOpacity,
-              transform: [{ perspective: 1200 }, { rotateY: frontRotate }],
+              zIndex: isFlipped ? 0 : 1,
+              transform: [{ perspective: 1200 }, { rotateY: frontRotateY }],
             },
           ]}
         >
@@ -142,7 +155,7 @@ export function BoardingPassNoteInput({
                   {rank != null && (
                     <View style={styles.infoField}>
                       <Text style={styles.fieldLabel}>RANKING</Text>
-                      <Text style={styles.infoValue}>{rank}번</Text>
+                      <Text style={styles.infoValue}>{rank}등</Text>
                     </View>
                   )}
                 </View>
@@ -182,8 +195,8 @@ export function BoardingPassNoteInput({
           style={[
             styles.face,
             {
-              opacity: backOpacity,
-              transform: [{ perspective: 1200 }, { rotateY: backRotate }],
+              zIndex: isFlipped ? 1 : 0,
+              transform: [{ perspective: 1200 }, { rotateY: backRotateY }],
             },
           ]}
         >
@@ -261,7 +274,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: BORDER_COLOR,
     borderRadius: radius.md,
-    backfaceVisibility: "hidden",
     ...Platform.select({
       ios: {
         shadowColor: "#000",

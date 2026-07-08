@@ -12,12 +12,13 @@ import {
   TouchableWithoutFeedback,
   View,
 } from "react-native";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { BoardingPassNoteInput } from "@/src/components/daily-review/BoardingPassNoteInput";
 import { MemorableItemChips } from "@/src/components/daily-review/MemorableItemChips";
 import { StarRatingInput } from "@/src/components/daily-review/StarRatingInput";
+import { ResponsiveContainer } from "@/src/components/common/ResponsiveContainer";
 import { ZODIAC_MAP } from "@/src/constants/zodiac";
 import { useHoroscopeDateContext } from "@/src/context/HoroscopeDateContext";
 import { useAllHoroscopes } from "@/src/hooks/useHoroscope";
@@ -46,12 +47,25 @@ function formatShortDate(dateStr: string | null): string {
 export default function DailyReviewScreen() {
   const insets = useSafeAreaInsets();
   const scrollRef = useRef<ScrollView>(null);
+  const [keyboardVisible, setKeyboardVisible] = useState(false);
+  const [androidKeyboardHeight, setAndroidKeyboardHeight] = useState(0);
 
   useEffect(() => {
-    const sub = Keyboard.addListener("keyboardDidShow", () => {
-      scrollRef.current?.scrollToEnd({ animated: true });
+    const showSub = Keyboard.addListener("keyboardDidShow", (e) => {
+      if (Platform.OS === "android") setAndroidKeyboardHeight(e.endCoordinates.height);
+      setKeyboardVisible(true);
+      setTimeout(() => {
+        scrollRef.current?.scrollToEnd({ animated: true });
+      }, 50);
     });
-    return () => sub.remove();
+    const hideSub = Keyboard.addListener("keyboardDidHide", () => {
+      if (Platform.OS === "android") setAndroidKeyboardHeight(0);
+      setKeyboardVisible(false);
+    });
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
   }, []);
   const { zodiacSign } = useZodiac();
   const { selectedDate } = useHoroscopeDateContext();
@@ -93,16 +107,16 @@ export default function DailyReviewScreen() {
     <LinearGradient colors={gradients.screen} style={styles.fill}>
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : undefined}
-        style={styles.fill}
+        style={[styles.fill, { paddingBottom: androidKeyboardHeight }]}
       >
-      <View style={styles.inner}>
+      <ResponsiveContainer>
         {/* ── 스크롤 컨텐츠 ── */}
         <ScrollView
           ref={scrollRef}
           style={styles.scroll}
           contentContainerStyle={[
             styles.content,
-            { paddingTop: insets.top + 16, paddingBottom: 32 },
+            { paddingTop: insets.top + 16, paddingBottom: keyboardVisible ? 40 : 32 },
           ]}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
@@ -176,7 +190,7 @@ export default function DailyReviewScreen() {
             </Text>
           </Pressable>
         </View>
-      </View>
+      </ResponsiveContainer>
       </KeyboardAvoidingView>
     </LinearGradient>
   );
@@ -184,7 +198,6 @@ export default function DailyReviewScreen() {
 
 const styles = StyleSheet.create({
   fill: { flex: 1 },
-  inner: { flex: 1 },
   scroll: { flex: 1 },
   content: {
     paddingHorizontal: 24,
