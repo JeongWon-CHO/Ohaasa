@@ -44,6 +44,7 @@ import {
   STORAGE_KEYS,
 } from "@/src/lib/storage";
 import { upsertDevice } from "@/src/lib/supabase";
+import { deleteDailyReview } from "@/src/lib/dailyReviews";
 
 // ─── Screen ───────────────────────────────────────────────────
 
@@ -424,6 +425,22 @@ export default function SettingsScreen() {
               onPress={async () => {
                 await AsyncStorage.removeItem(STORAGE_KEYS.cardOpenedDate);
                 Alert.alert("완료", "오늘의 카드가 초기화되었습니다. 홈 화면으로 이동하면 다시 열 수 있어요.");
+              }}
+              style={[styles.aboutRow, styles.rowBorder]}
+            />
+            <SettingsRow
+              title="오늘의 리뷰 초기화"
+              description="오늘 저장한 일일 리뷰 삭제 → 미작성 상태로 복원"
+              showChevron
+              onPress={async () => {
+                const zodiac = await getZodiacSign();
+                if (!zodiac) {
+                  Alert.alert("알림", "별자리가 설정되지 않았습니다.");
+                  return;
+                }
+                const today = new Date().toISOString().slice(0, 10);
+                await deleteDailyReview(today, zodiac);
+                Alert.alert("완료", "오늘의 리뷰가 초기화되었습니다.");
               }}
               style={[styles.aboutRow, styles.rowBorder]}
             />

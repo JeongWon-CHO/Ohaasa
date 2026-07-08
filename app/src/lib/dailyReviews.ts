@@ -53,6 +53,17 @@ type UpsertParams = {
   horoscopeRank: number | null;
 };
 
+export async function deleteDailyReview(
+  date: string,
+  zodiacSign: ZodiacSign,
+): Promise<void> {
+  const all = await loadAll();
+  const id = makeId(date, zodiacSign);
+  if (!(id in all)) return;
+  const { [id]: _, ...rest } = all;
+  await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(rest));
+}
+
 export async function upsertDailyReview({
   draft,
   date,
