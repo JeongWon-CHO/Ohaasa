@@ -2,6 +2,7 @@ import { useCallback, useEffect } from 'react';
 import {
   Image,
   Modal,
+  Platform,
   Pressable,
   StyleSheet,
   Text,
@@ -105,7 +106,7 @@ export function CardRevealOverlay({ visible, card, zodiacSign, onRevealComplete,
   const backFaceStyle = useAnimatedStyle(() => {
     const rotateY = interpolate(flipProgress.value, [0, 0.5, 1], [0, 90, 90]);
     return {
-      transform: [{ perspective: 1200 }, { rotateY: `${rotateY}deg` }],
+      transform: [{ rotateY: `${rotateY}deg` }],
       opacity: flipProgress.value < 0.5 ? 1 : 0,
     };
   });
@@ -113,7 +114,7 @@ export function CardRevealOverlay({ visible, card, zodiacSign, onRevealComplete,
   const frontFaceStyle = useAnimatedStyle(() => {
     const rotateY = interpolate(flipProgress.value, [0, 0.5, 1], [-90, -90, 0]);
     return {
-      transform: [{ perspective: 1200 }, { rotateY: `${rotateY}deg` }],
+      transform: [{ rotateY: `${rotateY}deg` }],
       opacity: flipProgress.value >= 0.5 ? 1 : 0,
       position: 'absolute',
       top: 0, left: 0, right: 0, bottom: 0,
@@ -136,12 +137,10 @@ export function CardRevealOverlay({ visible, card, zodiacSign, onRevealComplete,
       <Pressable style={styles.fill} onPress={handleDismiss}>
         {/* Blur + dim background */}
         <Animated.View style={[StyleSheet.absoluteFillObject, dimStyle]}>
-          <BlurView
-            style={StyleSheet.absoluteFillObject}
-            intensity={30}
-            tint="dark"
-          />
-          <View style={styles.dimOverlay} />
+          {Platform.OS === 'ios' ? (
+            <BlurView style={StyleSheet.absoluteFillObject} intensity={30} tint="dark" />
+          ) : null}
+          <View style={[styles.dimOverlay, Platform.OS !== 'ios' && styles.dimOverlayAndroid]} />
         </Animated.View>
 
         {/* Envelope */}
@@ -157,7 +156,7 @@ export function CardRevealOverlay({ visible, card, zodiacSign, onRevealComplete,
         <View style={styles.cardColumn}>
           <Animated.View style={[styles.cardAnimWrap, cardAnimStyle]} pointerEvents="none">
             {/* Card faces */}
-            <View style={styles.cardWrap}>
+            <View style={[styles.cardWrap, { transform: [{ perspective: 1200 }] }]}>
               <Animated.View style={[styles.cardFace, backFaceStyle]}>
                 <CardBackFace zodiacSign={zodiacSign} />
               </Animated.View>
@@ -230,6 +229,9 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     backgroundColor: 'rgba(18, 8, 2, 0.38)',
   },
+  dimOverlayAndroid: {
+    backgroundColor: 'rgba(18, 8, 2, 0.72)',
+  },
 
   envelopeWrap: {
     position: 'absolute',
@@ -262,7 +264,6 @@ const styles = StyleSheet.create({
     width: CARD_WIDTH,
     height: CARD_HEIGHT,
     borderRadius: radius.lg,
-    overflow: 'hidden',
     borderWidth: 1.5,
     borderColor: 'rgba(210,185,155,0.5)',
   },
@@ -270,6 +271,8 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
+    borderRadius: radius.lg,
+    overflow: 'hidden',
   },
 
   // Back face

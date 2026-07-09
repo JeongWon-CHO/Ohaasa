@@ -44,6 +44,7 @@ import {
   STORAGE_KEYS,
 } from "@/src/lib/storage";
 import { upsertDevice } from "@/src/lib/supabase";
+import { deleteDailyReview } from "@/src/lib/dailyReviews";
 
 // ─── Screen ───────────────────────────────────────────────────
 
@@ -428,6 +429,22 @@ export default function SettingsScreen() {
               style={[styles.aboutRow, styles.rowBorder]}
             />
             <SettingsRow
+              title="오늘의 리뷰 초기화"
+              description="오늘 저장한 일일 리뷰 삭제 → 미작성 상태로 복원"
+              showChevron
+              onPress={async () => {
+                const zodiac = await getZodiacSign();
+                if (!zodiac) {
+                  Alert.alert("알림", "별자리가 설정되지 않았습니다.");
+                  return;
+                }
+                const today = new Date().toISOString().slice(0, 10);
+                await deleteDailyReview(today, zodiac);
+                Alert.alert("완료", "오늘의 리뷰가 초기화되었습니다.");
+              }}
+              style={[styles.aboutRow, styles.rowBorder]}
+            />
+            <SettingsRow
               title="온보딩으로 돌아가기"
               description="별자리 초기화 → 맨처음 화면으로 이동"
               showChevron
@@ -460,7 +477,7 @@ export default function SettingsScreen() {
             <Text style={styles.footerLogo}>ohaasa ✦</Text>
           </View>
           <Text style={styles.footerJa}>おはあさ</Text>
-          <Text style={styles.footerCaption}>v1.2.1</Text>
+          <Text style={styles.footerCaption}>v1.3.0</Text>
         </View>
 
         <View style={styles.spacer} />
