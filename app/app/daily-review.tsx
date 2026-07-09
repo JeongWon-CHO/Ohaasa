@@ -1,5 +1,5 @@
 import { Feather } from "@expo/vector-icons";
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
 import {
   Keyboard,
@@ -67,16 +67,18 @@ export default function DailyReviewScreen() {
       hideSub.remove();
     };
   }, []);
+  const { date: dateParam } = useLocalSearchParams<{ date?: string }>();
   const { zodiacSign } = useZodiac();
   const { selectedDate } = useHoroscopeDateContext();
-  const { horoscopes } = useAllHoroscopes({ date: selectedDate });
+  const effectiveDate = dateParam ?? selectedDate;
+  const { horoscopes } = useAllHoroscopes({ date: effectiveDate });
 
   const zodiac = zodiacSign ? ZODIAC_MAP[zodiacSign] : null;
   const horoscope = zodiacSign
     ? (horoscopes.find((h) => h.zodiac_sign === zodiacSign) ?? null)
     : null;
 
-  const horoscopeDate = horoscope?.date ?? null;
+  const horoscopeDate = horoscope?.date ?? effectiveDate ?? null;
 
   const metaParts = [
     formatKoreanDate(horoscopeDate),
