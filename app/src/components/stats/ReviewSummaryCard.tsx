@@ -56,10 +56,10 @@ const styles = StyleSheet.create({
     paddingRight: spacing.md,
   },
   value: {
-    fontSize: 28,
+    fontSize: 22,
     fontFamily: 'NotoSansKR_300Light',
     color: colors.apricotDark,
-    lineHeight: 36,
+    lineHeight: 30,
     includeFontPadding: false,
   },
   label: {
