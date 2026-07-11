@@ -145,7 +145,7 @@ CREATE POLICY "user_devices_anon_select" ON public.user_devices FOR SELECT  TO a
 
 - 개인정보처리방침 URL: `https://jeongwon-cho.github.io/Ohaasa/privacy-policy.html`
 - `google-services.json`: 커밋 대상(앱 수신용) · Firebase service account JSON은 커밋 금지
-- 현재 버전: v1.3.0 - 오늘의 카드 및 운세 리뷰 추가
+- 현재 버전: v1.4.0 - 운세 기록 캘린더 추가
 
 ---
 
