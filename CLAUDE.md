@@ -42,7 +42,7 @@ app/
 │       ├── _layout.tsx        # 탭 진입 시 device registration (fire-and-forget)
 │       ├── index.tsx          # 오늘의 운세 + TodayCardSection + DailyReviewEntryCard + PushPermissionSheet
 │       ├── rankings.tsx       # 전체 순위
-│       ├── stats.tsx          # 운세 통계 (기간 선택 · 그래프 · 별자리 비교 · 순위 목록) — orchestration only
+│       ├── stats.tsx          # 운세 통계 — [흐름/기록] 세그먼트 + 흐름(그래프·순위) / 기록(캘린더·아카이브) — orchestration only
 │       └── settings.tsx       # 알림 토글 · 별자리 변경 · NotificationDeniedSheet
 └── src/
     ├── context/ZodiacContext.tsx     # 별자리 전역 상태 (ZodiacProvider · useZodiacContext)
@@ -51,12 +51,13 @@ app/
     ├── lib/
     │   ├── storage.ts                # device_id · zodiac · pushToken · platform · notificationsEnabled · hasAskedPushPermission · cardOpenedDate
     │   ├── supabase.ts               # anon client + upsertDevice()
-    │   ├── dailyReviews.ts           # AsyncStorage CRUD — getDailyReview · upsertDailyReview · deleteDailyReview
+    │   ├── dailyReviews.ts           # AsyncStorage CRUD — getDailyReview · upsertDailyReview · deleteDailyReview · getAllDailyReviews
     │   └── notifications.ts          # requestPushToken() · checkPermissionStatus() · setupForegroundHandler() — dynamic import
     ├── hooks/
     │   ├── useZodiac · useHoroscope · useShareHoroscope · useToast
     │   ├── useDailyCard.ts           # 카드 열람 상태 (isOpened · markOpened)
     │   ├── useDailyReview.ts         # 리뷰 폼 상태 + save (upsert)
+    │   ├── useReviewHistory.ts       # 월별 리뷰 집계 — summary · ratingDist · topItems · noteArchive
     │   └── useHoroscopeTrends.ts     # 통계 데이터 훅 — periodLabel · getSummaryComment · SignAverage 타입 export
     └── components/
         ├── PushPermissionSheet.tsx   # 최초 알림 권한 요청 바텀시트
@@ -77,11 +78,18 @@ app/
             ├── ChartCard.tsx         # 순위 흐름 그래프 + 별자리 비교 + 공유 버튼
             ├── RankingCard.tsx       # 별자리별 평균 순위 리스트
             ├── ErrorState.tsx        # 에러 일러스트 + 재시도
-            ├── PeriodSelector.tsx    # 7일/30일 세그먼트 컨트롤
+            ├── PeriodSelector.tsx    # 7일/30일 세그먼트 컨트롤 (stats.tsx에서 직접 사용 안 함 — FinalHeader rightSlot 텍스트 토글로 대체)
             ├── RankTrendChart.tsx    # SVG 라인 차트
             ├── StatsLoadingState.tsx # 로딩 스켈레톤
             ├── FloatingBadge.tsx     # 별자리 아이콘 (placeholder용)
-            └── ZodiacSelectBottomSheet.tsx  # 비교 별자리 선택
+            ├── ZodiacSelectBottomSheet.tsx  # 비교 별자리 선택
+            ├── ReviewHistoryTab.tsx  # 기록 탭 오케스트레이터 (월 탐색 state + 하위 카드 조합)
+            ├── ReviewCalendar.tsx    # 월 캘린더 — 리뷰 있는 날 apricot 원, 일/토 색상, 이전/다음 월 네비게이션
+            ├── ReviewDetailSheet.tsx # 날짜 탭 바텀시트 — 리뷰 상세 또는 "기록 없음" + 수정하기
+            ├── ReviewSummaryCard.tsx # 이달 기록 요약 (2×2 그리드 — 리뷰/별점/메모/기억항목 남긴 날)
+            ├── RatingDistributionCard.tsx  # 5★→1★ 별점 분포 바 차트
+            ├── TopMemorableItemsCard.tsx   # 기억 항목 빈도 바 차트
+            └── NoteArchiveCard.tsx   # 한 줄 기록 최신순 목록
 backend/src/
 ├── crawler/   fetcher · parser (31 tests)
 ├── translator/translate.ts    # GPT 번역
@@ -137,7 +145,7 @@ CREATE POLICY "user_devices_anon_select" ON public.user_devices FOR SELECT  TO a
 
 - 개인정보처리방침 URL: `https://jeongwon-cho.github.io/Ohaasa/privacy-policy.html`
 - `google-services.json`: 커밋 대상(앱 수신용) · Firebase service account JSON은 커밋 금지
-- 현재 버전: v1.3.0 - 오늘의 카드 및 운세 리뷰 추가
+- 현재 버전: v1.4.0 - 운세 기록 캘린더 추가
 
 ---
 
@@ -174,7 +182,9 @@ CREATE POLICY "user_devices_anon_select" ON public.user_devices FOR SELECT  TO a
 
 ### 통계 화면 (stats.tsx)
 
-- **구조**: `stats.tsx`는 orchestration(훅 호출 + state + 카드 조합)만 담당. 각 UI 섹션은 `src/components/stats/`의 독립 컴포넌트가 담당한다 — `SummaryCard`, `ChartCard`, `RankingCard`, `ErrorState`.
+- **탭 구조**: `activeTab: 'trend' | 'history'` state로 [흐름/기록] 전환. 헤더 아래 세그먼트 컨트롤, 탭 내용 조건부 렌더링.
+- **7일/30일 토글**: 흐름 탭에서만 `FinalHeader`의 `rightSlot`에 작은 텍스트 토글로 표시. `PeriodSelector` 컴포넌트는 ScrollView 최상단에서 제거됨 — 헤더 안으로 이동해 세그먼트 컨트롤과 시각적 계층 충돌 방지.
+- **흐름 탭 구조**: `stats.tsx`는 orchestration(훅 호출 + state + 카드 조합)만 담당. 각 UI 섹션은 `src/components/stats/`의 독립 컴포넌트 — `SummaryCard`, `ChartCard`, `RankingCard`, `ErrorState`.
 - **데이터 훅**: `useHoroscopeTrends(zodiacSign, period, compareSign?)` — Supabase에서 기간 내 전체 별자리 rank rows를 한 번에 가져와 클라이언트에서 가공. `CUTOFF_BUFFER_DAYS = 3`으로 버퍼를 두어 크론 미실행 날 대응.
 - **등수(rank) 표시 두 가지 모드**:
   - 기본(반올림): `roundedRank` — 반올림값이 같으면 공동 등수 부여 후 다음 번호 스킵 (예: 3.4→3위, 6.1→6위, 6.8→6위 → 1/2/2/4위)
@@ -187,26 +197,22 @@ CREATE POLICY "user_devices_anon_select" ON public.user_devices FOR SELECT  TO a
 
 ### 오늘의 카드
 
-- **카드 정의**: `src/constants/dailyCards.ts` — 12등수 × 3종 `DailyCard` 배열. `getCardByRank(rank, date)`가 날짜의 일(day)을 index로 순환 선택.
-- **열람 상태**: `src/lib/storage.ts`의 `cardOpenedDate`(YYYY-MM-DD 문자열)로 추적 — 방송 기준일(`broadcastDate`)과 일치하면 열람 완료.
-- **훅**: `useDailyCard(rank, broadcastDate)` → `{ card, isOpened, markOpened, loading }`. `markOpened()`는 `setCardOpenedDate(broadcastDate)` 후 `isOpened = true`.
-- **진입 배너**: `TodayCardSection` — 미열람 시 "열어보면 오늘의 카드가 펼쳐져요", 열람 후 카드 이름·spell 표시. 탭하면 `CardRevealOverlay` 표시.
-- **애니메이션 오버레이**: `CardRevealOverlay` (Modal) — 봉투 등장 → 카드 슬라이드업 → Y축 뒤집기(뒷면→앞면) 순서. 이미 열람한 경우(`alreadyOpened`)는 봉투 없이 바로 앞면 표시. 화면 터치로 닫힘.
-- **카드 뒷면**: 별자리 워터마크(`assets/images/zodiac/{sign}.png`) + "오늘의 카드" 레이블.
-- **카드 앞면**: 카드 이름(대형) · spell(이탤릭) · interpretation(본문) 구성.
-- **이미지 assets**: 봉투 `assets/images/card/envelope.png`, 별자리 워터마크 `assets/images/zodiac/{sign}.png`
+- **카드 순환**: `getCardByRank(rank, date)` — 등수별 3종 카드 중 날짜의 일(day)을 index로 순환 선택.
+- **열람 상태**: `storage.ts`의 `cardOpenedDate`(YYYY-MM-DD)로 하루 단위 추적. 방송 기준일과 일치하면 열람 완료.
+- **`CardRevealOverlay`**: 첫 열람은 봉투→슬라이드업→뒤집기 순서. `alreadyOpened`이면 봉투 없이 앞면 바로 표시.
 
 ### 운세 리뷰
 
-- **저장소**: AsyncStorage 로컬 전용. 키 `ohaasa:daily_reviews:v1`, 레코드 id = `{date}:{zodiacSign}`.
-- **데이터 구조**: `DailyReview` — `rating(1~5)` · `memorableItems(string[])` · `note(string)` · `horoscopeRank` · `createdAt/updatedAt`. `syncedAt/remoteId`는 미래 서버 동기화를 위한 예약 필드.
-- **CRUD**: `src/lib/dailyReviews.ts` — `getDailyReview`, `upsertDailyReview`, `deleteDailyReview`.
-- **훅**: `useDailyReview({ date, zodiacSign, horoscopeRank })` → `{ form, setForm, save, isSaving, existingReview, isLoaded }`. `save()`는 `rating !== null`일 때만 실행.
-- **저장 조건**: `rating !== null && note.trim().length > 0 && hasChanges` 모두 충족 시 저장 버튼 활성화.
-- **진입 배너**: `DailyReviewEntryCard` — 미작성 시 "오늘 운세는 어땠나요?", 작성 후 별점 아이콘 + "오늘의 별점을 남겼어요" 표시. 탭하면 `app/daily-review.tsx`로 `router.push`.
-- **리뷰 화면** (`app/daily-review.tsx`): `StarRatingInput` → `MemorableItemChips` → `BoardingPassNoteInput` 순서. 저장 후 `router.back()`.
-- **`BoardingPassNoteInput`**: 앞면(빈 입력창)↔뒷면(입력된 메모 미리보기) 플립 애니메이션. 입력 시 자동으로 앞면 표시.
-- **키보드 대응**: Android는 `keyboardDidShow` 이벤트로 `androidKeyboardHeight` 직접 관리(padding 방식). iOS는 `KeyboardAvoidingView behavior="padding"`.
+- **저장소**: AsyncStorage 로컬 전용. 키 `ohaasa:daily_reviews:v1`, 레코드 id = `{date}:{zodiacSign}`. `syncedAt/remoteId`는 미래 서버 동기화를 위한 예약 필드.
+- **저장 조건**: `rating !== null && note.trim().length > 0 && hasChanges` 모두 충족 시 활성화.
+- **키보드 대응**: Android는 `keyboardDidShow`로 `androidKeyboardHeight` 직접 관리. iOS는 `KeyboardAvoidingView behavior="padding"`.
+- **`date` URL 파라미터**: 기록 탭 "수정하기"에서 특정 날짜로 진입할 때 사용. 미제공 시 `selectedDate`(최신)로 fallback. `horoscopeDate`도 `horoscope?.date ?? effectiveDate`로 fallback해 Supabase 조회 실패 시에도 기존 리뷰 로드 가능.
+
+### 통계 기록 탭
+
+- **`useReviewHistory(year, month)`**: `useFocusEffect`로 탭 진입·복귀 시 자동 리로드 — 리뷰 작성 후 돌아와도 즉시 반영.
+- **수정하기 플로우**: `ReviewDetailSheet` → `router.push('/daily-review', { params: { date } })` → 저장·`router.back()` → 탭 포커스 → `useFocusEffect` 리로드.
+- **바 차트 width**: percentage string 타입 에러 회피를 위해 `flex: count` / `flex: maxCount - count` 방식 사용 (`RatingDistributionCard`, `TopMemorableItemsCard`).
 
 ### 이미지 저장 / SNS 공유
 
