@@ -30,7 +30,7 @@ export function useShareHoroscope({ showToast }: Options = {}) {
     if (!cardRef.current) return;
     setSaving(true);
     try {
-      const MediaLibrary = await import('expo-media-library');
+      const MediaLibrary = await import('expo-media-library/legacy');
       const { status, canAskAgain } = await MediaLibrary.requestPermissionsAsync(true);
       if (status !== 'granted') {
         if (!canAskAgain) {
