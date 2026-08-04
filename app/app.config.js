@@ -49,6 +49,11 @@ module.exports = {
       'expo-router',
       'expo-notifications',
       'expo-dev-client',
+      'expo-font',
+      'expo-sharing',
+      'expo-splash-screen',
+      'expo-status-bar',
+      'expo-web-browser',
       './plugins/withAndroidRegistration',
       [
         'expo-media-library',
