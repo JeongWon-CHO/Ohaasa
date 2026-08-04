@@ -141,11 +141,12 @@ CREATE POLICY "user_devices_anon_select" ON public.user_devices FOR SELECT  TO a
 | Phase 1~5 | 파서 · Supabase 스키마 · 파이프라인 · Push 발송 · cron | ✅ |
 | Phase 6 Step 1~9 | Expo 앱 · FCM · Push (Receipt polling 제거됨) | ✅ |
 | Phase 10 Step 1~5 | EAS profile · 아이콘/splash · 개인정보처리방침 | ✅ |
-| Phase 10 Step 6 | Play Console 내부 테스트 트랙 업로드 | ⬜ |
+| Phase 10 Step 6 | Play Console 내부 테스트 트랙 업로드 | ✅ |
+| Phase 11 | Expo SDK 56 업그레이드 검증 (위젯 제외) | ⬜ |
 
 - 개인정보처리방침 URL: `https://jeongwon-cho.github.io/Ohaasa/privacy-policy.html`
 - `google-services.json`: 커밋 대상(앱 수신용) · Firebase service account JSON은 커밋 금지
-- 현재 버전: v1.4.0 - 운세 기록 캘린더 추가
+- 현재 버전: v1.4.0 - iOS·Android 모두 기록 탭까지 배포 완료
 
 ---
 
