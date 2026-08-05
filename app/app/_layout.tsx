@@ -84,6 +84,7 @@ function RootLayoutNav() {
             <Stack.Screen name="onboarding" options={{ headerShown: false }} />
             <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
             <Stack.Screen name="zodiac/[sign]" options={{ headerShown: false }} />
+            <Stack.Screen name="daily-review" options={{ headerShown: false }} />
             <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
           </Stack>
         </HoroscopeDateProvider>

@@ -1,4 +1,5 @@
 import { useCallback, useRef, useState } from "react";
+import { router } from "expo-router";
 import {
   ActivityIndicator,
   Linking,
@@ -7,6 +8,10 @@ import {
   Text,
   View,
 } from "react-native";
+import { CardRevealOverlay } from "@/src/components/daily-card/CardRevealOverlay";
+import { TodayCardSection } from "@/src/components/daily-card/TodayCardSection";
+import { DailyReviewEntryCard } from "@/src/components/daily-review/DailyReviewEntryCard";
+import { useDailyCard } from "@/src/hooks/useDailyCard";
 import { useFocusEffect } from "@react-navigation/native";
 import { LinearGradient } from "expo-linear-gradient";
 
@@ -25,6 +30,7 @@ import { useHoroscopeDateContext } from "@/src/context/HoroscopeDateContext";
 import { colors, gradients, layout } from "@/src/constants/design";
 import { ZODIAC_MAP } from "@/src/constants/zodiac";
 import { useAllHoroscopes } from "@/src/hooks/useHoroscope";
+import { getDailyReview, type DailyReview } from "@/src/lib/dailyReviews";
 import { usePushPermissionPrompt } from "@/src/hooks/usePushPermissionPrompt";
 import { useShareHoroscope } from "@/src/hooks/useShareHoroscope";
 import { useToast } from "@/src/hooks/useToast";
@@ -74,15 +80,26 @@ export default function TodayScreen() {
         : COPY.noData;
 
   const scrollRef = useRef<ScrollView>(null);
+  const [dateSheetVisible, setDateSheetVisible] = useState(false);
+  const [cardRevealVisible, setCardRevealVisible] = useState(false);
+  const [currentReview, setCurrentReview] = useState<DailyReview | null>(null);
 
   useFocusEffect(useCallback(() => {
     scrollRef.current?.scrollTo({ y: 0, animated: false });
   }, []));
 
+  useFocusEffect(useCallback(() => {
+    if (!horoscope?.date || !zodiacSign) {
+      setCurrentReview(null);
+      return;
+    }
+    getDailyReview(horoscope.date, zodiacSign).then(setCurrentReview);
+  }, [horoscope?.date, zodiacSign]));
+
   const { pushSheetVisible, handlePushAccept, handlePushDecline } =
     usePushPermissionPrompt({ loading, zodiacSign });
 
-  const [dateSheetVisible, setDateSheetVisible] = useState(false);
+  const { card, isOpened, markOpened } = useDailyCard(horoscope?.rank, broadcastDate);
 
   const rankPillText = isLatest
     ? `오늘의 운세 ${horoscope?.rank}위`
@@ -166,6 +183,21 @@ export default function TodayScreen() {
             />
 
             <GogoInfoGrid horoscope={horoscope} style={styles.infoGrid} />
+
+            <TodayCardSection
+              card={card}
+              isOpened={isOpened}
+              onOpenPress={() => setCardRevealVisible(true)}
+              onViewPress={() => setCardRevealVisible(true)}
+              style={styles.cardSection}
+            />
+
+            <DailyReviewEntryCard
+              hasReview={currentReview !== null}
+              rating={currentReview?.rating}
+              onPress={() => router.push("/daily-review")}
+              style={styles.reviewEntryCard}
+            />
           </>
         ) : (
           <View style={styles.emptyWrap}>
@@ -202,6 +234,19 @@ export default function TodayScreen() {
         selectedDate={selectedDate}
         onSelect={setSelectedDate}
       />
+
+      {card && (
+        <CardRevealOverlay
+          visible={cardRevealVisible}
+          card={card}
+          zodiacSign={zodiacSign ?? undefined}
+          alreadyOpened={isOpened}
+          onRevealComplete={async () => {
+            await markOpened();
+            setCardRevealVisible(false);
+          }}
+        />
+      )}
     </LinearGradient>
   );
 }
@@ -242,6 +287,12 @@ const styles = StyleSheet.create({
     gap: 10,
     marginTop: 12,
     marginHorizontal: 24,
+  },
+  cardSection: {
+    marginBottom: 8,
+  },
+  reviewEntryCard: {
+    marginBottom: 8,
   },
 
   emptyWrap: {
