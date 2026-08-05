@@ -9,8 +9,8 @@ import {
   Text,
   View,
 } from "react-native";
-import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
-import { useFocusEffect } from "@react-navigation/native";
+import { useBottomTabBarHeight } from "expo-router/js-tabs";
+import { useFocusEffect } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 

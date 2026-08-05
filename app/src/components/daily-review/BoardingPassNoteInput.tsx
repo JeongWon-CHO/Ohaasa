@@ -269,7 +269,7 @@ const styles = StyleSheet.create({
   },
 
   face: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: PASS_BG,
     borderWidth: 1,
     borderColor: BORDER_COLOR,

@@ -136,9 +136,9 @@ export function CardRevealOverlay({ visible, card, zodiacSign, onRevealComplete,
     <Modal transparent animationType="none" visible={visible} statusBarTranslucent>
       <Pressable style={styles.fill} onPress={handleDismiss}>
         {/* Blur + dim background */}
-        <Animated.View style={[StyleSheet.absoluteFillObject, dimStyle]}>
+        <Animated.View style={[StyleSheet.absoluteFill, dimStyle]}>
           {Platform.OS === 'ios' ? (
-            <BlurView style={StyleSheet.absoluteFillObject} intensity={30} tint="dark" />
+            <BlurView style={StyleSheet.absoluteFill} intensity={30} tint="dark" />
           ) : null}
           <View style={[styles.dimOverlay, Platform.OS !== 'ios' && styles.dimOverlayAndroid]} />
         </Animated.View>
@@ -226,7 +226,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   dimOverlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: 'rgba(18, 8, 2, 0.38)',
   },
   dimOverlayAndroid: {

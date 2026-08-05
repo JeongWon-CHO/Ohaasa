@@ -12,7 +12,7 @@ import { CardRevealOverlay } from "@/src/components/daily-card/CardRevealOverlay
 import { TodayCardSection } from "@/src/components/daily-card/TodayCardSection";
 import { DailyReviewEntryCard } from "@/src/components/daily-review/DailyReviewEntryCard";
 import { useDailyCard } from "@/src/hooks/useDailyCard";
-import { useFocusEffect } from "@react-navigation/native";
+import { useFocusEffect } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
 
 import { CircleDeco, MoonDeco, StarDeco } from "@/src/components/final/ScreenDeco";
