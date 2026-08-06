@@ -1,13 +1,15 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { router } from "expo-router";
 import {
   ActivityIndicator,
   Linking,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
   View,
 } from "react-native";
+import { requestWidgetUpdate } from "react-native-android-widget";
 import { CardRevealOverlay } from "@/src/components/daily-card/CardRevealOverlay";
 import { TodayCardSection } from "@/src/components/daily-card/TodayCardSection";
 import { DailyReviewEntryCard } from "@/src/components/daily-review/DailyReviewEntryCard";
@@ -25,12 +27,14 @@ import { HoroscopeDateSheet } from "@/src/components/HoroscopeDateSheet";
 import { MediaDeniedSheet } from "@/src/components/MediaDeniedSheet";
 import { PushPermissionSheet } from "@/src/components/PushPermissionSheet";
 import { ShareCard } from "@/src/components/share/ShareCard";
+import { TodayHoroscopeWidget } from "@/src/components/widget/TodayHoroscopeWidget";
 import { Toast } from "@/src/components/common/Toast";
 import { useHoroscopeDateContext } from "@/src/context/HoroscopeDateContext";
 import { colors, gradients, layout } from "@/src/constants/design";
 import { ZODIAC_MAP } from "@/src/constants/zodiac";
 import { useAllHoroscopes } from "@/src/hooks/useHoroscope";
 import { getDailyReview, type DailyReview } from "@/src/lib/dailyReviews";
+import { formatShortDate } from "@/src/lib/horoscope";
 import { usePushPermissionPrompt } from "@/src/hooks/usePushPermissionPrompt";
 import { useShareHoroscope } from "@/src/hooks/useShareHoroscope";
 import { useToast } from "@/src/hooks/useToast";
@@ -98,6 +102,25 @@ export default function TodayScreen() {
 
   const { pushSheetVisible, handlePushAccept, handlePushDecline } =
     usePushPermissionPrompt({ loading, zodiacSign });
+
+  // 오늘의 운세를 새로 불러온 시점에 핀된 위젯도 즉시 갱신 (주기 갱신을 기다리지 않음)
+  useEffect(() => {
+    if (Platform.OS !== "android" || !isLatest || !zodiac || !horoscope) return;
+
+    requestWidgetUpdate({
+      widgetName: "TodayHoroscope",
+      renderWidget: () => (
+        <TodayHoroscopeWidget
+          status="ok"
+          zodiacEmoji={zodiac.emoji}
+          zodiacName={zodiac.ko}
+          rank={horoscope.rank}
+          advice={horoscope.advice_ko ?? horoscope.advice}
+          dateText={formatShortDate(horoscope.date)}
+        />
+      ),
+    });
+  }, [isLatest, zodiac, horoscope]);
 
   const { card, isOpened, markOpened } = useDailyCard(horoscope?.rank, broadcastDate);
 
