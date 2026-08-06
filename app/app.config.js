@@ -64,6 +64,23 @@ module.exports = {
         },
       ],
       './plugins/withWriteOnlyMediaLibrary',
+      [
+        'react-native-android-widget',
+        {
+          widgets: [
+            {
+              name: 'TodayHoroscope',
+              label: '오늘의 운세',
+              description: '오늘의 운세 등수와 한마디를 홈 화면에서 바로 확인해요.',
+              minWidth: '220dp',
+              minHeight: '110dp',
+              updatePeriodMillis: 21600000,
+              previewImage: './assets/images/adaptive-icon.png',
+              resizeMode: 'horizontal|vertical',
+            },
+          ],
+        },
+      ],
     ],
     experiments: {
       typedRoutes: true,
