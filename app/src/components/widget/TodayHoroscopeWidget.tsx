@@ -42,20 +42,21 @@ const ZODIAC_IMAGE: Record<ZodiacSign, number> = {
   pisces: require('@/assets/images/zodiac/pisces.png'),
 };
 
-// 1x1 아이콘 위젯 전용 — 배경 전체에 은은하게 깔리는, 미리 알파를 낮춰둔 버전.
-const FADED_ZODIAC_IMAGE: Record<ZodiacSign, number> = {
-  aries: require('@/assets/images/zodiac-widget/aries.png'),
-  taurus: require('@/assets/images/zodiac-widget/taurus.png'),
-  gemini: require('@/assets/images/zodiac-widget/gemini.png'),
-  cancer: require('@/assets/images/zodiac-widget/cancer.png'),
-  leo: require('@/assets/images/zodiac-widget/leo.png'),
-  virgo: require('@/assets/images/zodiac-widget/virgo.png'),
-  libra: require('@/assets/images/zodiac-widget/libra.png'),
-  scorpio: require('@/assets/images/zodiac-widget/scorpio.png'),
-  sagittarius: require('@/assets/images/zodiac-widget/sagittarius.png'),
-  capricorn: require('@/assets/images/zodiac-widget/capricorn.png'),
-  aquarius: require('@/assets/images/zodiac-widget/aquarius.png'),
-  pisces: require('@/assets/images/zodiac-widget/pisces.png'),
+const LUCKY_COLOR_HEX: Record<string, string> = {
+  빨간색: '#E05555',
+  주황색: '#E8935B',
+  노란색: '#E8C85A',
+  초록색: '#5AAA6B',
+  파란색: '#5588CC',
+  남색: '#3B4D8B',
+  보라색: '#8B5BAA',
+  분홍색: '#E87FAA',
+  흰색: '#E8E0D4',
+  회색: '#8B8B8B',
+  검은색: '#3B3330',
+  갈색: '#8B6347',
+  황금색: '#D4AA45',
+  은색: '#A8A8A8',
 };
 
 const CARD_RADIUS = { small: 18, medium: 20, large: 22 } as const;
@@ -65,6 +66,9 @@ const DASH_RING_COLOR = 'rgba(217, 138, 104, 0.16)' as const;
 const GLOW_COLOR = 'rgba(240, 184, 154, 0.4)' as const;
 const ADVICE_BG = 'rgba(255, 253, 249, 0.75)' as const;
 const ADVICE_BORDER = 'rgba(237, 227, 214, 0.7)' as const;
+const TEAL_BLOB = 'rgba(161, 210, 196, 0.4)' as const;
+const SPARKLE_COLOR = 'rgba(200, 168, 98, 0.45)' as const;
+const MOON_COLOR = 'rgba(163, 175, 200, 0.5)' as const;
 
 function EmptyStateWidget({
   size,
@@ -73,24 +77,6 @@ function EmptyStateWidget({
   size: WidgetSize;
   status: 'no-zodiac' | 'error';
 }) {
-  if (size === 'small') {
-    return (
-      <FlexWidget
-        clickAction="OPEN_APP"
-        style={{
-          height: 'match_parent',
-          width: 'match_parent',
-          backgroundColor: colors.cream2,
-          borderRadius: CARD_RADIUS.small,
-          alignItems: 'center',
-          justifyContent: 'center',
-        }}
-      >
-        <TextWidget text="!" style={{ fontSize: 20, fontWeight: 'bold', color: colors.textSoft }} />
-      </FlexWidget>
-    );
-  }
-
   return (
     <FlexWidget
       clickAction="OPEN_APP"
@@ -112,32 +98,164 @@ function EmptyStateWidget({
   );
 }
 
-function SmallWidget({ sign, rank }: { sign: ZodiacSign; rank: number }) {
+function SmallWidget({
+  sign,
+  zodiacName,
+  zodiacEn,
+  zodiacDateRange,
+  rank,
+  advice,
+  luckyColor,
+}: {
+  sign: ZodiacSign;
+  zodiacName: string;
+  zodiacEn: string;
+  zodiacDateRange: string;
+  rank: number;
+  advice: string;
+  luckyColor: string | null;
+}) {
+  const badgeSize = 64;
+  const dotColor = luckyColor ? (LUCKY_COLOR_HEX[luckyColor] as `#${string}` | undefined) : undefined;
+
   return (
     <OverlapWidget
       clickAction="OPEN_APP"
-      style={{
-        height: 'match_parent',
-        width: 'match_parent',
-        backgroundColor: colors.cream2,
-        borderRadius: CARD_RADIUS.small,
-      }}
+      style={{ height: 'match_parent', width: 'match_parent' }}
     >
+      {/* 배경 그라디언트 — OverlapWidget에 backgroundGradient를 직접 쓰면 투명하게 렌더링되는 버그 있음 */}
       <FlexWidget
-        style={{ height: 'match_parent', width: 'match_parent', alignItems: 'flex-end', justifyContent: 'flex-start' }}
+        style={{
+          height: 'match_parent',
+          width: 'match_parent',
+          backgroundGradient: CARD_GRADIENT,
+          borderRadius: CARD_RADIUS.small,
+        }}
+      />
+
+      {/* 하단 좌: 민트 원 데코 */}
+      <FlexWidget
+        style={{
+          height: 'match_parent',
+          width: 'match_parent',
+          justifyContent: 'flex-end',
+          alignItems: 'flex-start',
+        }}
       >
-        <ImageWidget
-          image={FADED_ZODIAC_IMAGE[sign]}
-          imageWidth={44}
-          imageHeight={44}
-          resizeMode="contain"
-          style={{ marginTop: -6, marginRight: -6 }}
+        <FlexWidget
+          style={{
+            width: 56,
+            height: 56,
+            borderRadius: 999,
+            backgroundColor: TEAL_BLOB,
+            marginLeft: -16,
+            marginBottom: -16,
+          }}
         />
       </FlexWidget>
+
+      {/* 우측 중앙: 달 데코 */}
       <FlexWidget
-        style={{ height: 'match_parent', width: 'match_parent', alignItems: 'center', justifyContent: 'center' }}
+        style={{
+          height: 'match_parent',
+          width: 'match_parent',
+          justifyContent: 'center',
+          alignItems: 'flex-end',
+          paddingRight: 14,
+        }}
       >
-        <TextWidget text={`${rank}위`} style={{ fontSize: 16, fontWeight: 'bold', color: colors.text }} />
+        <TextWidget text="☽" style={{ fontSize: 20, color: MOON_COLOR }} />
+      </FlexWidget>
+
+      {/* 우측 상단: 스파클 데코 */}
+      <FlexWidget
+        style={{
+          height: 'match_parent',
+          width: 'match_parent',
+          alignItems: 'flex-end',
+          paddingTop: 26,
+          paddingRight: 16,
+        }}
+      >
+        <TextWidget text="✦" style={{ fontSize: 7, color: SPARKLE_COLOR }} />
+      </FlexWidget>
+
+      {/* 메인 콘텐츠 */}
+      <FlexWidget
+        style={{
+          height: 'match_parent',
+          width: 'match_parent',
+          flexDirection: 'column',
+          paddingHorizontal: 14,
+          paddingTop: 10,
+          paddingBottom: 10,
+        }}
+      >
+        {/* ohaasa | N위 */}
+        <FlexWidget
+          style={{ flexDirection: 'row', justifyContent: 'space-between', width: 'match_parent' }}
+        >
+          <TextWidget
+            text="ohaasa"
+            style={{ fontSize: 13, color: colors.textSoft, letterSpacing: 1 }}
+          />
+          <FlexWidget
+            style={{
+              backgroundGradient: RANK_GRADIENT,
+              borderRadius: 999,
+              paddingHorizontal: 14,
+              paddingVertical: 5,
+            }}
+          >
+            <TextWidget
+              text={`${rank}위`}
+              style={{ fontSize: 15, fontWeight: 'bold', color: colors.cardSolid }}
+            />
+          </FlexWidget>
+        </FlexWidget>
+
+        {/* 별자리 배지 | 텍스트 컬럼 */}
+        <FlexWidget style={{ flexDirection: 'row', alignItems: 'center', marginTop: 8 }}>
+          <ConstellationBadgeWidget sign={sign} size={badgeSize} />
+
+          <FlexWidget style={{ flexDirection: 'column', marginLeft: 14 }}>
+            <TextWidget
+              text={zodiacName}
+              style={{ fontSize: 20, fontWeight: 'bold', color: colors.text }}
+            />
+            <TextWidget
+              text={`${zodiacEn} · ${zodiacDateRange}`}
+              style={{ fontSize: 11, color: colors.textSoft, marginTop: 2 }}
+            />
+            <TextWidget
+              text={`✦ ${advice}`}
+              maxLines={1}
+              truncate="END"
+              style={{ fontSize: 12, color: colors.textMid, marginTop: 6 }}
+            />
+            {luckyColor && (
+              <FlexWidget style={{ flexDirection: 'row', alignItems: 'center', marginTop: 6 }}>
+                <TextWidget text="✦ 행운 컬러" style={{ fontSize: 10, color: colors.textSoft }} />
+                <TextWidget text="  |  " style={{ fontSize: 10, color: colors.cream3 }} />
+                <TextWidget
+                  text={luckyColor}
+                  style={{ fontSize: 10, fontWeight: 'bold', color: colors.textMid }}
+                />
+                {dotColor && (
+                  <FlexWidget
+                    style={{
+                      width: 8,
+                      height: 8,
+                      borderRadius: 999,
+                      backgroundColor: dotColor,
+                      marginLeft: 4,
+                    }}
+                  />
+                )}
+              </FlexWidget>
+            )}
+          </FlexWidget>
+        </FlexWidget>
       </FlexWidget>
     </OverlapWidget>
   );
@@ -180,8 +298,150 @@ function ConstellationBadgeWidget({ sign, size }: { sign: ZodiacSign; size: numb
   );
 }
 
+function MediumWidget({
+  sign,
+  zodiacName,
+  zodiacEn,
+  zodiacDateRange,
+  rank,
+  advice,
+}: {
+  sign: ZodiacSign;
+  zodiacName: string;
+  zodiacEn: string;
+  zodiacDateRange: string;
+  rank: number;
+  advice: string;
+}) {
+  const badgeSize = 44;
+
+  return (
+    <OverlapWidget
+      clickAction="OPEN_APP"
+      style={{ height: 'match_parent', width: 'match_parent' }}
+    >
+      {/* 배경 그라디언트 — OverlapWidget에 backgroundGradient를 직접 쓰면 투명하게 렌더링되는 버그 있음 */}
+      <FlexWidget
+        style={{
+          height: 'match_parent',
+          width: 'match_parent',
+          backgroundGradient: CARD_GRADIENT,
+          borderRadius: CARD_RADIUS.medium,
+        }}
+      />
+
+      {/* 하단 좌: 민트 원 데코 */}
+      <FlexWidget
+        style={{
+          height: 'match_parent',
+          width: 'match_parent',
+          justifyContent: 'flex-end',
+          alignItems: 'flex-start',
+        }}
+      >
+        <FlexWidget
+          style={{
+            width: 44,
+            height: 44,
+            borderRadius: 999,
+            backgroundColor: TEAL_BLOB,
+            marginLeft: -12,
+            marginBottom: -12,
+          }}
+        />
+      </FlexWidget>
+
+      {/* 하단 우: 달 데코 */}
+      <FlexWidget
+        style={{
+          height: 'match_parent',
+          width: 'match_parent',
+          justifyContent: 'flex-end',
+          alignItems: 'flex-end',
+          paddingBottom: 10,
+          paddingRight: 8,
+        }}
+      >
+        <TextWidget text="☽" style={{ fontSize: 15, color: MOON_COLOR }} />
+      </FlexWidget>
+
+      {/* 우측 중단: 스파클 데코 */}
+      <FlexWidget
+        style={{
+          height: 'match_parent',
+          width: 'match_parent',
+          alignItems: 'flex-end',
+          paddingTop: 28,
+          paddingRight: 9,
+        }}
+      >
+        <TextWidget text="✦" style={{ fontSize: 6, color: SPARKLE_COLOR }} />
+      </FlexWidget>
+
+      {/* 메인 콘텐츠 */}
+      <FlexWidget
+        style={{
+          height: 'match_parent',
+          width: 'match_parent',
+          flexDirection: 'column',
+          alignItems: 'center',
+          paddingHorizontal: 10,
+          paddingVertical: 9,
+        }}
+      >
+        {/* ohaasa | N위 */}
+        <FlexWidget
+          style={{ flexDirection: 'row', justifyContent: 'space-between', width: 'match_parent' }}
+        >
+          <TextWidget
+            text="ohaasa"
+            style={{ fontSize: 10, color: colors.textSoft, letterSpacing: 1 }}
+          />
+          <FlexWidget
+            style={{
+              backgroundGradient: RANK_GRADIENT,
+              borderRadius: 999,
+              paddingHorizontal: 8,
+              paddingVertical: 3,
+            }}
+          >
+            <TextWidget
+              text={`${rank}위`}
+              style={{ fontSize: 11, fontWeight: 'bold', color: colors.cardSolid }}
+            />
+          </FlexWidget>
+        </FlexWidget>
+
+        {/* 별자리 배지 */}
+        <FlexWidget style={{ marginTop: 4 }}>
+          <ConstellationBadgeWidget sign={sign} size={badgeSize} />
+        </FlexWidget>
+
+        {/* 별자리명 */}
+        <TextWidget
+          text={zodiacName}
+          style={{ fontSize: 13, fontWeight: 'bold', color: colors.text, marginTop: 4 }}
+        />
+
+        {/* 영문 · 날짜 */}
+        <TextWidget
+          text={`${zodiacEn} · ${zodiacDateRange}`}
+          style={{ fontSize: 9, color: colors.textSoft, marginTop: 1 }}
+        />
+
+        {/* 조언 */}
+        <TextWidget
+          text={`✦ ${advice}`}
+          maxLines={1}
+          truncate="END"
+          style={{ fontSize: 10, color: colors.textMid, marginTop: 5 }}
+        />
+      </FlexWidget>
+    </OverlapWidget>
+  );
+}
+
 function CardWidget({
-  size,
   sign,
   zodiacName,
   zodiacEn,
@@ -191,7 +451,6 @@ function CardWidget({
   dateText,
   luckyColor,
 }: {
-  size: 'medium' | 'large';
   sign: ZodiacSign;
   zodiacName: string;
   zodiacEn: string;
@@ -201,9 +460,6 @@ function CardWidget({
   dateText: string;
   luckyColor: string | null;
 }) {
-  const isLarge = size === 'large';
-  const badgeSize = isLarge ? 84 : 46;
-
   return (
     <FlexWidget
       clickAction="OPEN_APP"
@@ -211,81 +467,48 @@ function CardWidget({
         height: 'match_parent',
         width: 'match_parent',
         backgroundGradient: CARD_GRADIENT,
-        borderRadius: CARD_RADIUS[size],
+        borderRadius: CARD_RADIUS.large,
         flexDirection: 'column',
         justifyContent: 'space-between',
-        paddingHorizontal: isLarge ? 20 : 14,
-        paddingVertical: isLarge ? 16 : 10,
+        paddingHorizontal: 20,
+        paddingVertical: 16,
       }}
     >
-      {isLarge ? (
-        <FlexWidget style={{ flexDirection: 'row', justifyContent: 'space-between', width: 'match_parent' }}>
-          <TextWidget text="ohaasa" style={{ fontSize: 13, color: colors.textSoft, letterSpacing: 1 }} />
+      <FlexWidget style={{ flexDirection: 'row', justifyContent: 'space-between', width: 'match_parent' }}>
+        <TextWidget text="ohaasa" style={{ fontSize: 13, color: colors.textSoft, letterSpacing: 1 }} />
 
-          <FlexWidget style={{ flexDirection: 'column', alignItems: 'flex-end' }}>
-            <FlexWidget
-              style={{ backgroundColor: colors.sky, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 3 }}
-            >
-              <TextWidget text={dateText} style={{ fontSize: 11, fontWeight: 'bold', color: colors.skyDark }} />
-            </FlexWidget>
-            <FlexWidget
-              style={{
-                backgroundGradient: RANK_GRADIENT,
-                borderRadius: 999,
-                paddingHorizontal: 12,
-                paddingVertical: 4,
-                marginTop: 4,
-              }}
-            >
-              <TextWidget
-                text={`오늘의 운세 ${rank}위`}
-                style={{ fontSize: 12, fontWeight: 'bold', color: colors.cardSolid }}
-              />
-            </FlexWidget>
-          </FlexWidget>
-        </FlexWidget>
-      ) : (
-        <FlexWidget style={{ flexDirection: 'row', justifyContent: 'space-between', width: 'match_parent' }}>
-          <TextWidget text="오늘의 운세" style={{ fontSize: 11, color: colors.textMid }} />
+        <FlexWidget style={{ flexDirection: 'column', alignItems: 'flex-end' }}>
           <FlexWidget
-            style={{ backgroundColor: colors.sky, borderRadius: 999, paddingHorizontal: 8, paddingVertical: 2 }}
+            style={{ backgroundColor: colors.sky, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 3 }}
           >
-            <TextWidget text={dateText} style={{ fontSize: 10, fontWeight: 'bold', color: colors.skyDark }} />
+            <TextWidget text={dateText} style={{ fontSize: 11, fontWeight: 'bold', color: colors.skyDark }} />
+          </FlexWidget>
+          <FlexWidget
+            style={{
+              backgroundGradient: RANK_GRADIENT,
+              borderRadius: 999,
+              paddingHorizontal: 12,
+              paddingVertical: 4,
+              marginTop: 4,
+            }}
+          >
+            <TextWidget
+              text={`오늘의 운세 ${rank}위`}
+              style={{ fontSize: 12, fontWeight: 'bold', color: colors.cardSolid }}
+            />
           </FlexWidget>
         </FlexWidget>
-      )}
+      </FlexWidget>
 
       <FlexWidget style={{ flexDirection: 'row', alignItems: 'center' }}>
-        <ConstellationBadgeWidget sign={sign} size={badgeSize} />
+        <ConstellationBadgeWidget sign={sign} size={84} />
 
         <FlexWidget style={{ flexDirection: 'column', marginLeft: 10 }}>
-          {isLarge ? (
-            <>
-              <TextWidget text={zodiacName} style={{ fontSize: 18, fontWeight: 'bold', color: colors.text }} />
-              <TextWidget
-                text={`${zodiacEn} · ${zodiacDateRange}`}
-                style={{ fontSize: 11, color: colors.textSoft, marginTop: 2 }}
-              />
-            </>
-          ) : (
-            <FlexWidget style={{ flexDirection: 'row', alignItems: 'center' }}>
-              <TextWidget text={zodiacName} style={{ fontSize: 15, fontWeight: 'bold', color: colors.text }} />
-              <FlexWidget
-                style={{
-                  backgroundGradient: RANK_GRADIENT,
-                  borderRadius: 999,
-                  paddingHorizontal: 9,
-                  paddingVertical: 2,
-                  marginLeft: 8,
-                }}
-              >
-                <TextWidget
-                  text={`${rank}위`}
-                  style={{ fontSize: 12, fontWeight: 'bold', color: colors.cardSolid }}
-                />
-              </FlexWidget>
-            </FlexWidget>
-          )}
+          <TextWidget text={zodiacName} style={{ fontSize: 18, fontWeight: 'bold', color: colors.text }} />
+          <TextWidget
+            text={`${zodiacEn} · ${zodiacDateRange}`}
+            style={{ fontSize: 11, color: colors.textSoft, marginTop: 2 }}
+          />
         </FlexWidget>
       </FlexWidget>
 
@@ -295,20 +518,20 @@ function CardWidget({
           borderWidth: 1,
           borderColor: ADVICE_BORDER,
           borderRadius: 14,
-          paddingHorizontal: isLarge ? 14 : 10,
-          paddingVertical: isLarge ? 10 : 8,
+          paddingHorizontal: 14,
+          paddingVertical: 10,
           width: 'match_parent',
         }}
       >
         <TextWidget
           text={advice}
-          maxLines={isLarge ? 3 : 2}
+          maxLines={3}
           truncate="END"
-          style={{ fontSize: isLarge ? 13 : 11, color: colors.text, lineHeight: isLarge ? 19 : 16 }}
+          style={{ fontSize: 13, color: colors.text, lineHeight: 19 }}
         />
       </FlexWidget>
 
-      {isLarge && luckyColor && (
+      {luckyColor && (
         <FlexWidget style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
           <TextWidget text="✦ 행운 컬러" style={{ fontSize: 11, color: colors.textSoft }} />
           <FlexWidget
@@ -334,12 +557,34 @@ export function TodayHoroscopeWidget(props: TodayHoroscopeWidgetProps) {
   }
 
   if (props.size === 'small') {
-    return <SmallWidget sign={props.sign} rank={props.rank} />;
+    return (
+      <SmallWidget
+        sign={props.sign}
+        zodiacName={props.zodiacName}
+        zodiacEn={props.zodiacEn}
+        zodiacDateRange={props.zodiacDateRange}
+        rank={props.rank}
+        advice={props.advice}
+        luckyColor={props.luckyColor}
+      />
+    );
+  }
+
+  if (props.size === 'medium') {
+    return (
+      <MediumWidget
+        sign={props.sign}
+        zodiacName={props.zodiacName}
+        zodiacEn={props.zodiacEn}
+        zodiacDateRange={props.zodiacDateRange}
+        rank={props.rank}
+        advice={props.advice}
+      />
+    );
   }
 
   return (
     <CardWidget
-      size={props.size}
       sign={props.sign}
       zodiacName={props.zodiacName}
       zodiacEn={props.zodiacEn}
