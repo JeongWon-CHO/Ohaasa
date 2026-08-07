@@ -69,11 +69,31 @@ module.exports = {
         {
           widgets: [
             {
+              name: 'TodayHoroscopeSmall',
+              label: '오늘의 운세 (아이콘)',
+              description: '오늘의 순위를 홈 화면 아이콘 크기로 바로 확인해요.',
+              minWidth: '40dp',
+              minHeight: '40dp',
+              updatePeriodMillis: 21600000,
+              previewImage: './assets/images/adaptive-icon.png',
+              resizeMode: 'none',
+            },
+            {
               name: 'TodayHoroscope',
               label: '오늘의 운세',
               description: '오늘의 운세 등수와 한마디를 홈 화면에서 바로 확인해요.',
               minWidth: '220dp',
               minHeight: '110dp',
+              updatePeriodMillis: 21600000,
+              previewImage: './assets/images/adaptive-icon.png',
+              resizeMode: 'horizontal|vertical',
+            },
+            {
+              name: 'TodayHoroscopeLarge',
+              label: '오늘의 운세 (크게)',
+              description: '오늘의 운세를 더 크게, 조언 전체를 홈 화면에서 확인해요.',
+              minWidth: '250dp',
+              minHeight: '180dp',
               updatePeriodMillis: 21600000,
               previewImage: './assets/images/adaptive-icon.png',
               resizeMode: 'horizontal|vertical',
