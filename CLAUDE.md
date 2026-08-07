@@ -38,35 +38,44 @@ app/
 │   ├── index.tsx              # 온보딩 완료 여부 분기
 │   ├── onboarding.tsx         # 별자리 선택 → user_devices 선반영
 │   ├── daily-review.tsx       # 운세 리뷰 입력 화면 (router.push로 진입)
+│   ├── daily-question.tsx     # 오늘의 질문 작성/커뮤니티 화면 (router.push로 진입, date 파라미터 지원)
 │   └── (tabs)/
 │       ├── _layout.tsx        # 탭 진입 시 device registration (fire-and-forget)
-│       ├── index.tsx          # 오늘의 운세 + TodayCardSection + DailyReviewEntryCard + PushPermissionSheet
+│       ├── index.tsx          # 오늘의 운세 + TodayQuestionSection + DailyReviewEntryCard + PushPermissionSheet
 │       ├── rankings.tsx       # 전체 순위
 │       ├── stats.tsx          # 운세 통계 — [흐름/기록] 세그먼트 + 흐름(그래프·순위) / 기록(캘린더·아카이브) — orchestration only
 │       └── settings.tsx       # 알림 토글 · 별자리 변경 · NotificationDeniedSheet
 └── src/
     ├── context/ZodiacContext.tsx     # 별자리 전역 상태 (ZodiacProvider · useZodiacContext)
     ├── constants/
-    │   └── dailyCards.ts             # 12등수 × 3종 DailyCard 정의 + getCardByRank(rank, date)
+    │   └── dailyQuestions.ts         # 질문 60~80개 + getQuestionByDate(date) — day-of-year 기반 순환
     ├── lib/
-    │   ├── storage.ts                # device_id · zodiac · pushToken · platform · notificationsEnabled · hasAskedPushPermission · cardOpenedDate
-    │   ├── supabase.ts               # anon client + upsertDevice()
+    │   ├── storage.ts                # device_id · zodiac · pushToken · platform · notificationsEnabled · hasAskedPushPermission
+    │   ├── supabase.ts               # anon client + upsertDevice() + 오늘의 질문 공개 답변 CRUD/좋아요 함수
     │   ├── dailyReviews.ts           # AsyncStorage CRUD — getDailyReview · upsertDailyReview · deleteDailyReview · getAllDailyReviews
+    │   ├── questionAnswers.ts        # AsyncStorage CRUD — getQuestionAnswer · upsertQuestionAnswer · deleteQuestionAnswer · getAllQuestionAnswers
     │   └── notifications.ts          # requestPushToken() · checkPermissionStatus() · setupForegroundHandler() — dynamic import
     ├── hooks/
     │   ├── useZodiac · useHoroscope · useShareHoroscope · useToast
-    │   ├── useDailyCard.ts           # 카드 열람 상태 (isOpened · markOpened)
     │   ├── useDailyReview.ts         # 리뷰 폼 상태 + save (upsert)
     │   ├── useReviewHistory.ts       # 월별 리뷰 집계 — summary · ratingDist · topItems · noteArchive
+    │   ├── useDailyQuestion.ts       # 홈 배너용 — questionText · myAnswer · hasAnswered (로컬, useFocusEffect 리로드)
+    │   ├── useQuestionAnswerForm.ts  # 작성 폼 상태 + save/remove (로컬 upsert + 공개 시 서버 미러링)
+    │   ├── useAnswerFeed.ts          # 커뮤니티 피드 — answers · likedIds · myAnswerId · toggleLike(낙관적 업데이트)
+    │   ├── useQuestionAnswerHistory.ts  # 월별 답변 집계 — answersByDate (기록 탭 캘린더용)
     │   └── useHoroscopeTrends.ts     # 통계 데이터 훅 — periodLabel · getSummaryComment · SignAverage 타입 export
     └── components/
         ├── PushPermissionSheet.tsx   # 최초 알림 권한 요청 바텀시트
         ├── NotificationDeniedSheet.tsx  # 알림 거부 후 시스템 설정 유도
         ├── common/BottomSheet.tsx    # 공통 바텀시트 (슬라이드 애니메이션)
         ├── final/Toggle.tsx          # disabled prop 지원
-        ├── daily-card/               # 오늘의 카드 전용 컴포넌트
-        │   ├── TodayCardSection.tsx  # 운세 탭 내 카드 진입 배너 (미열람/열람 상태 분기)
-        │   └── CardRevealOverlay.tsx # 봉투→뒤집기→앞면 애니메이션 Modal
+        ├── daily-question/           # 오늘의 질문 전용 컴포넌트
+        │   ├── TodayQuestionSection.tsx  # 운세 탭 내 질문 진입 배너 (미답변/답변완료 상태 분기)
+        │   ├── QuestionAnswerForm.tsx    # 답변 입력(120자 제한) + 공개/비공개 Toggle
+        │   ├── AnswerCard.tsx            # 커뮤니티 피드의 짧은 생각 카드 — 공감 버튼 + (내 글일 때) 수정/삭제
+        │   ├── AnswerFeedTabs.tsx        # 전체/내 별자리 세그먼트 + 별자리 필터 버튼·칩
+        │   ├── AnswerSortToggle.tsx      # 최신순/공감순 텍스트 토글
+        │   └── ZodiacFilterSheet.tsx     # 12별자리 필터 바텀시트 (ZodiacSelectBottomSheet 패턴 적응)
         ├── daily-review/             # 운세 리뷰 전용 컴포넌트
         │   ├── DailyReviewEntryCard.tsx  # 운세 탭 내 리뷰 진입 배너 (미작성/작성 상태 분기)
         │   ├── StarRatingInput.tsx       # 1~5점 별점 입력
@@ -94,8 +103,9 @@ backend/src/
 ├── crawler/   fetcher · parser (31 tests)
 ├── translator/translate.ts    # GPT 번역
 └── main.ts    # 크롤 + 번역 + 저장 (알림 발송 제외)
-supabase/functions/
-└── send-horoscope-notifications/index.ts  # Deno Edge Function — 알림 발송
+supabase/
+├── functions/send-horoscope-notifications/index.ts  # Deno Edge Function — 알림 발송
+└── migrations/  # 스키마 SQL (수동 실행 — supabase/ 전체가 .gitignore 대상이라 git에는 포함되지 않음)
 ```
 
 ---
@@ -122,6 +132,14 @@ CREATE POLICY "user_devices_anon_update" ON public.user_devices FOR UPDATE  TO a
 CREATE POLICY "user_devices_anon_select" ON public.user_devices FOR SELECT  TO anon USING (true);
 ```
 
+### question_answers / question_answer_likes (오늘의 질문 — 공개 UGC)
+
+전체 스키마·RLS·트리거는 `supabase/migrations/20260807000000_question_answers.sql` 참고. `supabase db push`로 반영하거나 대시보드 SQL Editor에서 수동 실행.
+
+- `user_devices`와 동일하게 `device_id`를 베어러 토큰처럼 신뢰하는 RLS(`USING(true)`)를 쓴다 — **앱은 공개 피드 조회 시 절대 `device_id` 컬럼을 select하지 않는다.** 이게 없으면 다른 사용자가 device_id를 알아내 남의 글을 수정/삭제할 수 있다.
+- `question_answers`는 `unique(question_date, device_id)`로 기기당 하루 1개 공개글만 허용 — 작성/수정은 `upsert(onConflict: 'question_date,device_id')`.
+- `like_count`는 `question_answer_likes` insert/delete 트리거(`sync_answer_like_count`)가 자동 동기화 — 클라이언트가 직접 증감시키지 않는다.
+
 ### 환경변수
 
 | 변수                            | 용도                                   |
@@ -143,6 +161,7 @@ CREATE POLICY "user_devices_anon_select" ON public.user_devices FOR SELECT  TO a
 | Phase 10 Step 1~5 | EAS profile · 아이콘/splash · 개인정보처리방침 | ✅ |
 | Phase 10 Step 6 | Play Console 내부 테스트 트랙 업로드 | ✅ |
 | Phase 11 | Expo SDK 56 업그레이드 검증 (위젯 제외) | ⬜ |
+| Phase 12 | 오늘의 카드 → 오늘의 질문 교체 (작성·공개/비공개·커뮤니티 피드·공감·기록 탭 통합) | ✅ (구현 완료, Supabase 마이그레이션 수동 실행 및 실기기 QA 필요) |
 
 - 개인정보처리방침 URL: `https://jeongwon-cho.github.io/Ohaasa/privacy-policy.html`
 - `google-services.json`: 커밋 대상(앱 수신용) · Firebase service account JSON은 커밋 금지
@@ -196,11 +215,20 @@ CREATE POLICY "user_devices_anon_select" ON public.user_devices FOR SELECT  TO a
 - **`periodLabel` 위치**: `useHoroscopeTrends.ts`에서 export — `TrendsPeriod`와 묶인 순수 함수라 훅 파일에 둔다.
 - **별자리 비교**: `compareId` state로 관리. `zodiacSign` 변경 시 `useEffect`로 `compareId` 초기화.
 
-### 오늘의 카드
+### 오늘의 질문
 
-- **카드 순환**: `getCardByRank(rank, date)` — 등수별 3종 카드 중 날짜의 일(day)을 index로 순환 선택.
-- **열람 상태**: `storage.ts`의 `cardOpenedDate`(YYYY-MM-DD)로 하루 단위 추적. 방송 기준일과 일치하면 열람 완료.
-- **`CardRevealOverlay`**: 첫 열람은 봉투→슬라이드업→뒤집기 순서. `alreadyOpened`이면 봉투 없이 앞면 바로 표시.
+이 앱에서 처음으로 서버에 저장되는 공개 UGC(익명 사용자 글)를 다루는 기능. "내 생각을 먼저 남기게" 하는 것이 핵심이라 작성 전에는 커뮤니티 피드를 보여주지 않는다.
+
+- **질문 콘텐츠**: `dailyQuestions.ts`의 `getQuestionByDate(date)` — 연중 일수(day-of-year) 기준 순환. 오늘의 카드보다 반복 주기가 길어야 해서 날짜의 일(day)이 아니라 day-of-year를 쓴다.
+- **플로우**: `daily-question.tsx` 하나의 화면에서 `step: 'answer' | 'community'` state로 작성/피드를 전환한다.
+  - 홈 배너(미답변) 진입 → `step='answer'` → 저장 성공 시 공개면 `step='community'`로 전환, 비공개면 완료 토스트 후 `router.back()`
+  - 홈 배너(답변완료) 진입 → 바로 `step='community'`
+  - 기록 탭 "수정하기"(`date` 파라미터 있음) 진입 → `step='answer'`로 시작, 저장 후 `router.back()` (커뮤니티 전환 없음 — `daily-review.tsx`와 동일 흐름)
+- **로컬 우선 저장**: 공개/비공개 무관하게 모든 답변은 `questionAnswers.ts`(AsyncStorage, 키 `ohaasa:question_answers:v1`, id = date)에 먼저 저장된다 — 캘린더·수정·삭제의 source of truth. 공개일 때만 `question_answers` 테이블에 `upsert(onConflict: 'question_date,device_id')`로 미러링.
+- **신원/보안**: `device_id`를 `user_devices`와 동일하게 베어러 토큰처럼 신뢰(RLS `USING(true)`). **공개 피드 조회는 `device_id` 컬럼을 절대 select하지 않는다** — 남의 글을 수정/삭제하지 못하도록 하는 유일한 방어선이므로 새 쿼리를 추가할 때도 이 규칙을 지켜야 한다. "내 글인지"는 `fetchMyAnswerId(date, myDeviceId)`로 내 device_id만 필터링해 별도 조회한다.
+- **커뮤니티 피드**: `useAnswerFeed(date, scope, sort, deviceId)` — `scope: 'all' | ZodiacSign` 단일 state로 전체/내 별자리/필터를 통합 관리. 공감(`toggleAnswerLike`)은 낙관적 업데이트 후 실패 시 롤백. 리스트는 `ScrollView`(코드베이스 전체가 FlatList/FlashList 안 씀).
+- **하루 1개 제약**: `question_answers`의 `unique(question_date, device_id)`로 기기당 하루 1개 공개글만 허용 — DB 레벨 방어.
+- **모더레이션/신고 기능 없음**: MVP는 120자 제한만 있고 욕설 필터·신고는 후속 과제.
 
 ### 운세 리뷰
 
@@ -214,6 +242,7 @@ CREATE POLICY "user_devices_anon_select" ON public.user_devices FOR SELECT  TO a
 - **`useReviewHistory(year, month)`**: `useFocusEffect`로 탭 진입·복귀 시 자동 리로드 — 리뷰 작성 후 돌아와도 즉시 반영.
 - **수정하기 플로우**: `ReviewDetailSheet` → `router.push('/daily-review', { params: { date } })` → 저장·`router.back()` → 탭 포커스 → `useFocusEffect` 리로드.
 - **바 차트 width**: percentage string 타입 에러 회피를 위해 `flex: count` / `flex: maxCount - count` 방식 사용 (`RatingDistributionCard`, `TopMemorableItemsCard`).
+- **오늘의 질문 통합**: 별도 탭 없이 기존 캘린더에 통합. `useQuestionAnswerHistory(year, month)`가 `answersByDate`를 별도로 조회해 `ReviewCalendar`(리뷰 마커와 별개의 보조 점)와 `ReviewDetailSheet`("오늘의 질문" 섹션 — 질문/답변/공개 여부 칩 + 수정하기/삭제하기)에 함께 전달. 삭제는 화면 이동 없이 즉시 반영되므로 `useReviewHistory`와 달리 수동 `refetch()`를 노출한다.
 
 ### 이미지 저장 / SNS 공유
 

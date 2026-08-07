@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { colors, radius, spacing } from '@/src/constants/design';
 import type { DailyReview } from '@/src/lib/dailyReviews';
+import type { QuestionAnswer } from '@/src/lib/questionAnswers';
 
 const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토'] as const;
 
@@ -10,6 +11,7 @@ interface ReviewCalendarProps {
   year: number;
   month: number;
   reviewsByDate: Record<string, DailyReview>;
+  answersByDate?: Record<string, QuestionAnswer>;
   todayStr: string;
   onDayPress: (date: string) => void;
   onPrevMonth: () => void;
@@ -25,6 +27,7 @@ export function ReviewCalendar({
   year,
   month,
   reviewsByDate,
+  answersByDate = {},
   todayStr,
   onDayPress,
   onPrevMonth,
@@ -82,6 +85,7 @@ export function ReviewCalendar({
             if (!day) return <View key={`e-${ci}`} style={styles.cell} />;
             const dateStr = `${year}-${pad(month)}-${pad(day)}`;
             const hasReview = dateStr in reviewsByDate;
+            const hasAnswer = dateStr in answersByDate;
             const isToday = dateStr === todayStr;
             const isSun = ci === 0;
             const isSat = ci === 6;
@@ -92,23 +96,26 @@ export function ReviewCalendar({
                 style={styles.cell}
                 onPress={() => onDayPress(dateStr)}
               >
-                <View
-                  style={[
-                    styles.dayCircle,
-                    hasReview && styles.dayCircleReview,
-                    isToday && !hasReview && styles.dayCircleToday,
-                  ]}
-                >
-                  <Text
+                <View style={styles.dayWrap}>
+                  <View
                     style={[
-                      styles.dayText,
-                      hasReview && styles.dayTextReview,
-                      !hasReview && isSun && styles.sunText,
-                      !hasReview && isSat && styles.satText,
+                      styles.dayCircle,
+                      hasReview && styles.dayCircleReview,
+                      isToday && !hasReview && styles.dayCircleToday,
                     ]}
                   >
-                    {day}
-                  </Text>
+                    <Text
+                      style={[
+                        styles.dayText,
+                        hasReview && styles.dayTextReview,
+                        !hasReview && isSun && styles.sunText,
+                        !hasReview && isSat && styles.satText,
+                      ]}
+                    >
+                      {day}
+                    </Text>
+                  </View>
+                  {hasAnswer && <View style={styles.answerDot} />}
                 </View>
               </Pressable>
             );
@@ -169,12 +176,26 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 2,
   },
+  dayWrap: {
+    width: CELL_H,
+    height: CELL_H,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   dayCircle: {
     width: CELL_H,
     height: CELL_H,
     borderRadius: CELL_H / 2,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  answerDot: {
+    position: 'absolute',
+    bottom: 1,
+    width: 5,
+    height: 5,
+    borderRadius: 2.5,
+    backgroundColor: colors.skyDark,
   },
   dayCircleReview: {
     backgroundColor: 'rgba(240,184,154,0.2)',
