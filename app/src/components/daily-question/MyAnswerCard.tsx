@@ -1,3 +1,4 @@
+import { Feather } from '@expo/vector-icons';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { colors, radius, shadows, spacing } from '@/src/constants/design';
@@ -21,24 +22,27 @@ export function MyAnswerCard({ answer, onEdit, onDelete }: MyAnswerCardProps) {
             {isPublic ? '공개' : '비공개'}
           </Text>
         </View>
-      </View>
-
-      <Text style={styles.body}>{answer.body}</Text>
-
-      <View style={styles.actions}>
         <Pressable
           onPress={onEdit}
-          style={({ pressed }) => [styles.actionBtn, pressed && { opacity: 0.72 }]}
+          style={({ pressed }) => [styles.iconButton, pressed && { opacity: 0.64 }]}
+          hitSlop={6}
+          accessibilityRole="button"
+          accessibilityLabel="내 답변 수정하기"
         >
-          <Text style={styles.actionText}>수정하기</Text>
+          <Feather name="edit-2" size={16} color={colors.textMid} />
         </Pressable>
         <Pressable
           onPress={onDelete}
-          style={({ pressed }) => [styles.actionBtn, pressed && { opacity: 0.72 }]}
+          style={({ pressed }) => [styles.iconButton, pressed && { opacity: 0.64 }]}
+          hitSlop={6}
+          accessibilityRole="button"
+          accessibilityLabel="내 답변 삭제하기"
         >
-          <Text style={[styles.actionText, styles.deleteText]}>삭제하기</Text>
+          <Feather name="trash-2" size={16} color={colors.trendDown} />
         </Pressable>
       </View>
+
+      <Text style={styles.body}>{answer.body}</Text>
     </View>
   );
 }
@@ -91,26 +95,14 @@ const styles = StyleSheet.create({
     color: colors.text,
     lineHeight: 21,
   },
-  actions: {
-    flexDirection: 'row',
-    gap: spacing.sm,
-  },
-  actionBtn: {
-    flex: 1,
-    paddingVertical: 10,
-    borderRadius: radius.md,
-    borderWidth: 1.5,
+  iconButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    borderWidth: 1,
     borderColor: colors.cream3,
     backgroundColor: colors.cardSolid,
     alignItems: 'center',
-  },
-  actionText: {
-    fontSize: 12,
-    fontFamily: 'NotoSansKR_500Medium',
-    color: colors.textMid,
-    lineHeight: 18,
-  },
-  deleteText: {
-    color: colors.trendDown,
+    justifyContent: 'center',
   },
 });

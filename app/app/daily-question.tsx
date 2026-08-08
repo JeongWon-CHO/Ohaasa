@@ -22,6 +22,7 @@ import { AnswerSortToggle } from "@/src/components/daily-question/AnswerSortTogg
 import { MyAnswerCard } from "@/src/components/daily-question/MyAnswerCard";
 import { QuestionAnswerForm } from "@/src/components/daily-question/QuestionAnswerForm";
 import { ZodiacFilterSheet } from "@/src/components/daily-question/ZodiacFilterSheet";
+import { ConfirmDialog } from "@/src/components/common/ConfirmDialog";
 import { ResponsiveContainer } from "@/src/components/common/ResponsiveContainer";
 import { Toast } from "@/src/components/common/Toast";
 import { getQuestionByDate } from "@/src/constants/dailyQuestions";
@@ -47,6 +48,7 @@ export default function DailyQuestionScreen() {
   const scrollRef = useRef<ScrollView>(null);
   const [keyboardVisible, setKeyboardVisible] = useState(false);
   const [androidKeyboardHeight, setAndroidKeyboardHeight] = useState(0);
+  const [deleteDialogVisible, setDeleteDialogVisible] = useState(false);
 
   useEffect(() => {
     const showSub = Keyboard.addListener("keyboardDidShow", (e) => {
@@ -134,6 +136,11 @@ export default function DailyQuestionScreen() {
     router.back();
   }
 
+  function confirmDeleteMine() {
+    setDeleteDialogVisible(false);
+    void handleDeleteMine();
+  }
+
   function handleEditMine() {
     setStep("answer");
   }
@@ -204,7 +211,7 @@ export default function DailyQuestionScreen() {
                       <MyAnswerCard
                         answer={existingAnswer}
                         onEdit={handleEditMine}
-                        onDelete={handleDeleteMine}
+                        onDelete={() => setDeleteDialogVisible(true)}
                       />
                     )}
 
@@ -264,6 +271,15 @@ export default function DailyQuestionScreen() {
           setScope(sign);
           setFilterVisible(false);
         }}
+      />
+
+      <ConfirmDialog
+        visible={deleteDialogVisible}
+        title="답변을 삭제할까요?"
+        description="삭제한 답변은 되돌릴 수 없어요."
+        confirmLabel="삭제"
+        onCancel={() => setDeleteDialogVisible(false)}
+        onConfirm={confirmDeleteMine}
       />
 
       <Toast {...toastProps} />

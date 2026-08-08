@@ -1,8 +1,10 @@
 import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
 import { router } from 'expo-router';
+import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { BottomSheet } from '@/src/components/common/BottomSheet';
+import { ConfirmDialog } from '@/src/components/common/ConfirmDialog';
 import { colors, radius, spacing } from '@/src/constants/design';
 import { ZODIAC_MAP } from '@/src/constants/zodiac';
 import type { DailyReview } from '@/src/lib/dailyReviews';
@@ -33,6 +35,8 @@ export function ReviewDetailSheet({
   onAnswerChanged,
   onClose,
 }: ReviewDetailSheetProps) {
+  const [deleteDialogVisible, setDeleteDialogVisible] = useState(false);
+
   function handleEdit() {
     if (!date) return;
     onClose();
@@ -56,13 +60,19 @@ export function ReviewDetailSheet({
     onClose();
   }
 
+  function confirmDeleteAnswer() {
+    setDeleteDialogVisible(false);
+    void handleDeleteAnswer();
+  }
+
   const zodiac = review ? ZODIAC_MAP[review.zodiacSign] : null;
 
   return (
-    <BottomSheet visible={visible} onClose={onClose}>
-      {date && (
-        <ScrollView showsVerticalScrollIndicator={false} bounces={false}>
-          <View style={styles.content}>
+    <>
+      <BottomSheet visible={visible} onClose={onClose}>
+        {date && (
+          <ScrollView showsVerticalScrollIndicator={false} bounces={false}>
+            <View style={styles.content}>
             <Text style={styles.dateLabel}>{formatDate(date)}</Text>
 
             {answer && (
@@ -97,7 +107,7 @@ export function ReviewDetailSheet({
                     <Text style={styles.smallBtnText}>수정하기</Text>
                   </Pressable>
                   <Pressable
-                    onPress={handleDeleteAnswer}
+                    onPress={() => setDeleteDialogVisible(true)}
                     style={({ pressed }) => [styles.smallBtn, pressed && { opacity: 0.72 }]}
                   >
                     <Text style={[styles.smallBtnText, styles.smallBtnDangerText]}>삭제하기</Text>
@@ -165,10 +175,20 @@ export function ReviewDetailSheet({
                 </View>
               )
             )}
-          </View>
-        </ScrollView>
-      )}
-    </BottomSheet>
+            </View>
+          </ScrollView>
+        )}
+      </BottomSheet>
+
+      <ConfirmDialog
+        visible={deleteDialogVisible}
+        title="답변을 삭제할까요?"
+        description="삭제한 답변은 되돌릴 수 없어요."
+        confirmLabel="삭제"
+        onCancel={() => setDeleteDialogVisible(false)}
+        onConfirm={confirmDeleteAnswer}
+      />
+    </>
   );
 }
 

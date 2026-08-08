@@ -78,7 +78,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontFamily: 'NotoSansKR_400Regular',
     color: colors.text,
-    lineHeight: 22,
+    lineHeight: 24,
     textAlignVertical: 'top',
   },
   inputFooter: {
