@@ -81,16 +81,6 @@ export function ReviewDetailSheet({
                   <View style={styles.chip}>
                     <Text style={styles.chipText}>오늘의 질문</Text>
                   </View>
-                  <View style={[styles.chip, answer.visibility === 'public' && styles.chipActive]}>
-                    <Text
-                      style={[
-                        styles.chipText,
-                        answer.visibility === 'public' && styles.chipTextActive,
-                      ]}
-                    >
-                      {answer.visibility === 'public' ? '공개' : '비공개'}
-                    </Text>
-                  </View>
                 </View>
 
                 <Text style={styles.questionText}>{answer.questionText}</Text>
