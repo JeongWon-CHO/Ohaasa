@@ -214,12 +214,24 @@ export default function DailyQuestionScreen() {
                       scope={scope}
                       mySign={zodiacSign}
                       onChangeScope={setScope}
-                      onOpenFilter={() => setFilterVisible(true)}
                     />
 
                     <View style={styles.sortRow}>
-                      <AnswerSortToggle sort={sort} onChangeSort={setSort} />
+                      <AnswerSortToggle
+                        sort={sort}
+                        onChangeSort={setSort}
+                        scope={scope}
+                        mySign={zodiacSign}
+                        onOpenFilter={() => setFilterVisible(true)}
+                      />
                     </View>
+
+                    {questionText && (
+                      <View style={styles.questionSummary}>
+                        <Text style={styles.questionSummaryLabel}>오늘의 질문</Text>
+                        <Text style={styles.questionSummaryText}>{questionText}</Text>
+                      </View>
+                    )}
 
                     {existingAnswer && (
                       <MyAnswerCard
@@ -338,6 +350,25 @@ const styles = StyleSheet.create({
   sortRow: {
     flexDirection: "row",
     justifyContent: "flex-end",
+  },
+  questionSummary: {
+    gap: 4,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: 12,
+    backgroundColor: "rgba(240,184,154,0.12)",
+  },
+  questionSummaryLabel: {
+    fontSize: 11,
+    fontFamily: "NotoSansKR_600SemiBold",
+    color: colors.apricotDark,
+    lineHeight: 16,
+  },
+  questionSummaryText: {
+    fontSize: 13,
+    fontFamily: "NotoSansKR_400Regular",
+    color: colors.text,
+    lineHeight: 20,
   },
   feedLoading: {
     paddingVertical: 40,

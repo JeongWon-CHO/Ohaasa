@@ -9,40 +9,30 @@ interface AnswerFeedTabsProps {
   scope: AnswerFeedScope;
   mySign: ZodiacSign | null;
   onChangeScope: (scope: AnswerFeedScope) => void;
-  onOpenFilter: () => void;
 }
 
-export function AnswerFeedTabs({ scope, mySign, onChangeScope, onOpenFilter }: AnswerFeedTabsProps) {
+export function AnswerFeedTabs({ scope, mySign, onChangeScope }: AnswerFeedTabsProps) {
   const isFiltered = scope !== 'all' && scope !== mySign;
 
   return (
     <View style={styles.container}>
-      <View style={styles.segmentRow}>
-        <View style={styles.segmentTrack}>
-          <Pressable
-            onPress={() => onChangeScope('all')}
-            style={[styles.segment, scope === 'all' && styles.segmentActive]}
-          >
-            <Text style={[styles.segmentLabel, scope === 'all' && styles.segmentLabelActive]}>
-              전체
-            </Text>
-          </Pressable>
-          <Pressable
-            onPress={() => mySign && onChangeScope(mySign)}
-            disabled={!mySign}
-            style={[styles.segment, scope === mySign && styles.segmentActive]}
-          >
-            <Text style={[styles.segmentLabel, scope === mySign && styles.segmentLabelActive]}>
-              내 별자리
-            </Text>
-          </Pressable>
-        </View>
-
+      <View style={styles.segmentTrack}>
         <Pressable
-          onPress={onOpenFilter}
-          style={[styles.filterBtn, isFiltered && styles.filterBtnActive, shadows.card]}
+          onPress={() => onChangeScope('all')}
+          style={[styles.segment, scope === 'all' && styles.segmentActive]}
         >
-          <Feather name="filter" size={14} color={isFiltered ? '#FFFDF5' : colors.textMid} />
+          <Text style={[styles.segmentLabel, scope === 'all' && styles.segmentLabelActive]}>
+            전체
+          </Text>
+        </Pressable>
+        <Pressable
+          onPress={() => mySign && onChangeScope(mySign)}
+          disabled={!mySign}
+          style={[styles.segment, scope === mySign && styles.segmentActive]}
+        >
+          <Text style={[styles.segmentLabel, scope === mySign && styles.segmentLabelActive]}>
+            내 별자리
+          </Text>
         </Pressable>
       </View>
 
@@ -62,13 +52,7 @@ const styles = StyleSheet.create({
   container: {
     gap: spacing.sm,
   },
-  segmentRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-  },
   segmentTrack: {
-    flex: 1,
     flexDirection: 'row',
     borderRadius: 14,
     backgroundColor: colors.segmentTrack,
@@ -93,20 +77,6 @@ const styles = StyleSheet.create({
   segmentLabelActive: {
     fontFamily: 'NotoSansKR_700Bold',
     color: colors.apricotDark,
-  },
-  filterBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.cardSolid,
-    borderWidth: 1.5,
-    borderColor: colors.border,
-  },
-  filterBtnActive: {
-    backgroundColor: colors.apricotDark,
-    borderColor: colors.apricotDark,
   },
   filterChip: {
     alignSelf: 'flex-start',

@@ -25,31 +25,32 @@ export function AnswerCard({ answer, isMine, liked, onToggleLike }: AnswerCardPr
           <ConstellationBadge sign={answer.zodiac_sign} size={28} />
         </View>
         <Text style={styles.zodiacName}>{zodiac.ko}</Text>
-        {isMine && (
-          <View style={styles.mineChip}>
-            <Text style={styles.mineChipText}>내 글</Text>
-          </View>
-        )}
+        <View style={styles.headerActions}>
+          {isMine && (
+            <View style={styles.mineChip}>
+              <Text style={styles.mineChipText}>내 글</Text>
+            </View>
+          )}
+          <Pressable
+            onPress={onToggleLike}
+            hitSlop={8}
+            style={({ pressed }) => [styles.likeBtn, pressed && { opacity: 0.7 }]}
+            accessibilityRole="button"
+            accessibilityLabel={`공감 ${answer.like_count}개`}
+          >
+            <Feather
+              name="thumbs-up"
+              size={14}
+              color={liked ? colors.apricotDark : colors.textSoft}
+            />
+            <Text style={[styles.likeCount, liked && styles.likeCountActive]}>
+              {answer.like_count}
+            </Text>
+          </Pressable>
+        </View>
       </View>
 
       <Text style={styles.body}>{answer.body}</Text>
-
-      <View style={styles.footer}>
-        <Pressable
-          onPress={onToggleLike}
-          hitSlop={8}
-          style={({ pressed }) => [styles.likeBtn, pressed && { opacity: 0.7 }]}
-        >
-          <Feather
-            name="thumbs-up"
-            size={14}
-            color={liked ? colors.apricotDark : colors.textSoft}
-          />
-          <Text style={[styles.likeCount, liked && styles.likeCountActive]}>
-            {answer.like_count}
-          </Text>
-        </Pressable>
-      </View>
     </View>
   );
 }
@@ -85,8 +86,13 @@ const styles = StyleSheet.create({
     color: colors.textMid,
     lineHeight: 18,
   },
-  mineChip: {
+  headerActions: {
     marginLeft: 'auto',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  mineChip: {
     paddingHorizontal: spacing.sm,
     paddingVertical: 3,
     borderRadius: radius.pill,
@@ -103,11 +109,6 @@ const styles = StyleSheet.create({
     fontFamily: 'NotoSansKR_400Regular',
     color: colors.text,
     lineHeight: 21,
-  },
-  footer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
   },
   likeBtn: {
     flexDirection: 'row',
