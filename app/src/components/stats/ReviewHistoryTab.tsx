@@ -26,7 +26,11 @@ export function ReviewHistoryTab() {
 
   const { reviewsByDate, summary, ratingDist, topItems, noteArchive, loading } =
     useReviewHistory(year, month);
-  const { answersByDate, refetch: refetchAnswers } = useQuestionAnswerHistory(year, month);
+  const {
+    answersByDate,
+    loading: answersLoading,
+    refetch: refetchAnswers,
+  } = useQuestionAnswerHistory(year, month);
 
   const todayStr = getTodayStr();
   const canGoNext = !(year === today.getFullYear() && month === today.getMonth() + 1);
@@ -53,7 +57,7 @@ export function ReviewHistoryTab() {
     }
   }
 
-  if (loading) {
+  if (loading || answersLoading) {
     return (
       <View style={styles.loadingWrap}>
         <Text style={styles.loadingText}>불러오는 중...</Text>
@@ -80,7 +84,10 @@ export function ReviewHistoryTab() {
           canGoNext={canGoNext}
         />
 
-        <ReviewSummaryCard summary={summary} />
+        <ReviewSummaryCard
+          summary={summary}
+          questionAnswerDays={Object.keys(answersByDate).length}
+        />
 
         {hasAnyRating && <RatingDistributionCard dist={ratingDist} />}
         {topItems.length > 0 && <TopMemorableItemsCard items={topItems} />}
