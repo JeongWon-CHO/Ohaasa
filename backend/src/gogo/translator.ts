@@ -143,8 +143,12 @@ export interface GogoKoEntry {
   lucky_item_ko: string | null;
 }
 
+export interface GogoTranslationOptions {
+  includeItems?: boolean;
+}
+
 /**
- * GogoEntry 배열을 받아 lucky_color_ko / lucky_item_ko를 번역해 반환한다.
+ * GogoEntry 배열을 받아 lucky_color_ko와 선택적으로 lucky_item_ko를 번역해 반환한다.
  *
  * - unique 값만 번역해 중복 API 호출을 방지한다.
  * - COLOR_MAP 매핑은 OPENAI_API_KEY 없이도 동작한다.
@@ -154,16 +158,19 @@ export interface GogoKoEntry {
  */
 export async function translateGogoEntries(
   entries: GogoEntry[],
+  { includeItems = true }: GogoTranslationOptions = {},
 ): Promise<Map<string, GogoKoEntry>> {
   const uniqueColors = [...new Set(entries.map((e) => e.lucky_color))];
-  const uniqueItems = [...new Set(entries.map((e) => e.lucky_item))];
+  const uniqueItems = includeItems
+    ? [...new Set(entries.map((e) => e.lucky_item))]
+    : [];
 
   const mappedCount = uniqueColors.filter((c) => Object.prototype.hasOwnProperty.call(COLOR_MAP, c)).length;
   const gptColorCount = uniqueColors.length - mappedCount;
   console.log(
     `[gogo-ko] ${uniqueColors.length} unique colors` +
     ` (${mappedCount} mapped, ${gptColorCount} GPT),` +
-    ` ${uniqueItems.length} unique items (GPT)`
+    ` ${uniqueItems.length} unique items (GPT${includeItems ? "" : ", skipped"})`
   );
 
   // 색상 번역 (unique 값별 1회)
@@ -172,7 +179,7 @@ export async function translateGogoEntries(
     colorKoMap.set(color, await translateColor(color));
   }
 
-  // 아이템 번역 (unique 값별 1회)
+  // 아이템 번역 (주말에만, unique 값별 1회)
   const itemKoMap = new Map<string, string | null>();
   for (const item of uniqueItems) {
     itemKoMap.set(item, await translateItem(item));

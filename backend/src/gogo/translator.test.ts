@@ -109,6 +109,16 @@ describe("translateGogoEntries() — no OPENAI_API_KEY", () => {
     });
   });
 
+  it("includeItems=false면 고고 아이템 번역 결과를 만들지 않는다", async () => {
+    const { translateGogoEntries } = await import("./translator");
+    const result = await translateGogoEntries(
+      [makeEntry("aries", "ゴールド", "コスメ")],
+      { includeItems: false },
+    );
+    expect(result.get("aries")?.lucky_color_ko).toBe("금색");
+    expect(result.get("aries")?.lucky_item_ko).toBeNull();
+  });
+
   // ----------------------------------------------------------
   // 3. 결과 구조
   // ----------------------------------------------------------
