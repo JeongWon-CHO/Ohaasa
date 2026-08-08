@@ -52,7 +52,7 @@ describe("parse()", () => {
         expect(e).toHaveProperty("zodiac_name");
         expect(e).toHaveProperty("rank");
         expect(e).toHaveProperty("advice");
-        expect(e).toHaveProperty("lucky_place");
+        expect(e).toHaveProperty("lucky_item_ohaasa");
       }
     });
 
@@ -212,49 +212,49 @@ describe("parse()", () => {
   });
 
   // ----------------------------------------------------------
-  // 5-1. lucky_place 분리
+  // 5-1. lucky_item_ohaasa 분리
   //
   // 실제 API 응답(2026-06-08)에서 확인된 패턴: 일반 조언 문장 사이는
-  // 탭 1개, 행운의 장소가 있는 날은 마지막 조언 문장과 장소명 사이에
+  // 탭 1개, 행운 아이템이 있는 날은 마지막 조언 문장과 아이템명 사이에
   // 탭이 2개 이상 연속으로 들어온다. 이 탭 길이 차이만으로 분리한다.
   // ----------------------------------------------------------
-  describe("lucky_place 분리", () => {
-    it("탭 2개로 구분되면 마지막 세그먼트를 lucky_place로 분리한다 (gemini, 2026-06-08 실데이터)", () => {
+  describe("lucky_item_ohaasa 분리", () => {
+    it("탭 2개로 구분되면 마지막 세그먼트를 lucky_item_ohaasa로 분리한다", () => {
       const data = withDetail(0, {
         horoscope_text:
-          "予想外の幸運が訪れそう\t心強いサポーターの出現にも期待大\t願いを口に出すとＧＯＯＤ\t\t喫茶店",
+          "予想外の幸運が訪れそう\t心強いサポーターの出現にも期待大\t願いを口に出すとＧＯＯＤ\t\tキーホルダー",
       });
       const entry = parse(data)[0];
-      expect(entry.lucky_place).toBe("喫茶店");
+      expect(entry.lucky_item_ohaasa).toBe("キーホルダー");
       expect(entry.advice).toBe(
         "予想外の幸運が訪れそう\n心強いサポーターの出現にも期待大\n願いを口に出すとＧＯＯＤ"
       );
-      expect(entry.advice).not.toContain("喫茶店");
+      expect(entry.advice).not.toContain("キーホルダー");
     });
 
-    it("탭 3개로 구분되어도 동일하게 분리한다 (libra, 2026-06-08 실데이터)", () => {
+    it("탭 3개로 구분되어도 동일하게 분리한다", () => {
       const data = withDetail(0, {
         horoscope_text:
-          "後輩の面倒を見ると良い日\t困っていたら相談に乗ってあげて\t\t\tバスターミナル",
+          "後輩の面倒を見ると良い日\t困っていたら相談に乗ってあげて\t\t\tソーセージ",
       });
       const entry = parse(data)[0];
-      expect(entry.lucky_place).toBe("バスターミナル");
+      expect(entry.lucky_item_ohaasa).toBe("ソーセージ");
       expect(entry.advice).toBe("後輩の面倒を見ると良い日\n困っていたら相談に乗ってあげて");
     });
 
-    it("탭이 항상 1개뿐이면 lucky_place는 null이다 (sample.json — 장소 없는 날)", () => {
+    it("탭이 항상 1개뿐이면 lucky_item_ohaasa는 null이다 (sample.json — 아이템 없는 날)", () => {
       const entries = parse(sampleData as HoroscopeApiResponse);
       for (const e of entries) {
-        expect(e.lucky_place).toBeNull();
+        expect(e.lucky_item_ohaasa).toBeNull();
       }
     });
 
-    it("trailing 탭 1개만 있는 경우 lucky_place로 오인하지 않는다", () => {
+    it("trailing 탭 1개만 있는 경우 lucky_item_ohaasa로 오인하지 않는다", () => {
       const data = withDetail(0, {
         horoscope_text: "良い買い物ができる予感\t情報収集に力を入れてね\t",
       });
       const entry = parse(data)[0];
-      expect(entry.lucky_place).toBeNull();
+      expect(entry.lucky_item_ohaasa).toBeNull();
       expect(entry.advice).toBe("良い買い物ができる予感\n情報収集に力を入れてね");
     });
   });

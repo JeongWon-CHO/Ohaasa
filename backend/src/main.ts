@@ -5,7 +5,7 @@ import "dotenv/config";
 import { fetchJson } from "./crawler/fetcher";
 import { parse, type HoroscopeEntry } from "./crawler/parser";
 import { createAdminClient } from "./db/supabase";
-import { translateAdvice, translatePlace, containsJapanese } from "./translator/translate";
+import { translateAdvice, translateOhaasaLuckyItem, containsJapanese } from "./translator/translate";
 import { fetchHtml as fetchGogoHtml } from "./gogo/fetcher";
 import { parse as parseGogo, type GogoEntry } from "./gogo/parser";
 import { translateGogoEntries, type GogoKoEntry } from "./gogo/translator";
@@ -21,11 +21,13 @@ type HoroscopeSource = "ohaasa" | "gogo";
 interface HoroscopeUpsertRow extends HoroscopeEntry {
   advice_ko:      string | null;
   source:         HoroscopeSource;
+  lucky_place:    string | null;
   lucky_place_ko: string | null;
   lucky_color:    string | null;
   lucky_item:     string | null;
   lucky_color_ko: string | null;
   lucky_item_ko:  string | null;
+  lucky_item_ohaasa_ko: string | null;
   money_score:    number | null;
   love_score:     number | null;
   work_score:     number | null;
@@ -79,7 +81,8 @@ function isWeekendJST(today: string): boolean {
 
 /**
  * DB에서 기존 번역을 조회해 재번역 방지 로직을 적용한 후 각 entry에
- * advice_ko를 붙여 반환한다. gogo 필드는 null로, source는 'ohaasa'로 초기화한다.
+ * advice_ko와 오하아사 아이템 번역을 붙여 반환한다.
+ * 고고 아이템은 null로, source는 'ohaasa'로 초기화한다.
  *
  * 재번역 skip 조건 (모두 만족해야 함):
  *   1. 동일 (date, zodiac_sign) row가 이미 존재
@@ -94,7 +97,7 @@ async function attachTranslations(
 
   const { data: existingRows, error: queryError } = await supabase
     .from("horoscopes")
-    .select("zodiac_sign, advice, advice_ko, lucky_place, lucky_place_ko")
+    .select("zodiac_sign, advice, advice_ko, lucky_item_ohaasa, lucky_item_ohaasa_ko")
     .eq("date", date);
 
   if (queryError) {
@@ -107,8 +110,8 @@ async function attachTranslations(
     zodiac_sign: string;
     advice: string;
     advice_ko: string | null;
-    lucky_place: string | null;
-    lucky_place_ko: string | null;
+    lucky_item_ohaasa: string | null;
+    lucky_item_ohaasa_ko: string | null;
   };
   const existingMap = new Map<string, ExistingRow>(
     (existingRows ?? []).map((r: ExistingRow) => [r.zodiac_sign, r])
@@ -119,22 +122,22 @@ async function attachTranslations(
   for (const entry of entries) {
     const existing = existingMap.get(entry.zodiac_sign);
 
-    // ── lucky_place_ko (advice 번역과 독립적으로 skip 판단) ──────
-    let lucky_place_ko: string | null = null;
-    if (entry.lucky_place !== null) {
-      const canSkipPlace =
+    // ── lucky_item_ohaasa_ko (advice 번역과 독립적으로 skip 판단) ──
+    let lucky_item_ohaasa_ko: string | null = null;
+    if (entry.lucky_item_ohaasa !== null) {
+      const canSkipItem =
         existing !== undefined &&
-        existing.lucky_place === entry.lucky_place &&
-        existing.lucky_place_ko !== null &&
-        !containsJapanese(existing.lucky_place_ko);
+        existing.lucky_item_ohaasa === entry.lucky_item_ohaasa &&
+        existing.lucky_item_ohaasa_ko !== null &&
+        !containsJapanese(existing.lucky_item_ohaasa_ko);
 
-      if (canSkipPlace) {
-        lucky_place_ko = existing.lucky_place_ko;
+      if (canSkipItem) {
+        lucky_item_ohaasa_ko = existing.lucky_item_ohaasa_ko;
       } else {
-        console.log(`[translator] ${entry.zodiac_sign}: translating lucky_place "${entry.lucky_place}"`);
-        lucky_place_ko = await translatePlace(entry.lucky_place);
-        if (lucky_place_ko === null) {
-          console.warn(`[translator] ${entry.zodiac_sign}: lucky_place translation failed, lucky_place_ko=null`);
+        console.log(`[translator] ${entry.zodiac_sign}: translating ohaasa item "${entry.lucky_item_ohaasa}"`);
+        lucky_item_ohaasa_ko = await translateOhaasaLuckyItem(entry.lucky_item_ohaasa);
+        if (lucky_item_ohaasa_ko === null) {
+          console.warn(`[translator] ${entry.zodiac_sign}: ohaasa item translation failed, lucky_item_ohaasa_ko=null`);
         }
       }
     }
@@ -145,7 +148,7 @@ async function attachTranslations(
       existing.advice_ko !== null &&
       !containsJapanese(existing.advice_ko);
 
-    const nullGogoFields = {
+    const nullGogoItemFields = {
       lucky_color:    null,
       lucky_item:     null,
       lucky_color_ko: null,
@@ -158,7 +161,15 @@ async function attachTranslations(
 
     if (canSkip) {
       console.log(`[translator] ${entry.zodiac_sign}: skip (same advice, already translated)`);
-      results.push({ ...entry, advice_ko: existing.advice_ko, lucky_place_ko, source: "ohaasa", ...nullGogoFields });
+      results.push({
+        ...entry,
+        advice_ko: existing.advice_ko,
+        source: "ohaasa",
+        lucky_place: null,
+        lucky_place_ko: null,
+        lucky_item_ohaasa_ko,
+        ...nullGogoItemFields,
+      });
       continue;
     }
 
@@ -171,7 +182,15 @@ async function attachTranslations(
     if (advice_ko === null) {
       console.warn(`[translator] ${entry.zodiac_sign}: translation failed, advice_ko=null`);
     }
-    results.push({ ...entry, advice_ko, lucky_place_ko, source: "ohaasa", ...nullGogoFields });
+    results.push({
+      ...entry,
+      advice_ko,
+      source: "ohaasa",
+      lucky_place: null,
+      lucky_place_ko: null,
+      lucky_item_ohaasa_ko,
+      ...nullGogoItemFields,
+    });
   }
 
   return results;
@@ -216,27 +235,28 @@ async function fetchGogoEntries(today: string, force = false): Promise<GogoEntry
 }
 
 /**
- * GogoEntry 배열의 lucky_color / lucky_item을 번역한다.
+ * GogoEntry 배열의 lucky_color와 선택적으로 lucky_item을 번역한다.
  * 실패 시 null Map을 반환하며, 파이프라인을 중단하지 않는다.
  */
 async function fetchGogoKo(
-  gogoEntries: GogoEntry[] | null
+  gogoEntries: GogoEntry[] | null,
+  includeItems = true,
 ): Promise<Map<string, GogoKoEntry> | null> {
   if (!gogoEntries) return null;
   try {
-    return await translateGogoEntries(gogoEntries);
+    return await translateGogoEntries(gogoEntries, { includeItems });
   } catch (err) {
     console.warn(
       `[gogo-ko] Failed: ${err instanceof Error ? err.message : String(err)}.` +
-      ` lucky_color_ko / lucky_item_ko will be null.`
+      ` lucky_color_ko${includeItems ? " / lucky_item_ko" : ""} will be null.`
     );
     return null;
   }
 }
 
 /**
- * 번역이 붙은 ohaasa rows에 gogo 부가정보(lucky/score 필드)를 병합한다.
- * rank / advice / source 는 ohaasa 기준을 유지한다.
+ * 번역이 붙은 ohaasa rows에 고고별자리 컬러/점수만 병합한다.
+ * rank / advice / item / source는 오하아사 기준을 유지한다.
  */
 function mergeGogo(
   rows: HoroscopeUpsertRow[],
@@ -253,9 +273,9 @@ function mergeGogo(
     return {
       ...row,
       lucky_color:    gogo?.lucky_color   ?? null,
-      lucky_item:     gogo?.lucky_item    ?? null,
+      lucky_item:     null,
       lucky_color_ko: gogoKo?.lucky_color_ko ?? null,
-      lucky_item_ko:  gogoKo?.lucky_item_ko  ?? null,
+      lucky_item_ko:  null,
       money_score:    gogo?.money_score   ?? null,
       love_score:     gogo?.love_score    ?? null,
       work_score:     gogo?.work_score    ?? null,
@@ -340,6 +360,8 @@ async function buildWeekendRows(
       lucky_item:     entry.lucky_item,
       lucky_color_ko: gogoKo?.lucky_color_ko ?? null,
       lucky_item_ko:  gogoKo?.lucky_item_ko  ?? null,
+      lucky_item_ohaasa:    null,
+      lucky_item_ohaasa_ko: null,
       money_score:    entry.money_score,
       love_score:     entry.love_score,
       work_score:     entry.work_score,
@@ -354,13 +376,13 @@ async function buildWeekendRows(
 // Dry-run previews
 // ============================================================
 
-/** 평일 dry-run: ohaasa rank 순서로 gogo 병합 결과를 출력한다. */
+/** 평일 dry-run: ohaasa rank 순서로 고고 컬러/점수 병합 결과를 출력한다. */
 function printGogoPreview(
   sorted:      HoroscopeEntry[],
   gogoEntries: GogoEntry[] | null,
   gogoKoMap:   Map<string, GogoKoEntry> | null,
 ): void {
-  console.log("[crawl] dry-run weekday gogo supplement preview:");
+  console.log("[crawl] dry-run weekday gogo color/score supplement preview:");
   const gogoMap = gogoEntries
     ? new Map(gogoEntries.map((e) => [e.zodiac_sign, e]))
     : null;
@@ -372,12 +394,9 @@ function printGogoPreview(
       const colorDisplay = ko?.lucky_color_ko
         ? `${g.lucky_color}(${ko.lucky_color_ko})`
         : g.lucky_color;
-      const itemDisplay = ko?.lucky_item_ko
-        ? `${g.lucky_item}(${ko.lucky_item_ko})`
-        : g.lucky_item;
       console.log(
         `  ${e.zodiac_sign.padEnd(12)}` +
-        `  color=${colorDisplay}  item=${itemDisplay}` +
+        `  color=${colorDisplay}` +
         `  money=${g.money_score} love=${g.love_score}` +
         `  work=${g.work_score} health=${g.health_score}`
       );
@@ -514,7 +533,7 @@ async function crawlAndSave(
 
   // ── Step 2: gogo fetch (best-effort) ──────────────────────────
   const gogoEntries = await fetchGogoEntries(today, isForce);
-  const gogoKoMap   = await fetchGogoKo(gogoEntries);
+  const gogoKoMap   = await fetchGogoKo(gogoEntries, false);
 
   if (isDryRun) {
     printGogoPreview(sorted, gogoEntries, gogoKoMap);
@@ -525,7 +544,7 @@ async function crawlAndSave(
   // ── Step 3: advice 번역 ────────────────────────────────────────
   const translatedRows = await attachTranslations(supabase, entries);
 
-  // ── Step 4: gogo 병합 ──────────────────────────────────────────
+  // ── Step 4: 고고 컬러/점수 병합 ─────────────────────────────────
   const rows = mergeGogo(translatedRows, gogoEntries, gogoKoMap);
 
   // ── Step 5: upsert ─────────────────────────────────────────────
@@ -536,13 +555,13 @@ async function crawlAndSave(
   if (error) throw new Error(`[upsert] ${error.message}`);
 
   const translated = rows.filter((r) => r.advice_ko    !== null).length;
-  const withGogo   = rows.filter((r) => r.lucky_color  !== null).length;
-  const withGogoKo = rows.filter((r) => r.lucky_color_ko !== null).length;
+  const withGogoColor   = rows.filter((r) => r.lucky_color  !== null).length;
+  const withGogoColorKo = rows.filter((r) => r.lucky_color_ko !== null).length;
   console.log(
     `[main] ✓ Upserted ${rows.length} rows  date=${ohaasaDate}  source=ohaasa` +
     `  translated=${translated}/${rows.length}` +
-    `  gogo=${withGogo}/${rows.length}` +
-    `  gogo-ko=${withGogoKo}/${rows.length}`
+    `  gogo-color=${withGogoColor}/${rows.length}` +
+    `  gogo-color-ko=${withGogoColorKo}/${rows.length}`
   );
   return true;
 }

@@ -50,9 +50,14 @@ function StarRow({ label, value }: { label: string; value: number | null }) {
 }
 
 export function GogoInfoGrid({ horoscope, style }: GogoInfoGridProps) {
+  const luckyItem =
+    horoscope.lucky_item_ohaasa_ko ??
+    horoscope.lucky_item_ohaasa ??
+    horoscope.lucky_item_ko ??
+    horoscope.lucky_item;
   const hasLucky =
     horoscope.lucky_color !== null ||
-    horoscope.lucky_item !== null ||
+    luckyItem !== null ||
     horoscope.lucky_place !== null;
   const hasScore =
     (horoscope.love_score !== null && horoscope.love_score > 0) ||
@@ -76,7 +81,7 @@ export function GogoInfoGrid({ horoscope, style }: GogoInfoGridProps) {
         />
         <LuckyRow
           label="아이템"
-          value={horoscope.lucky_item_ko ?? horoscope.lucky_item}
+          value={luckyItem}
         />
       </FinalCard>
 
