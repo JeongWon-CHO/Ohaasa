@@ -26,7 +26,7 @@ import { ResponsiveContainer } from "@/src/components/common/ResponsiveContainer
 import { Toast } from "@/src/components/common/Toast";
 import { getQuestionByDate } from "@/src/constants/dailyQuestions";
 import { colors, gradients, spacing } from "@/src/constants/design";
-import { ZODIAC_MAP, type ZodiacSign } from "@/src/constants/zodiac";
+import type { ZodiacSign } from "@/src/constants/zodiac";
 import { useAnswerFeed, type AnswerFeedScope, type AnswerFeedSort } from "@/src/hooks/useAnswerFeed";
 import { useQuestionAnswerForm } from "@/src/hooks/useQuestionAnswerForm";
 import { useToast } from "@/src/hooks/useToast";
@@ -113,7 +113,6 @@ export default function DailyQuestionScreen() {
 
   const { showToast, toastProps } = useToast();
 
-  const zodiac = zodiacSign ? ZODIAC_MAP[zodiacSign] : null;
   const canSave = form.body.trim().length > 0;
 
   async function handleSave() {
@@ -171,11 +170,6 @@ export default function DailyQuestionScreen() {
                     <Text style={styles.headerTitle}>
                       {step === "answer" ? "오늘의 질문" : "다른 사람들의 생각"}
                     </Text>
-                    {zodiac && (
-                      <Text style={styles.headerMeta} numberOfLines={1}>
-                        {zodiac.ko}
-                      </Text>
-                    )}
                   </View>
 
                   <View style={styles.headerBtn} />
@@ -195,14 +189,6 @@ export default function DailyQuestionScreen() {
                   )
                 ) : (
                   <View style={styles.communitySection}>
-                    {existingAnswer && (
-                      <MyAnswerCard
-                        answer={existingAnswer}
-                        onEdit={handleEditMine}
-                        onDelete={handleDeleteMine}
-                      />
-                    )}
-
                     <AnswerFeedTabs
                       scope={scope}
                       mySign={zodiacSign}
@@ -213,6 +199,14 @@ export default function DailyQuestionScreen() {
                     <View style={styles.sortRow}>
                       <AnswerSortToggle sort={sort} onChangeSort={setSort} />
                     </View>
+
+                    {existingAnswer && (
+                      <MyAnswerCard
+                        answer={existingAnswer}
+                        onEdit={handleEditMine}
+                        onDelete={handleDeleteMine}
+                      />
+                    )}
 
                     {feedLoading ? (
                       <View style={styles.feedLoading}>
@@ -308,13 +302,6 @@ const styles = StyleSheet.create({
     color: colors.text,
     lineHeight: 24,
   },
-  headerMeta: {
-    fontSize: 11,
-    fontFamily: "NotoSansKR_300Light",
-    color: colors.textSoft,
-    lineHeight: 17,
-  },
-
   communitySection: {
     gap: spacing.lg,
   },

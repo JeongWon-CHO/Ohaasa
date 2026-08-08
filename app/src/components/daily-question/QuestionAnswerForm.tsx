@@ -1,6 +1,5 @@
-import { StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
-import { Toggle } from '@/src/components/final/Toggle';
 import { colors, radius, spacing, typography } from '@/src/constants/design';
 
 const MAX_LENGTH = 120;
@@ -34,23 +33,24 @@ export function QuestionAnswerForm({
           multiline
           maxLength={MAX_LENGTH}
         />
-        <Text style={styles.counter}>
-          {body.length} / {MAX_LENGTH}
-        </Text>
-      </View>
+        <View style={styles.inputFooter}>
+          <Pressable
+            onPress={() => onChangeIsPublic(!isPublic)}
+            style={({ pressed }) => [styles.visibilityRow, pressed && { opacity: 0.6 }]}
+            hitSlop={8}
+            accessibilityRole="radio"
+            accessibilityState={{ checked: !isPublic }}
+          >
+            <View style={[styles.radio, !isPublic && styles.radioSelected]}>
+              {!isPublic && <View style={styles.radioDot} />}
+            </View>
+            <Text style={styles.visibilityLabel}>나만 보기</Text>
+          </Pressable>
 
-      <View style={styles.visibilityRow}>
-        <View style={styles.visibilityTextWrap}>
-          <Text style={styles.visibilityTitle}>
-            {isPublic ? '다른 사람에게도 보여주기' : '나만 보기'}
-          </Text>
-          <Text style={styles.visibilitySubtitle}>
-            {isPublic
-              ? '익명으로 커뮤니티에 공개돼요'
-              : '비공개로 남기면 나만 볼 수 있어요'}
+          <Text style={styles.counter}>
+            {body.length} / {MAX_LENGTH}
           </Text>
         </View>
-        <Toggle value={isPublic} onChange={onChangeIsPublic} />
       </View>
     </View>
   );
@@ -81,8 +81,12 @@ const styles = StyleSheet.create({
     lineHeight: 22,
     textAlignVertical: 'top',
   },
+  inputFooter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
   counter: {
-    alignSelf: 'flex-end',
     fontSize: 11,
     fontFamily: 'NotoSansKR_300Light',
     color: colors.textSoft,
@@ -90,28 +94,30 @@ const styles = StyleSheet.create({
   visibilityRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.md,
+    gap: 6,
+  },
+  radio: {
+    width: 14,
+    height: 14,
+    borderRadius: 7,
     borderWidth: 1.5,
     borderColor: colors.border,
-    borderRadius: radius.md,
-    backgroundColor: colors.cardSolid,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  visibilityTextWrap: {
-    flex: 1,
-    gap: 2,
+  radioSelected: {
+    borderColor: colors.apricotDark,
   },
-  visibilityTitle: {
-    fontSize: 13,
-    fontFamily: 'NotoSansKR_500Medium',
-    color: colors.text,
-    lineHeight: 19,
+  radioDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: colors.apricotDark,
   },
-  visibilitySubtitle: {
-    fontSize: 11,
-    fontFamily: 'NotoSansKR_300Light',
+  visibilityLabel: {
+    fontSize: 12,
+    fontFamily: 'NotoSansKR_400Regular',
     color: colors.textSoft,
-    lineHeight: 17,
+    lineHeight: 18,
   },
 });

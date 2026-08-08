@@ -96,6 +96,7 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontFamily: 'NotoSansKR_500Medium',
     color: colors.apricotDark,
+    lineHeight: 15,
   },
   body: {
     fontSize: 14,
@@ -117,6 +118,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontFamily: 'NotoSansKR_400Regular',
     color: colors.textSoft,
+    lineHeight: 18,
   },
   likeCountActive: {
     fontFamily: 'NotoSansKR_600SemiBold',

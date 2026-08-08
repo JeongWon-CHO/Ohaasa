@@ -122,5 +122,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontFamily: 'NotoSansKR_500Medium',
     color: colors.apricotDark,
+    lineHeight: 18,
   },
 });

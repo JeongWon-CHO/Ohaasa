@@ -80,6 +80,7 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontFamily: 'NotoSansKR_500Medium',
     color: colors.textSoft,
+    lineHeight: 15,
   },
   chipTextActive: {
     color: colors.apricotDark,
@@ -107,6 +108,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontFamily: 'NotoSansKR_500Medium',
     color: colors.textMid,
+    lineHeight: 18,
   },
   deleteText: {
     color: colors.trendDown,
