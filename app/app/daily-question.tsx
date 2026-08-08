@@ -88,6 +88,7 @@ export default function DailyQuestionScreen() {
 
   const [step, setStep] = useState<Step>("answer");
   const [stepInitialized, setStepInitialized] = useState(false);
+  const [returnToCommunity, setReturnToCommunity] = useState(false);
 
   useEffect(() => {
     if (stepInitialized || !isLoaded) return;
@@ -127,6 +128,7 @@ export default function DailyQuestionScreen() {
     }
 
     setStep("community");
+    setReturnToCommunity(false);
     refetchFeed();
   }
 
@@ -142,7 +144,19 @@ export default function DailyQuestionScreen() {
   }
 
   function handleEditMine() {
+    setReturnToCommunity(true);
     setStep("answer");
+  }
+
+  function handleBack() {
+    if (step === "answer" && returnToCommunity) {
+      Keyboard.dismiss();
+      setStep("community");
+      setReturnToCommunity(false);
+      return;
+    }
+
+    router.back();
   }
 
   return (
@@ -166,7 +180,7 @@ export default function DailyQuestionScreen() {
               <View>
                 <View style={styles.header}>
                   <Pressable
-                    onPress={() => router.back()}
+                    onPress={handleBack}
                     style={({ pressed }) => [styles.headerBtn, pressed && { opacity: 0.6 }]}
                     hitSlop={12}
                   >
