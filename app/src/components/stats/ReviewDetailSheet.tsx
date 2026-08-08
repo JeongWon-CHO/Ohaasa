@@ -1,16 +1,23 @@
 import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
 import { router } from 'expo-router';
+import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { BottomSheet } from '@/src/components/common/BottomSheet';
+import { ConfirmDialog } from '@/src/components/common/ConfirmDialog';
 import { colors, radius, spacing } from '@/src/constants/design';
 import { ZODIAC_MAP } from '@/src/constants/zodiac';
 import type { DailyReview } from '@/src/lib/dailyReviews';
+import { deleteQuestionAnswer, type QuestionAnswer } from '@/src/lib/questionAnswers';
+import { getOrCreateDeviceId } from '@/src/lib/storage';
+import { deletePublicAnswer } from '@/src/lib/supabase';
 
 interface ReviewDetailSheetProps {
   visible: boolean;
   date: string | null;
   review: DailyReview | null;
+  answer?: QuestionAnswer | null;
+  onAnswerChanged?: () => void;
   onClose: () => void;
 }
 
@@ -20,21 +27,84 @@ function formatDate(dateStr: string): string {
   return `${y}년 ${m}월 ${d}일 (${dow})`;
 }
 
-export function ReviewDetailSheet({ visible, date, review, onClose }: ReviewDetailSheetProps) {
+export function ReviewDetailSheet({
+  visible,
+  date,
+  review,
+  answer = null,
+  onAnswerChanged,
+  onClose,
+}: ReviewDetailSheetProps) {
+  const [deleteDialogVisible, setDeleteDialogVisible] = useState(false);
+
   function handleEdit() {
     if (!date) return;
     onClose();
     router.push({ pathname: '/daily-review', params: { date } });
   }
 
+  function handleEditAnswer() {
+    if (!date) return;
+    onClose();
+    router.push({ pathname: '/daily-question', params: { date, mode: 'edit' } });
+  }
+
+  async function handleDeleteAnswer() {
+    if (!date || !answer) return;
+    await deleteQuestionAnswer(date);
+    if (answer.visibility === 'public') {
+      const deviceId = await getOrCreateDeviceId();
+      await deletePublicAnswer(date, deviceId);
+    }
+    onAnswerChanged?.();
+    onClose();
+  }
+
+  function confirmDeleteAnswer() {
+    setDeleteDialogVisible(false);
+    void handleDeleteAnswer();
+  }
+
   const zodiac = review ? ZODIAC_MAP[review.zodiacSign] : null;
 
   return (
-    <BottomSheet visible={visible} onClose={onClose}>
-      {date && (
-        <ScrollView showsVerticalScrollIndicator={false} bounces={false}>
-          <View style={styles.content}>
+    <>
+      <BottomSheet visible={visible} onClose={onClose}>
+        {date && (
+          <ScrollView showsVerticalScrollIndicator={false} bounces={false}>
+            <View style={styles.content}>
             <Text style={styles.dateLabel}>{formatDate(date)}</Text>
+
+            {answer && (
+              <View style={styles.questionBlock}>
+                <View style={styles.metaRow}>
+                  <View style={styles.chip}>
+                    <Text style={styles.chipText}>오늘의 질문</Text>
+                  </View>
+                </View>
+
+                <Text style={styles.questionText}>{answer.questionText}</Text>
+
+                <View style={styles.noteBox}>
+                  <Text style={styles.noteText}>{answer.body}</Text>
+                </View>
+
+                <View style={styles.answerActionsRow}>
+                  <Pressable
+                    onPress={handleEditAnswer}
+                    style={({ pressed }) => [styles.smallBtn, pressed && { opacity: 0.72 }]}
+                  >
+                    <Text style={styles.smallBtnText}>수정하기</Text>
+                  </Pressable>
+                  <Pressable
+                    onPress={() => setDeleteDialogVisible(true)}
+                    style={({ pressed }) => [styles.smallBtn, pressed && { opacity: 0.72 }]}
+                  >
+                    <Text style={[styles.smallBtnText, styles.smallBtnDangerText]}>삭제하기</Text>
+                  </Pressable>
+                </View>
+              </View>
+            )}
 
             {review ? (
               <>
@@ -89,14 +159,26 @@ export function ReviewDetailSheet({ visible, date, review, onClose }: ReviewDeta
                 </Pressable>
               </>
             ) : (
-              <View style={styles.emptyWrap}>
-                <Text style={styles.emptyText}>이날 남긴 기록이 없어요</Text>
-              </View>
+              !answer && (
+                <View style={styles.emptyWrap}>
+                  <Text style={styles.emptyText}>이날 남긴 기록이 없어요</Text>
+                </View>
+              )
             )}
-          </View>
-        </ScrollView>
-      )}
-    </BottomSheet>
+            </View>
+          </ScrollView>
+        )}
+      </BottomSheet>
+
+      <ConfirmDialog
+        visible={deleteDialogVisible}
+        title="답변을 삭제할까요?"
+        description="삭제한 답변은 되돌릴 수 없어요."
+        confirmLabel="삭제"
+        onCancel={() => setDeleteDialogVisible(false)}
+        onConfirm={confirmDeleteAnswer}
+      />
+    </>
   );
 }
 
@@ -110,6 +192,40 @@ const styles = StyleSheet.create({
     fontFamily: 'NotoSansKR_600SemiBold',
     color: colors.text,
     lineHeight: 24,
+  },
+  questionBlock: {
+    gap: spacing.md,
+    paddingBottom: spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.cream3,
+  },
+  questionText: {
+    fontSize: 14,
+    fontFamily: 'NotoSansKR_500Medium',
+    color: colors.text,
+    lineHeight: 21,
+  },
+  answerActionsRow: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+  },
+  smallBtn: {
+    flex: 1,
+    paddingVertical: 10,
+    borderRadius: radius.md,
+    borderWidth: 1.5,
+    borderColor: colors.cream3,
+    backgroundColor: colors.cardSolid,
+    alignItems: 'center',
+  },
+  smallBtnText: {
+    fontSize: 12,
+    fontFamily: 'NotoSansKR_500Medium',
+    color: colors.textMid,
+    lineHeight: 18,
+  },
+  smallBtnDangerText: {
+    color: colors.trendDown,
   },
   metaRow: {
     flexDirection: 'row',

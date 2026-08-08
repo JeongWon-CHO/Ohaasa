@@ -10,7 +10,6 @@ export const STORAGE_KEYS = {
   pushToken: 'ohaasa:push_token',
   platform: 'ohaasa:platform',
   hasAskedPushPermission: 'ohaasa:has_asked_push_permission',
-  cardOpenedDate: 'ohaasa:card_opened_date',
 } as const;
 
 const ZODIAC_SIGNS = new Set<ZodiacSign>(ZODIAC_LIST.map((zodiac) => zodiac.sign));
@@ -107,12 +106,4 @@ export async function getHasAskedPushPermission(): Promise<boolean> {
 
 export async function setHasAskedPushPermission(): Promise<void> {
   await AsyncStorage.setItem(STORAGE_KEYS.hasAskedPushPermission, 'true');
-}
-
-export async function getCardOpenedDate(): Promise<string | null> {
-  return AsyncStorage.getItem(STORAGE_KEYS.cardOpenedDate);
-}
-
-export async function setCardOpenedDate(date: string): Promise<void> {
-  await AsyncStorage.setItem(STORAGE_KEYS.cardOpenedDate, date);
 }

@@ -5,23 +5,23 @@ import type { ReviewSummary } from '@/src/hooks/useReviewHistory';
 
 interface ReviewSummaryCardProps {
   summary: ReviewSummary;
+  questionAnswerDays: number;
 }
 
-const ITEMS: { key: keyof ReviewSummary; label: string }[] = [
-  { key: 'totalDays', label: '리뷰 남긴 날' },
-  { key: 'daysWithRating', label: '별점 남긴 날' },
-  { key: 'daysWithNote', label: '메모 남긴 날' },
-  { key: 'daysWithMemorableItems', label: '기억 항목 선택' },
-];
+export function ReviewSummaryCard({ summary, questionAnswerDays }: ReviewSummaryCardProps) {
+  const items = [
+    { value: summary.totalDays, label: '리뷰 남긴 날' },
+    { value: questionAnswerDays, label: '질문 답변한 날' },
+    { value: summary.averageRating?.toFixed(1) ?? '-', label: '평균 별점' },
+  ];
 
-export function ReviewSummaryCard({ summary }: ReviewSummaryCardProps) {
   return (
     <View style={styles.card}>
       <Text style={styles.title}>이달의 기록 요약</Text>
       <View style={styles.grid}>
-        {ITEMS.map(({ key, label }) => (
-          <View key={key} style={styles.item}>
-            <Text style={styles.value}>{summary[key]}</Text>
+        {items.map(({ value, label }) => (
+          <View key={label} style={styles.item}>
+            <Text style={styles.value}>{value}</Text>
             <Text style={styles.label}>{label}</Text>
           </View>
         ))}
@@ -47,13 +47,11 @@ const styles = StyleSheet.create({
   },
   grid: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
   },
   item: {
-    width: '50%',
+    flex: 1,
     gap: 4,
     paddingVertical: spacing.sm,
-    paddingRight: spacing.md,
   },
   value: {
     fontSize: 22,

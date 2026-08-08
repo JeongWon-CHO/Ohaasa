@@ -30,7 +30,6 @@ import {
   requestPushToken,
   type NotifPermissionStatus,
 } from "@/src/lib/notifications";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
   getNotificationsEnabled,
   setNotificationsEnabled as saveNotificationsEnabled,
@@ -41,10 +40,10 @@ import {
   setPushToken,
   setPlatform,
   clearZodiacSign,
-  STORAGE_KEYS,
 } from "@/src/lib/storage";
-import { upsertDevice } from "@/src/lib/supabase";
+import { deletePublicAnswer, upsertDevice } from "@/src/lib/supabase";
 import { deleteDailyReview } from "@/src/lib/dailyReviews";
+import { deleteQuestionAnswer, getQuestionAnswer } from "@/src/lib/questionAnswers";
 
 // ─── Screen ───────────────────────────────────────────────────
 
@@ -419,12 +418,18 @@ export default function SettingsScreen() {
               style={[styles.aboutRow, styles.rowBorder]}
             />
             <SettingsRow
-              title="오늘의 카드 초기화"
-              description="개봉 기록 삭제 → 카드 미개봉 상태로 복원"
+              title="오늘의 질문 초기화"
+              description="오늘 남긴 답변 삭제 → 미답변 상태로 복원"
               showChevron
               onPress={async () => {
-                await AsyncStorage.removeItem(STORAGE_KEYS.cardOpenedDate);
-                Alert.alert("완료", "오늘의 카드가 초기화되었습니다. 홈 화면으로 이동하면 다시 열 수 있어요.");
+                const today = new Date().toISOString().slice(0, 10);
+                const existing = await getQuestionAnswer(today);
+                await deleteQuestionAnswer(today);
+                if (existing?.visibility === "public") {
+                  const deviceId = await getOrCreateDeviceId();
+                  await deletePublicAnswer(today, deviceId);
+                }
+                Alert.alert("완료", "오늘의 질문이 초기화되었습니다. 홈 화면으로 이동하면 다시 답할 수 있어요.");
               }}
               style={[styles.aboutRow, styles.rowBorder]}
             />
