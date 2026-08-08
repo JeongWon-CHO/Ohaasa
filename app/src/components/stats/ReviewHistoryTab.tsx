@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
-import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
+import { useBottomTabBarHeight } from 'expo-router/js-tabs';
 
 import { colors, spacing } from '@/src/constants/design';
 import { useReviewHistory } from '@/src/hooks/useReviewHistory';
+import { useQuestionAnswerHistory } from '@/src/hooks/useQuestionAnswerHistory';
 import { NoteArchiveCard } from './NoteArchiveCard';
 import { RatingDistributionCard } from './RatingDistributionCard';
 import { ReviewCalendar } from './ReviewCalendar';
@@ -25,10 +26,16 @@ export function ReviewHistoryTab() {
 
   const { reviewsByDate, summary, ratingDist, topItems, noteArchive, loading } =
     useReviewHistory(year, month);
+  const {
+    answersByDate,
+    loading: answersLoading,
+    refetch: refetchAnswers,
+  } = useQuestionAnswerHistory(year, month);
 
   const todayStr = getTodayStr();
   const canGoNext = !(year === today.getFullYear() && month === today.getMonth() + 1);
   const sheetReview = selectedDate ? (reviewsByDate[selectedDate] ?? null) : null;
+  const sheetAnswer = selectedDate ? (answersByDate[selectedDate] ?? null) : null;
   const hasAnyRating = Object.values(ratingDist).some((v) => v > 0);
 
   function prevMonth() {
@@ -50,7 +57,7 @@ export function ReviewHistoryTab() {
     }
   }
 
-  if (loading) {
+  if (loading || answersLoading) {
     return (
       <View style={styles.loadingWrap}>
         <Text style={styles.loadingText}>불러오는 중...</Text>
@@ -69,6 +76,7 @@ export function ReviewHistoryTab() {
           year={year}
           month={month}
           reviewsByDate={reviewsByDate}
+          answersByDate={answersByDate}
           todayStr={todayStr}
           onDayPress={setSelectedDate}
           onPrevMonth={prevMonth}
@@ -76,13 +84,16 @@ export function ReviewHistoryTab() {
           canGoNext={canGoNext}
         />
 
-        <ReviewSummaryCard summary={summary} />
+        <ReviewSummaryCard
+          summary={summary}
+          questionAnswerDays={Object.keys(answersByDate).length}
+        />
 
         {hasAnyRating && <RatingDistributionCard dist={ratingDist} />}
         {topItems.length > 0 && <TopMemorableItemsCard items={topItems} />}
         {noteArchive.length > 0 && <NoteArchiveCard notes={noteArchive} />}
 
-        {summary.totalDays === 0 && (
+        {summary.totalDays === 0 && Object.keys(answersByDate).length === 0 && (
           <View style={styles.empty}>
             <Text style={styles.emptyTitle}>이달에 남긴 기록이 없어요</Text>
             <Text style={styles.emptyBody}>오늘의 운세를 보고 리뷰를 남겨보세요</Text>
@@ -94,6 +105,8 @@ export function ReviewHistoryTab() {
         visible={selectedDate !== null}
         date={selectedDate}
         review={sheetReview}
+        answer={sheetAnswer}
+        onAnswerChanged={refetchAnswers}
         onClose={() => setSelectedDate(null)}
       />
     </>

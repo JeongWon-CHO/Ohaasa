@@ -166,24 +166,24 @@ export async function translateAdvice(
   return third;
 }
 
-const PLACE_SYSTEM_PROMPT =
-  "일본어 장소 명사구를 한국어 운세 앱 UI에 표시할 짧고 자연스러운 한국어 명사구로 번역하세요. " +
+const LUCKY_ITEM_SYSTEM_PROMPT =
+  "일본어 행운 아이템 명사구를 한국어 운세 앱 UI에 표시할 짧고 자연스러운 한국어 명사구로 번역하세요. " +
   "번역된 명사구만 출력하고 설명을 붙이지 마세요.";
 
 /**
- * "행운의 장소" 명사구를 한국어로 번역한다 (단발성 호출, 재시도 없음).
+ * 오하아사 "행운 아이템" 명사구를 한국어로 번역한다 (단발성 호출, 재시도 없음).
  * OPENAI_API_KEY가 없거나 GPT 호출이 실패하면 null을 반환한다.
  */
-export async function translatePlace(place: string): Promise<string | null> {
+export async function translateOhaasaLuckyItem(item: string): Promise<string | null> {
   const client = getClient();
   if (!client) return null;
 
   return callGPT(
     client, getModel(),
     [
-      { role: "system", content: PLACE_SYSTEM_PROMPT },
-      { role: "user", content: place },
+      { role: "system", content: LUCKY_ITEM_SYSTEM_PROMPT },
+      { role: "user", content: item },
     ],
-    `place "${place}"`,
+    `ohaasa item "${item}"`,
   );
 }

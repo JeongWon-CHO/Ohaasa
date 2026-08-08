@@ -1,13 +1,11 @@
 import { useCallback, useMemo, useState } from 'react';
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect } from 'expo-router';
 
 import { getAllDailyReviews, type DailyReview } from '@/src/lib/dailyReviews';
 
 export type ReviewSummary = {
   totalDays: number;
-  daysWithRating: number;
-  daysWithNote: number;
-  daysWithMemorableItems: number;
+  averageRating: number | null;
 };
 
 export type RatingDist = Record<1 | 2 | 3 | 4 | 5, number>;
@@ -42,12 +40,15 @@ export function useReviewHistory(year: number, month: number) {
   );
 
   const summary: ReviewSummary = useMemo(
-    () => ({
-      totalDays: reviews.length,
-      daysWithRating: reviews.filter((r) => r.rating > 0).length,
-      daysWithNote: reviews.filter((r) => r.note.trim().length > 0).length,
-      daysWithMemorableItems: reviews.filter((r) => r.memorableItems.length > 0).length,
-    }),
+    () => {
+      const ratedReviews = reviews.filter((r) => r.rating > 0);
+      const averageRating =
+        ratedReviews.length > 0
+          ? ratedReviews.reduce((total, review) => total + review.rating, 0) / ratedReviews.length
+          : null;
+
+      return { totalDays: reviews.length, averageRating };
+    },
     [reviews],
   );
 

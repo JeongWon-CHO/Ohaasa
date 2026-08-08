@@ -8,11 +8,10 @@ import {
   Text,
   View,
 } from "react-native";
-import { CardRevealOverlay } from "@/src/components/daily-card/CardRevealOverlay";
-import { TodayCardSection } from "@/src/components/daily-card/TodayCardSection";
+import { TodayQuestionSection } from "@/src/components/daily-question/TodayQuestionSection";
 import { DailyReviewEntryCard } from "@/src/components/daily-review/DailyReviewEntryCard";
-import { useDailyCard } from "@/src/hooks/useDailyCard";
-import { useFocusEffect } from "@react-navigation/native";
+import { useDailyQuestion } from "@/src/hooks/useDailyQuestion";
+import { useFocusEffect } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
 
 import { CircleDeco, MoonDeco, StarDeco } from "@/src/components/final/ScreenDeco";
@@ -81,7 +80,6 @@ export default function TodayScreen() {
 
   const scrollRef = useRef<ScrollView>(null);
   const [dateSheetVisible, setDateSheetVisible] = useState(false);
-  const [cardRevealVisible, setCardRevealVisible] = useState(false);
   const [currentReview, setCurrentReview] = useState<DailyReview | null>(null);
 
   useFocusEffect(useCallback(() => {
@@ -99,7 +97,7 @@ export default function TodayScreen() {
   const { pushSheetVisible, handlePushAccept, handlePushDecline } =
     usePushPermissionPrompt({ loading, zodiacSign });
 
-  const { card, isOpened, markOpened } = useDailyCard(horoscope?.rank, broadcastDate);
+  const { hasAnswered } = useDailyQuestion(horoscope?.date ?? null);
 
   const rankPillText = isLatest
     ? `오늘의 운세 ${horoscope?.rank}위`
@@ -184,11 +182,12 @@ export default function TodayScreen() {
 
             <GogoInfoGrid horoscope={horoscope} style={styles.infoGrid} />
 
-            <TodayCardSection
-              card={card}
-              isOpened={isOpened}
-              onOpenPress={() => setCardRevealVisible(true)}
-              onViewPress={() => setCardRevealVisible(true)}
+            <TodayQuestionSection
+              hasAnswered={hasAnswered}
+              onPress={() =>
+                horoscope?.date &&
+                router.push({ pathname: "/daily-question", params: { date: horoscope.date } })
+              }
               style={styles.cardSection}
             />
 
@@ -234,19 +233,6 @@ export default function TodayScreen() {
         selectedDate={selectedDate}
         onSelect={setSelectedDate}
       />
-
-      {card && (
-        <CardRevealOverlay
-          visible={cardRevealVisible}
-          card={card}
-          zodiacSign={zodiacSign ?? undefined}
-          alreadyOpened={isOpened}
-          onRevealComplete={async () => {
-            await markOpened();
-            setCardRevealVisible(false);
-          }}
-        />
-      )}
     </LinearGradient>
   );
 }

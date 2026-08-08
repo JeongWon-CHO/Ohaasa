@@ -1,42 +1,37 @@
-import { AntDesign, Feather } from "@expo/vector-icons";
+import { Feather } from '@expo/vector-icons';
 import { Pressable, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
 
-import { type DailyCard } from '@/src/constants/dailyCards';
 import { colors, radius, shadows, spacing, typography } from '@/src/constants/design';
 
-interface TodayCardSectionProps {
-  card: DailyCard | null;
-  isOpened: boolean;
-  onOpenPress: () => void;
-  onViewPress?: () => void;
+interface TodayQuestionSectionProps {
+  hasAnswered: boolean;
+  onPress: () => void;
   style?: StyleProp<ViewStyle>;
 }
 
-export function TodayCardSection({ card, isOpened, onOpenPress, onViewPress, style }: TodayCardSectionProps) {
-  const handlePress = isOpened ? onViewPress : onOpenPress;
-
+export function TodayQuestionSection({ hasAnswered, onPress, style }: TodayQuestionSectionProps) {
   return (
     <View style={[styles.container, style]}>
-      <Text style={styles.sectionLabel}>오늘의 카드</Text>
+      <Text style={styles.sectionLabel}>오늘의 질문</Text>
 
       <Pressable
         style={({ pressed }) => [styles.card, shadows.card, pressed && styles.cardPressed]}
-        onPress={handlePress}
+        onPress={onPress}
       >
         <View style={styles.iconWrap}>
-          <AntDesign name="crown" size={18} color={colors.apricotDark} />
+          <Feather name="help-circle" size={18} color={colors.apricotDark} />
         </View>
 
         <View style={styles.textWrap}>
-          {isOpened && card ? (
+          {hasAnswered ? (
             <>
-              <Text style={styles.title}>{card.name}</Text>
-              <Text style={styles.subtitle} numberOfLines={1}>{card.spell}</Text>
+              <Text style={styles.title}>오늘의 질문 구경하기</Text>
+              <Text style={styles.subtitle}>내가 남긴 답변도 다시 볼 수 있어요</Text>
             </>
           ) : (
             <>
-              <Text style={[styles.title, styles.titleDefault]}>오늘의 운세 카드가 도착했어요</Text>
-              <Text style={styles.subtitle}>열어보면 오늘의 카드가 펼쳐져요</Text>
+              <Text style={[styles.title, styles.titleDefault]}>오늘의 질문이 도착했어요</Text>
+              <Text style={styles.subtitle}>내 생각을 먼저 남겨보세요</Text>
             </>
           )}
         </View>
