@@ -232,6 +232,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontFamily: 'NotoSansKR_500Medium',
     color: colors.textMid,
+    lineHeight: 18,
   },
   smallBtnDangerText: {
     color: colors.trendDown,
