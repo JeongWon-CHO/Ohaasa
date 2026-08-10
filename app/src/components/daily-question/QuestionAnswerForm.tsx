@@ -1,6 +1,7 @@
-import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Linking, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { colors, radius, spacing, typography } from '@/src/constants/design';
+import { COMMUNITY_GUIDELINES_URL } from '@/src/constants/links';
 
 const MAX_LENGTH = 120;
 
@@ -52,6 +53,24 @@ export function QuestionAnswerForm({
           </Text>
         </View>
       </View>
+
+      {/*
+        App Store 심사 지침 1.2(UGC)는 공개 게시 전에 불쾌한 콘텐츠 무관용 정책에 대한
+        동의 절차를 요구한다. 기본값이 '공개'이므로 이 고지는 별도 조작 없이 노출된다.
+      */}
+      {isPublic && (
+        <Pressable
+          onPress={() => Linking.openURL(COMMUNITY_GUIDELINES_URL)}
+          accessibilityRole="link"
+          style={({ pressed }) => pressed && { opacity: 0.6 }}
+        >
+          <Text style={styles.notice}>
+            공개한 답변은 다른 사용자에게 보여요. 공개하면{' '}
+            <Text style={styles.noticeLink}>커뮤니티 가이드라인</Text>에 동의하는 것으로
+            간주되며, 욕설·괴롭힘 등 불쾌한 콘텐츠는 무관용 정책에 따라 24시간 이내에 삭제돼요.
+          </Text>
+        </Pressable>
+      )}
     </View>
   );
 }
@@ -119,5 +138,17 @@ const styles = StyleSheet.create({
     fontFamily: 'NotoSansKR_400Regular',
     color: colors.textSoft,
     lineHeight: 18,
+  },
+  notice: {
+    fontSize: 11,
+    fontFamily: 'NotoSansKR_300Light',
+    color: colors.textSoft,
+    lineHeight: 17,
+    marginTop: -spacing.sm,
+  },
+  noticeLink: {
+    fontFamily: 'NotoSansKR_500Medium',
+    color: colors.apricotDark,
+    textDecorationLine: 'underline',
   },
 });

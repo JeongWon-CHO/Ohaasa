@@ -1,12 +1,22 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import type { ZodiacSign } from '@/src/constants/zodiac';
+import {
+  addBlockedAuthor,
+  addHiddenAnswerId,
+  getBlockedAuthors,
+  getHiddenAnswerIds,
+  removeHiddenAnswerId,
+  type ReportReason,
+} from '@/src/lib/moderation';
 import {
   fetchMyAnswerId,
   fetchMyLikedAnswerIds,
   fetchPublicAnswers,
+  reportAnswer as reportAnswerRemote,
   toggleAnswerLike,
   type PublicAnswer,
+  type ReportResult,
 } from '@/src/lib/supabase';
 
 export type AnswerFeedScope = 'all' | ZodiacSign;
@@ -19,6 +29,13 @@ type UseAnswerFeedResult = {
   likedIds: Set<string>;
   myAnswerId: string | null;
   toggleLike: (answerId: string) => void;
+  /**
+   * 신고 → 로컬에서 즉시 숨김 + 서버에 신고 기록. 임계값에 도달하면 서버가 전체 공개에서 제외한다.
+   * 전송이 실패하면 숨김을 되돌리고 false를 반환한다 (호출부가 사용자에게 알려야 한다).
+   */
+  report: (answerId: string, reason: ReportReason) => Promise<ReportResult>;
+  /** 작성자 차단 → 이 기기에서 해당 작성자의 글이 오늘 것도 앞으로 올라올 것도 보이지 않는다. */
+  blockAuthor: (authorHash: string) => void;
   loading: boolean;
   error: boolean;
   refetch: () => void;
@@ -36,8 +53,23 @@ export function useAnswerFeed(
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [reloadTick, setReloadTick] = useState(0);
+  const [blockedAuthors, setBlockedAuthors] = useState<Set<string>>(new Set());
+  const [hiddenIds, setHiddenIds] = useState<Set<string>>(new Set());
 
   const refetch = useCallback(() => setReloadTick((n) => n + 1), []);
+
+  // 신고·차단 목록은 기기 로컬에만 있다. 서버 응답을 기다리지 않고 바로 필터에 쓴다.
+  useEffect(() => {
+    let cancelled = false;
+    Promise.all([getBlockedAuthors(), getHiddenAnswerIds()]).then(([blocked, hidden]) => {
+      if (cancelled) return;
+      setBlockedAuthors(blocked);
+      setHiddenIds(hidden);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     if (!date || !deviceId) {
@@ -121,5 +153,65 @@ export function useAnswerFeed(
     [deviceId, likedIds],
   );
 
-  return { answers, likedIds, myAnswerId, toggleLike, loading, error, refetch };
+  /**
+   * 낙관적으로 먼저 숨기고, 서버 전송이 실패하면 되돌린다.
+   *
+   * 실패해도 숨긴 채로 두면 사용자는 신고가 접수됐다고 믿는데 서버에는 아무것도 남지 않아
+   * 그 글이 영영 검토되지 않는다. 되돌려서 다시 시도할 수 있게 하는 편이 정직하다.
+   * "이 글을 그냥 안 보고 싶다"는 요구는 차단(로컬 전용이라 항상 성공)이 담당한다.
+   */
+  const report = useCallback(
+    async (answerId: string, reason: ReportReason): Promise<ReportResult> => {
+      setHiddenIds((prev) => new Set(prev).add(answerId));
+      await addHiddenAnswerId(answerId);
+
+      const result: ReportResult = deviceId
+        ? await reportAnswerRemote(answerId, deviceId, reason)
+        : { ok: false, error: 'device_id 없음 — 신고 요청을 보내지 않았습니다' };
+
+      if (result.ok) return result;
+
+      setHiddenIds((prev) => {
+        const next = new Set(prev);
+        next.delete(answerId);
+        return next;
+      });
+      await removeHiddenAnswerId(answerId);
+      return result;
+    },
+    [deviceId],
+  );
+
+  const blockAuthor = useCallback((authorHash: string) => {
+    // author_hash가 비어 있으면(마이그레이션 미적용 등) 차단 목록에 undefined가 들어가고,
+    // 그러면 author_hash 없는 모든 글이 한꺼번에 사라진다. 조용히 무시하는 편이 낫다.
+    if (!authorHash) {
+      console.warn('[useAnswerFeed] blockAuthor: author_hash가 비어 있어 차단을 건너뜁니다');
+      return;
+    }
+    setBlockedAuthors((prev) => new Set(prev).add(authorHash));
+    void addBlockedAuthor(authorHash);
+  }, []);
+
+  const visibleAnswers = useMemo(
+    () =>
+      answers.filter(
+        (answer) =>
+          !hiddenIds.has(answer.id) &&
+          !(answer.author_hash && blockedAuthors.has(answer.author_hash)),
+      ),
+    [answers, hiddenIds, blockedAuthors],
+  );
+
+  return {
+    answers: visibleAnswers,
+    likedIds,
+    myAnswerId,
+    toggleLike,
+    report,
+    blockAuthor,
+    loading,
+    error,
+    refetch,
+  };
 }

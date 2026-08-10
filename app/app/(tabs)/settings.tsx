@@ -41,6 +41,12 @@ import {
   setPlatform,
   clearZodiacSign,
 } from "@/src/lib/storage";
+import { COMMUNITY_GUIDELINES_URL, PRIVACY_POLICY_URL } from "@/src/constants/links";
+import {
+  clearBlockedAuthors,
+  clearModerationState,
+  getBlockedAuthorCount,
+} from "@/src/lib/moderation";
 import { deletePublicAnswer, upsertDevice } from "@/src/lib/supabase";
 import { deleteDailyReview } from "@/src/lib/dailyReviews";
 import { deleteQuestionAnswer, getQuestionAnswer } from "@/src/lib/questionAnswers";
@@ -55,6 +61,7 @@ export default function SettingsScreen() {
   const [storedPushToken, setStoredPushToken] = useState<string | null>(null);
   const [permStatus, setPermStatus] = useState<NotifPermissionStatus | null>(null);
   const [deniedSheetVisible, setDeniedSheetVisible] = useState(false);
+  const [blockedCount, setBlockedCount] = useState(0);
   // 사용자가 바텀시트에서 "설정하러 가기"를 눌렀는지 추적 (경우 1-1 자동 활성화용)
   const pendingActivationRef = useRef(false);
 
@@ -111,7 +118,27 @@ export default function SettingsScreen() {
     setNotificationsEnabledState(effectiveEnabled);
     setStoredPushToken(effectiveToken);
     setPermStatus(perm);
+    setBlockedCount(await getBlockedAuthorCount());
   }, []);
+
+  function handleUnblockAll() {
+    if (blockedCount === 0) return;
+    Alert.alert(
+      "차단을 모두 해제할까요?",
+      `차단한 사용자 ${blockedCount}명의 글이 다시 보이게 됩니다.`,
+      [
+        { text: "취소", style: "cancel" },
+        {
+          text: "전체 해제",
+          style: "destructive",
+          onPress: async () => {
+            await clearBlockedAuthors();
+            setBlockedCount(0);
+          },
+        },
+      ],
+    );
+  }
 
   useFocusEffect(
     useCallback(() => {
@@ -349,6 +376,28 @@ export default function SettingsScreen() {
           />
         </SettingsSection>
 
+        {/* COMMUNITY */}
+        <SettingsSection label="COMMUNITY" style={styles.sectionGap}>
+          <SettingsRow
+            title="커뮤니티 가이드라인"
+            description="공개 답변에 적용되는 이용약관"
+            showChevron
+            onPress={() => Linking.openURL(COMMUNITY_GUIDELINES_URL)}
+            style={[styles.aboutRow, styles.rowBorder]}
+          />
+          <SettingsRow
+            title="차단한 사용자"
+            description={
+              blockedCount === 0
+                ? "차단한 사용자가 없어요"
+                : `${blockedCount}명 · 눌러서 전체 해제`
+            }
+            showChevron={blockedCount > 0}
+            onPress={blockedCount > 0 ? handleUnblockAll : undefined}
+            style={styles.aboutRow}
+          />
+        </SettingsSection>
+
         {/* ABOUT */}
         <SettingsSection label="ABOUT" style={styles.aboutSection}>
           <SettingsRow
@@ -380,11 +429,7 @@ export default function SettingsScreen() {
           <SettingsRow
             title="개인정보 처리방침"
             showChevron
-            onPress={() =>
-              Linking.openURL(
-                "https://jeongwon-cho.github.io/Ohaasa/privacy-policy.html",
-              )
-            }
+            onPress={() => Linking.openURL(PRIVACY_POLICY_URL)}
             style={styles.aboutRow}
           />
         </SettingsSection>
@@ -446,6 +491,20 @@ export default function SettingsScreen() {
                 const today = new Date().toISOString().slice(0, 10);
                 await deleteDailyReview(today, zodiac);
                 Alert.alert("완료", "오늘의 리뷰가 초기화되었습니다.");
+              }}
+              style={[styles.aboutRow, styles.rowBorder]}
+            />
+            <SettingsRow
+              title="신고 · 차단 기록 초기화"
+              description="숨긴 글과 차단 목록 삭제 → 피드에 다시 표시"
+              showChevron
+              onPress={async () => {
+                await clearModerationState();
+                setBlockedCount(0);
+                Alert.alert(
+                  "완료",
+                  "숨긴 글과 차단이 초기화되었습니다. 서버의 신고 기록은 그대로입니다.",
+                );
               }}
               style={[styles.aboutRow, styles.rowBorder]}
             />
