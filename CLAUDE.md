@@ -202,18 +202,10 @@ CREATE POLICY "user_devices_anon_select" ON public.user_devices FOR SELECT  TO a
 
 ### 통계 화면 (stats.tsx)
 
-- **탭 구조**: `activeTab: 'trend' | 'history'` state로 [흐름/기록] 전환. 헤더 아래 세그먼트 컨트롤, 탭 내용 조건부 렌더링.
-- **7일/30일 토글**: 흐름 탭에서만 `FinalHeader`의 `rightSlot`에 작은 텍스트 토글로 표시. `PeriodSelector` 컴포넌트는 ScrollView 최상단에서 제거됨 — 헤더 안으로 이동해 세그먼트 컨트롤과 시각적 계층 충돌 방지.
-- **흐름 탭 구조**: `stats.tsx`는 orchestration(훅 호출 + state + 카드 조합)만 담당. 각 UI 섹션은 `src/components/stats/`의 독립 컴포넌트 — `SummaryCard`, `ChartCard`, `RankingCard`, `ErrorState`.
-- **데이터 훅**: `useHoroscopeTrends(zodiacSign, period, compareSign?)` — Supabase에서 기간 내 전체 별자리 rank rows를 한 번에 가져와 클라이언트에서 가공. `CUTOFF_BUFFER_DAYS = 3`으로 버퍼를 두어 크론 미실행 날 대응.
-- **등수(rank) 표시 두 가지 모드**:
-  - 기본(반올림): `roundedRank` — 반올림값이 같으면 공동 등수 부여 후 다음 번호 스킵 (예: 3.4→3위, 6.1→6위, 6.8→6위 → 1/2/2/4위)
-  - 자세히(소수점): `exactRank` — 순차 등수, `averageRank.toFixed(1)` 표시
-  - 모드 전환 토글(`detailMode`)은 **저장하지 않음** — 화면 재진입 시 항상 기본 모드로 리셋
-  - 공유 카드(`StatsShareCard`)는 토글 무관하게 항상 정수 표시
-- **화살표 트렌드 기준**: 그날의 원본 운세 순위(1~12)가 아니라 **기간 평균 기준 공동 등수(`roundedRank`)의 어제 대비 변화**. 어제 시점 윈도우 = `signRanks.slice(0, -1).slice(-targetCount)` 로 동일 길이 기간을 하루 앞당겨 재계산.
-- **`periodLabel` 위치**: `useHoroscopeTrends.ts`에서 export — `TrendsPeriod`와 묶인 순수 함수라 훅 파일에 둔다.
-- **별자리 비교**: `compareId` state로 관리. `zodiacSign` 변경 시 `useEffect`로 `compareId` 초기화.
+- **역할 분리**: `stats.tsx`는 orchestration(훅 호출 · state · 카드 조합)만 담당하고, UI 섹션은 `src/components/stats/`의 독립 컴포넌트로 둔다.
+- **데이터 훅**: `useHoroscopeTrends(zodiacSign, period, compareSign?)` — 기간 내 전체 별자리 rank rows를 한 번에 받아 클라이언트에서 가공. `CUTOFF_BUFFER_DAYS = 3`으로 크론 미실행 날 대응.
+- **등수 표시**: 기본은 `roundedRank`(반올림값이 같으면 공동 등수 부여 후 다음 번호 스킵 — 3.4·6.1·6.8 → 1/2/2/4위), 자세히 모드는 `exactRank` + 소수점 1자리. `detailMode`는 저장하지 않아 재진입 시 리셋되고, 공유 카드는 토글과 무관하게 항상 정수.
+- **화살표 트렌드 기준**: 그날의 원본 운세 순위(1~12)가 아니라 **기간 평균 공동 등수(`roundedRank`)의 어제 대비 변화** — 같은 길이의 윈도우를 하루 앞당겨 재계산한다.
 
 ### 오늘의 질문
 
@@ -226,17 +218,15 @@ CREATE POLICY "user_devices_anon_select" ON public.user_devices FOR SELECT  TO a
 
 ### 운세 리뷰
 
-- **저장소**: AsyncStorage 로컬 전용. 키 `ohaasa:daily_reviews:v1`, 레코드 id = `{date}:{zodiacSign}`. `syncedAt/remoteId`는 미래 서버 동기화를 위한 예약 필드.
-- **저장 조건**: `rating !== null && note.trim().length > 0 && hasChanges` 모두 충족 시 활성화.
-- **키보드 대응**: Android는 `keyboardDidShow`로 `androidKeyboardHeight` 직접 관리. iOS는 `KeyboardAvoidingView behavior="padding"`.
-- **`date` URL 파라미터**: 기록 탭 "수정하기"에서 특정 날짜로 진입할 때 사용. 미제공 시 `selectedDate`(최신)로 fallback. `horoscopeDate`도 `horoscope?.date ?? effectiveDate`로 fallback해 Supabase 조회 실패 시에도 기존 리뷰 로드 가능.
+- **저장소**: AsyncStorage 로컬 전용(`ohaasa:daily_reviews:v1`, 레코드 id = `{date}:{zodiacSign}`). `syncedAt/remoteId`는 미래 서버 동기화용 예약 필드.
+- **키보드 대응**: Android는 `keyboardDidShow`로 높이를 직접 관리, iOS는 `KeyboardAvoidingView behavior="padding"`.
+- **`date` URL 파라미터**: 기록 탭 "수정하기"로 특정 날짜에 진입할 때 사용. 날짜는 항상 fallback 체인을 거쳐 Supabase 조회가 실패해도 기존 리뷰를 열 수 있게 한다.
 
 ### 통계 기록 탭
 
-- **`useReviewHistory(year, month)`**: `useFocusEffect`로 탭 진입·복귀 시 자동 리로드 — 리뷰 작성 후 돌아와도 즉시 반영.
-- **수정하기 플로우**: `ReviewDetailSheet` → `router.push('/daily-review', { params: { date } })` → 저장·`router.back()` → 탭 포커스 → `useFocusEffect` 리로드.
-- **바 차트 width**: percentage string 타입 에러 회피를 위해 `flex: count` / `flex: maxCount - count` 방식 사용 (`RatingDistributionCard`, `TopMemorableItemsCard`).
-- **오늘의 질문 통합**: 별도 탭 없이 기존 캘린더에 통합. `useQuestionAnswerHistory(year, month)`가 `answersByDate`를 별도로 조회해 `ReviewCalendar`(리뷰 마커와 별개의 보조 점)와 `ReviewDetailSheet`("오늘의 질문" 섹션 — 질문/답변/공개 여부 칩 + 수정하기/삭제하기)에 함께 전달. 삭제는 화면 이동 없이 즉시 반영되므로 `useReviewHistory`와 달리 수동 `refetch()`를 노출한다.
+- **리로드**: `useReviewHistory`는 `useFocusEffect`로 탭 진입·복귀 시 자동 리로드(리뷰 작성 후 돌아와도 즉시 반영). `useQuestionAnswerHistory`는 화면 이동 없이 삭제가 일어나므로 수동 `refetch()`도 노출한다.
+- **오늘의 질문 통합**: 별도 탭 없이 기존 캘린더에 리뷰 마커와 구분되는 보조 마커로 표시.
+- **바 차트 width**: percentage string 타입 에러 회피를 위해 `flex: count` / `flex: maxCount - count` 방식 사용.
 
 ### 이미지 저장 / SNS 공유
 
