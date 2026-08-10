@@ -61,9 +61,13 @@ module.exports = {
           photosPermission: '갤러리에 이미지를 저장하기 위해 접근 권한이 필요해요.',
           savePhotosPermission: '갤러리에 이미지를 저장하기 위해 접근 권한이 필요해요.',
           isAccessMediaLocationEnabled: false,
+          // 갤러리 저장(write)만 쓰므로 READ_MEDIA_IMAGES/VIDEO/AUDIO를 아예 추가하지 않는다.
+          // 기본값이 ['photo','video','audio']라 두면 셋 다 매니페스트에 박힌다.
+          granularPermissions: [],
         },
       ],
       './plugins/withWriteOnlyMediaLibrary',
+      './plugins/withoutSystemAlertWindow',
     ],
     experiments: {
       typedRoutes: true,

@@ -6,9 +6,15 @@ const READ_PERMISSIONS = [
 ];
 
 // 갤러리 저장(write)만 사용하므로 READ 권한을 제거.
-// 단순 필터링만으로는 expo-media-library AAR의 자체 manifest에서
-// Gradle manifest merger가 다시 추가하기 때문에, tools:node="remove"로
-// merger 단계에서도 제거되도록 명시해야 한다.
+//
+// 1차 방어는 app.config.js의 `granularPermissions: []`다. 그걸로
+// READ_MEDIA_IMAGES/VIDEO/AUDIO가 애초에 추가되지 않으므로 이 플러그인은
+// 이제 이중 안전장치에 가깝다.
+//
+// tools:node="remove"를 유지하는 이유: 예전 expo-media-library는 AAR 자체
+// manifest에 READ 권한을 선언해서 Gradle manifest merger가 되살렸다.
+// SDK 56(56.0.10) 소스 매니페스트에는 더 이상 없지만, 버전이 올라가며
+// 되돌아와도 막히도록 둔다. 지울 대상이 없으면 merger에서 no-op이다.
 module.exports = function withWriteOnlyMediaLibrary(config) {
   return withAndroidManifest(config, (config) => {
     const manifest = config.modResults.manifest;

@@ -263,10 +263,23 @@ CREATE POLICY "user_devices_anon_select" ON public.user_devices FOR SELECT  TO a
 ### 이미지 저장 / SNS 공유
 
 - **라이브러리**: `expo-media-library` + `expo-sharing` + `react-native-view-shot`
-- **저장**: `saveToLibraryAsync()` + `requestPermissionsAsync(true)` (writeOnly). `plugins/withWriteOnlyMediaLibrary.js`로 READ 권한 manifest에서 제거 필수 (Play Console 경고 방지).
+- **저장**: `saveToLibraryAsync()` + `requestPermissionsAsync(true)` (writeOnly). writeOnly면 granular 권한(READ_MEDIA_*)은 런타임에 아예 요청되지 않는다(`MediaLibraryModule.kt`의 `shouldIncludeGranular = ... && !writeOnly`) — 매니페스트에 남아도 죽은 선언이지만 스토어 권한 목록에는 그대로 노출된다.
 - **공유**: `captureRef()` → `shareAsync(uri, { mimeType: 'image/png' })` — 추가 권한 불필요.
 - **동적 import**: `await import('expo-media-library')` — static import 금지.
 - **구현 위치**: `src/hooks/useShareHoroscope.ts`
+
+#### Android 권한 다이어트
+
+매니페스트는 `expo prebuild`가 생성하고 `android/`는 .gitignore 대상이라, **직접 고친 건 다음 빌드에 전부 날아간다. 반드시 config plugin으로 처리할 것.**
+
+- **granular 권한은 `granularPermissions: []`로 끈다** — `expo-media-library` 플러그인 옵션. 기본값이 `['photo','video','audio']`라 두면 READ_MEDIA_IMAGES/VIDEO/AUDIO 셋이 다 박힌다. 애초에 안 넣는 공식 옵션이 있으므로 넣었다가 빼는 방식보다 낫다.
+- **`SYSTEM_ALERT_WINDOW`는 우리 것도, 라이브러리 것도 아니다** — `@expo/config-plugins`의 bare 템플릿 보일러플레이트(`withAndroidBaseMods.js`, 주석에 "REMOVE WHATEVER YOU DO NOT NEED"라고 적혀 있다). prebuild마다 되살아나므로 `plugins/withoutSystemAlertWindow.js`가 걷어낸다.
+- **이 권한에는 `tools:node="remove"`를 쓰면 안 된다** — main 매니페스트에 넣는 AAR이 없어서 단순 필터로 충분하고, remove를 걸면 `react-native`의 **debug** 매니페스트까지 지워져 개발 빌드의 개발자 메뉴·레드박스 오버레이가 깨진다.
+- **`--clean` 없는 prebuild로는 검증이 안 된다**: 기존 매니페스트에 덧쓰기만 하므로 예전에 추가된 권한은 그대로 남는다. EAS는 레포를 새로 클론해 `android/`가 없는 상태로 시작하니 실제 빌드에는 문제없다.
+- 남아야 정상인 것: `INTERNET · VIBRATE · POST_NOTIFICATIONS · READ/WRITE_EXTERNAL_STORAGE · READ_MEDIA_VISUAL_USER_SELECTED`. 뒤의 셋은 expo-media-library 소스 매니페스트에서 온다.
+- **검증은 반드시 산출물로 한다** — `android/app/src/main/AndroidManifest.xml`은 소스일 뿐이고, `tools:node="remove"` 항목이 그대로 남아 있어 정적 스캐너가 오탐한다. Gradle manifest merger를 거친 최종 결과를 봐야 한다.
+  - APK: `$ANDROID_HOME/build-tools/<ver>/aapt2 dump permissions <파일>.apk`
+  - AAB: aapt2로는 못 읽는다(proto 포맷). `unzip -p <파일>.aab base/manifest/AndroidManifest.xml | strings | grep -o "android\.permission\.[A-Z_]*" | sort -u`
 
 ---
 
