@@ -240,6 +240,7 @@ const styles = StyleSheet.create({
   },
   answerActionsRow: {
     flexDirection: 'row',
+    justifyContent: 'flex-end',
     gap: spacing.sm,
   },
   answerLockedText: {
@@ -248,10 +249,11 @@ const styles = StyleSheet.create({
     color: colors.textSoft,
     lineHeight: 18,
   },
+  // 답변 수정/삭제는 보조 액션이다 — 가로를 채우면 하단 primary 버튼과 위계가 뒤엉킨다.
   smallBtn: {
-    flex: 1,
-    paddingVertical: 10,
-    borderRadius: radius.md,
+    paddingVertical: 7,
+    paddingHorizontal: 14,
+    borderRadius: radius.pill,
     borderWidth: 1.5,
     borderColor: colors.cream3,
     backgroundColor: colors.cardSolid,
@@ -329,10 +331,11 @@ const styles = StyleSheet.create({
     color: '#FFFDF5',
     lineHeight: 22,
   },
+  // 아래쪽은 BottomSheet가 이미 safe area만큼 패딩을 주므로 위쪽만 띄운다.
   emptyWrap: {
-    paddingVertical: spacing.xxl,
+    paddingTop: spacing.lg,
     alignItems: 'center',
-    gap: spacing.lg,
+    gap: spacing.xl,
     alignSelf: 'stretch',
   },
   emptyText: {
