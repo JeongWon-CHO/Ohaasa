@@ -193,10 +193,10 @@ export default function DailyQuestionScreen() {
           <ScrollView
             ref={scrollRef}
             style={styles.scroll}
-            contentContainerStyle={[
-              styles.content,
-              { paddingTop: insets.top + 16, paddingBottom: keyboardVisible ? 40 : 32 },
-            ]}
+            contentContainerStyle={{
+              paddingTop: insets.top + 16,
+              paddingBottom: keyboardVisible ? 40 : 32,
+            }}
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
           >
@@ -220,73 +220,75 @@ export default function DailyQuestionScreen() {
                   <View style={styles.headerBtn} />
                 </View>
 
-                {step === "answer" ? (
-                  questionText && (
-                    <QuestionAnswerForm
-                      questionText={questionText}
-                      body={form.body}
-                      onChangeBody={(body) => setForm((f) => ({ ...f, body }))}
-                      isPublic={form.visibility === "public"}
-                      onChangeIsPublic={(isPublic) =>
-                        setForm((f) => ({ ...f, visibility: isPublic ? "public" : "private" }))
-                      }
-                    />
-                  )
-                ) : (
-                  <View style={styles.communitySection}>
-                    <AnswerFeedTabs
-                      tab={tab}
-                      mySign={zodiacSign}
-                      onChangeTab={handleChangeTab}
-                    />
-
-                    <View style={styles.sortRow}>
-                      <AnswerSortToggle
-                        sort={sort}
-                        onChangeSort={setSort}
-                        isFiltered={filterSign !== null}
-                        onOpenFilter={() => setFilterVisible(true)}
+                <View style={styles.body}>
+                  {step === "answer" ? (
+                    questionText && (
+                      <QuestionAnswerForm
+                        questionText={questionText}
+                        body={form.body}
+                        onChangeBody={(body) => setForm((f) => ({ ...f, body }))}
+                        isPublic={form.visibility === "public"}
+                        onChangeIsPublic={(isPublic) =>
+                          setForm((f) => ({ ...f, visibility: isPublic ? "public" : "private" }))
+                        }
                       />
+                    )
+                  ) : (
+                    <View style={styles.communitySection}>
+                      <AnswerFeedTabs
+                        tab={tab}
+                        mySign={zodiacSign}
+                        onChangeTab={handleChangeTab}
+                      />
+
+                      <View style={styles.sortRow}>
+                        <AnswerSortToggle
+                          sort={sort}
+                          onChangeSort={setSort}
+                          isFiltered={filterSign !== null}
+                          onOpenFilter={() => setFilterVisible(true)}
+                        />
+                      </View>
+
+                      {questionText && (
+                        <View style={styles.questionSummary}>
+                          <Text style={styles.questionSummaryLabel}>오늘의 질문</Text>
+                          <Text style={styles.questionSummaryText}>{questionText}</Text>
+                        </View>
+                      )}
+
+                      {existingAnswer && (
+                        <MyAnswerCard
+                          answer={existingAnswer}
+                          onEdit={handleEditMine}
+                          onDelete={() => setDeleteDialogVisible(true)}
+                        />
+                      )}
+
+                      {feedLoading ? (
+                        <View style={styles.feedLoading}>
+                          <ActivityIndicator color={colors.apricotDark} />
+                        </View>
+                      ) : answers.length === 0 ? (
+                        <View style={styles.feedEmpty}>
+                          <Text style={styles.feedEmptyText}>아직 남겨진 생각이 없어요</Text>
+                        </View>
+                      ) : (
+                        <View style={styles.answerList}>
+                          {answers.map((answer) => (
+                            <AnswerCard
+                              key={answer.id}
+                              answer={answer}
+                              isMine={answer.id === myAnswerId}
+                              liked={likedIds.has(answer.id)}
+                              onToggleLike={() => toggleLike(answer.id)}
+                            />
+                          ))}
+                        </View>
+                      )}
                     </View>
-
-                    {questionText && (
-                      <View style={styles.questionSummary}>
-                        <Text style={styles.questionSummaryLabel}>오늘의 질문</Text>
-                        <Text style={styles.questionSummaryText}>{questionText}</Text>
-                      </View>
-                    )}
-
-                    {existingAnswer && (
-                      <MyAnswerCard
-                        answer={existingAnswer}
-                        onEdit={handleEditMine}
-                        onDelete={() => setDeleteDialogVisible(true)}
-                      />
-                    )}
-
-                    {feedLoading ? (
-                      <View style={styles.feedLoading}>
-                        <ActivityIndicator color={colors.apricotDark} />
-                      </View>
-                    ) : answers.length === 0 ? (
-                      <View style={styles.feedEmpty}>
-                        <Text style={styles.feedEmptyText}>아직 남겨진 생각이 없어요</Text>
-                      </View>
-                    ) : (
-                      <View style={styles.answerList}>
-                        {answers.map((answer) => (
-                          <AnswerCard
-                            key={answer.id}
-                            answer={answer}
-                            isMine={answer.id === myAnswerId}
-                            liked={likedIds.has(answer.id)}
-                            onToggleLike={() => toggleLike(answer.id)}
-                          />
-                        ))}
-                      </View>
-                    )}
-                  </View>
-                )}
+                  )}
+                </View>
               </View>
             </TouchableWithoutFeedback>
           </ScrollView>
@@ -336,15 +338,17 @@ export default function DailyQuestionScreen() {
 const styles = StyleSheet.create({
   fill: { flex: 1 },
   scroll: { flex: 1 },
-  content: {
+  body: {
     paddingHorizontal: 24,
   },
 
+  // 아이콘 버튼은 글리프 자체 여백이 있어 본문과 같은 24를 주면 왼쪽이 너무 비어 보인다.
   header: {
     flexDirection: "row",
     alignItems: "center",
     gap: spacing.sm,
     marginBottom: 24,
+    paddingHorizontal: 16,
   },
   headerBtn: {
     width: 36,
