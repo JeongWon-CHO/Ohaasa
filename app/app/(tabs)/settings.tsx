@@ -41,6 +41,7 @@ import {
   setPlatform,
   clearZodiacSign,
 } from "@/src/lib/storage";
+import { ConfirmDialog } from "@/src/components/common/ConfirmDialog";
 import { COMMUNITY_GUIDELINES_URL, PRIVACY_POLICY_URL } from "@/src/constants/links";
 import {
   clearBlockedAuthors,
@@ -62,6 +63,7 @@ export default function SettingsScreen() {
   const [permStatus, setPermStatus] = useState<NotifPermissionStatus | null>(null);
   const [deniedSheetVisible, setDeniedSheetVisible] = useState(false);
   const [blockedCount, setBlockedCount] = useState(0);
+  const [unblockDialogVisible, setUnblockDialogVisible] = useState(false);
   // 사용자가 바텀시트에서 "설정하러 가기"를 눌렀는지 추적 (경우 1-1 자동 활성화용)
   const pendingActivationRef = useRef(false);
 
@@ -121,23 +123,10 @@ export default function SettingsScreen() {
     setBlockedCount(await getBlockedAuthorCount());
   }, []);
 
-  function handleUnblockAll() {
-    if (blockedCount === 0) return;
-    Alert.alert(
-      "차단을 모두 해제할까요?",
-      `차단한 사용자 ${blockedCount}명의 글이 다시 보이게 됩니다.`,
-      [
-        { text: "취소", style: "cancel" },
-        {
-          text: "전체 해제",
-          style: "destructive",
-          onPress: async () => {
-            await clearBlockedAuthors();
-            setBlockedCount(0);
-          },
-        },
-      ],
-    );
+  async function handleConfirmUnblockAll() {
+    setUnblockDialogVisible(false);
+    await clearBlockedAuthors();
+    setBlockedCount(0);
   }
 
   useFocusEffect(
@@ -393,7 +382,7 @@ export default function SettingsScreen() {
                 : `${blockedCount}명 · 눌러서 전체 해제`
             }
             showChevron={blockedCount > 0}
-            onPress={blockedCount > 0 ? handleUnblockAll : undefined}
+            onPress={blockedCount > 0 ? () => setUnblockDialogVisible(true) : undefined}
             style={styles.aboutRow}
           />
         </SettingsSection>
@@ -556,6 +545,15 @@ export default function SettingsScreen() {
           Linking.openSettings();
         }}
         onClose={() => setDeniedSheetVisible(false)}
+      />
+
+      <ConfirmDialog
+        visible={unblockDialogVisible}
+        title="차단을 모두 해제할까요?"
+        description={`차단한 사용자 ${blockedCount}명의 글이 다시 보이게 돼요.`}
+        confirmLabel="전체 해제"
+        onCancel={() => setUnblockDialogVisible(false)}
+        onConfirm={handleConfirmUnblockAll}
       />
     </LinearGradient>
   );
