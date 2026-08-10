@@ -104,6 +104,7 @@ export function ReviewHistoryTab() {
       <ReviewDetailSheet
         visible={selectedDate !== null}
         date={selectedDate}
+        todayStr={todayStr}
         review={sheetReview}
         answer={sheetAnswer}
         onAnswerChanged={refetchAnswers}

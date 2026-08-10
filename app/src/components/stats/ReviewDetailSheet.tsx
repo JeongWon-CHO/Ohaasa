@@ -15,6 +15,7 @@ import { deletePublicAnswer } from '@/src/lib/supabase';
 interface ReviewDetailSheetProps {
   visible: boolean;
   date: string | null;
+  todayStr: string;
   review: DailyReview | null;
   answer?: QuestionAnswer | null;
   onAnswerChanged?: () => void;
@@ -30,12 +31,16 @@ function formatDate(dateStr: string): string {
 export function ReviewDetailSheet({
   visible,
   date,
+  todayStr,
   review,
   answer = null,
   onAnswerChanged,
   onClose,
 }: ReviewDetailSheetProps) {
   const [deleteDialogVisible, setDeleteDialogVisible] = useState(false);
+
+  // 아직 오지 않은 날은 남길 기록이 없다.
+  const isFuture = date !== null && date > todayStr;
 
   function handleEdit() {
     if (!date) return;
@@ -159,11 +164,25 @@ export function ReviewDetailSheet({
                 </Pressable>
               </>
             ) : (
-              !answer && (
-                <View style={styles.emptyWrap}>
-                  <Text style={styles.emptyText}>이날 남긴 기록이 없어요</Text>
-                </View>
-              )
+              <View style={styles.emptyWrap}>
+                {!answer && (
+                  <Text style={styles.emptyText}>
+                    {isFuture ? '아직 오지 않은 날이에요' : '이날 남긴 운세 리뷰가 없어요'}
+                  </Text>
+                )}
+                {!isFuture && (
+                  <Pressable
+                    onPress={handleEdit}
+                    style={({ pressed }) => [
+                      styles.editBtn,
+                      styles.editBtnStretch,
+                      pressed && { opacity: 0.72 },
+                    ]}
+                  >
+                    <Text style={styles.editBtnText}>리뷰 남기기</Text>
+                  </Pressable>
+                )}
+              </View>
             )}
             </View>
           </ScrollView>
@@ -280,6 +299,10 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     alignItems: 'center',
   },
+  // emptyWrap은 안내 문구를 가운데 정렬하므로 버튼만 따로 가로를 채운다.
+  editBtnStretch: {
+    alignSelf: 'stretch',
+  },
   editBtnText: {
     fontSize: 15,
     fontFamily: 'NotoSansKR_500Medium',
@@ -289,6 +312,8 @@ const styles = StyleSheet.create({
   emptyWrap: {
     paddingVertical: spacing.xxl,
     alignItems: 'center',
+    gap: spacing.lg,
+    alignSelf: 'stretch',
   },
   emptyText: {
     fontSize: 14,
