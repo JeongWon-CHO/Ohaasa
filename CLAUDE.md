@@ -48,12 +48,14 @@ app/
 └── src/
     ├── context/ZodiacContext.tsx     # 별자리 전역 상태 (ZodiacProvider · useZodiacContext)
     ├── constants/
-    │   └── dailyQuestions.ts         # 질문 60~80개 + getQuestionByDate(date) — day-of-year 기반 순환
+    │   ├── dailyQuestions.ts         # 질문 60~80개 + getQuestionByDate(date) — day-of-year 기반 순환
+    │   └── links.ts                  # 개인정보처리방침 · 커뮤니티 가이드라인(EULA) 외부 URL
     ├── lib/
     │   ├── storage.ts                # device_id · zodiac · pushToken · platform · notificationsEnabled · hasAskedPushPermission
-    │   ├── supabase.ts               # anon client + upsertDevice() + 오늘의 질문 공개 답변 CRUD/좋아요 함수
+    │   ├── supabase.ts               # anon client + upsertDevice() + 오늘의 질문 공개 답변 CRUD/좋아요/신고 함수
     │   ├── dailyReviews.ts           # AsyncStorage CRUD — getDailyReview · upsertDailyReview · deleteDailyReview · getAllDailyReviews
     │   ├── questionAnswers.ts        # AsyncStorage CRUD — getQuestionAnswer · upsertQuestionAnswer · deleteQuestionAnswer · getAllQuestionAnswers
+    │   ├── moderation.ts             # 로컬 신고/차단 상태 — getBlockedAuthors · addBlockedAuthor · clearBlockedAuthors · getHiddenAnswerIds · REPORT_REASONS
     │   └── notifications.ts          # requestPushToken() · checkPermissionStatus() · setupForegroundHandler() — dynamic import
     ├── hooks/
     │   ├── useZodiac · useHoroscope · useShareHoroscope · useToast
@@ -72,7 +74,8 @@ app/
         ├── daily-question/           # 오늘의 질문 전용 컴포넌트
         │   ├── TodayQuestionSection.tsx  # 운세 탭 내 질문 진입 배너 (미답변/답변완료 상태 분기)
         │   ├── QuestionAnswerForm.tsx    # 답변 입력(120자 제한) + 공개/비공개 Toggle
-        │   ├── AnswerCard.tsx            # 커뮤니티 피드의 짧은 생각 카드 — 공감 버튼 + (내 글일 때) 수정/삭제
+        │   ├── AnswerCard.tsx            # 커뮤니티 피드의 짧은 생각 카드 — 공감 버튼 + (남의 글일 때) ⋯ 신고/차단 메뉴
+        │   ├── AnswerModerationSheet.tsx # 신고/차단 바텀시트 — 메뉴 → 신고 사유 2단계
         │   ├── AnswerFeedTabs.tsx        # 전체/내 별자리 세그먼트 + 별자리 필터 버튼·칩
         │   ├── AnswerSortToggle.tsx      # 최신순/공감순 텍스트 토글
         │   └── ZodiacFilterSheet.tsx     # 12별자리 필터 바텀시트 (ZodiacSelectBottomSheet 패턴 적응)
@@ -141,6 +144,19 @@ CREATE POLICY "user_devices_anon_select" ON public.user_devices FOR SELECT  TO a
 - `like_count`는 `question_answer_likes` insert/delete 트리거(`sync_answer_like_count`)가 자동 동기화 — 클라이언트가 직접 증감시키지 않는다.
 - **"공개글은 올린 날에만 수정" 정책은 현재 앱 UI에서만 막는다**(`canEditAnswer()`). 서버 RLS는 `USING(true)`라 앱을 거치지 않으면 지난 글도 수정 가능하다. 조여야 할 때는 UPDATE 정책에 `created_at::date = current_date` 조건을 건다.
 
+### question_answer_reports (신고 · 자동 숨김)
+
+`supabase/migrations/20260810000000_question_answer_reports.sql` 참고.
+
+- `question_answers`에 컬럼 3개가 추가된다 — `author_hash`(생성 컬럼) · `report_count` · `hidden_at`.
+- **`question_answer_reports`는 anon에게 INSERT만 연다.** SELECT를 열면 신고자들의 `device_id`가 노출된다(`question_answers`에서 `device_id`를 숨기는 것과 같은 이유). "내가 신고한 글"은 서버에서 되읽지 않고 `moderation.ts`(AsyncStorage)가 기억한다.
+- 기기당 답변 1건 1회(`primary key (answer_id, device_id)`). 중복 신고는 23505로 거절되고 앱은 이를 성공으로 처리한다.
+- `sync_answer_report_count` 트리거가 `report_count`를 동기화하고, **`hide_threshold` 도달 시 `hidden_at`을 세팅**한다(현재 4). 트리거 함수의 상수 한 줄이라 `create or replace function` 블록만 재실행하면 바뀐다 — 트리거는 함수를 이름으로 참조하므로 손댈 필요 없다.
+- **임계값과 확인 주기는 연동된다.** 낮으면(2~3) 자동 숨김이 급한 건을 걷어내 주 1회 확인으로 충분하지만, 높으면 자동 숨김이 사실상 안 걸려 **매일 직접 확인해야 한다**. 글의 노출 수명이 24시간이라 하루를 넘기면 이미 늦는다.
+- 임계값을 낮추면 악용이 쉬워진다 — `device_id`가 재설치 시 재생성되므로 **한 사람이 재설치를 반복해 아무 글이나 내릴 수 있다.** 로그인이 없는 한 근본적으로 막을 수 없고, 복구가 SQL 두 줄이라는 점으로 상쇄한다.
+- 숨김 필터는 RLS가 아니라 쿼리(`.is('hidden_at', null)`)에 있다. RLS SELECT에 걸면 숨겨진 행이 `upsert`의 `ON CONFLICT` → UPDATE RLS에서 막혀 에러가 나고 `deletePublicAnswer`도 조용히 실패한다.
+- **허위신고 복구는 두 단계**: 신고 기록 `delete` + `hidden_at = null`. 숨김만 풀면 `report_count`가 임계값 이상으로 남아 다음 신고 1건에 즉시 재숨김된다. 운영 SQL은 마이그레이션 파일 하단 주석 참고.
+
 ### 환경변수
 
 | 변수                            | 용도                                   |
@@ -163,8 +179,10 @@ CREATE POLICY "user_devices_anon_select" ON public.user_devices FOR SELECT  TO a
 | Phase 10 Step 6 | Play Console 내부 테스트 트랙 업로드 | ✅ |
 | Phase 11 | Expo SDK 56 업그레이드 검증 (위젯 제외) | ⬜ |
 | Phase 12 | 오늘의 카드 → 오늘의 질문 교체 (작성·공개/비공개·커뮤니티 피드·공감·기록 탭 통합) | ✅ (구현 완료, Supabase 마이그레이션 수동 실행 및 실기기 QA 필요) |
+| Phase 13 | 신고 · 작성자 차단 · 자동 숨김 · 커뮤니티 가이드라인(iOS 심사 대비) | ✅ (구현 완료, 마이그레이션 실행 · GitHub Pages 반영 · 실기기 QA 필요) |
 
 - 개인정보처리방침 URL: `https://jeongwon-cho.github.io/Ohaasa/privacy-policy.html`
+- 커뮤니티 가이드라인 URL: `https://jeongwon-cho.github.io/Ohaasa/community-guidelines.html`
 - `google-services.json`: 커밋 대상(앱 수신용) · Firebase service account JSON은 커밋 금지
 - 현재 버전: v1.5.0 - 오늘의 질문 기능 추가
 
@@ -216,7 +234,19 @@ CREATE POLICY "user_devices_anon_select" ON public.user_devices FOR SELECT  TO a
 - **로컬 우선 저장**: 공개/비공개 무관하게 `questionAnswers.ts`(AsyncStorage)가 source of truth. 공개일 때만 `question_answers` 테이블에 미러링.
 - **질문 콘텐츠**: `getQuestionByDate(date)` — 반복 주기를 길게 하려고 날짜의 일(day)이 아닌 day-of-year 기준 순환.
 - **수정 가능 기간**: 비공개 답변은 언제든, 공개 답변은 **올린 날에만** 수정 가능하고 이후에는 삭제만 남긴다(`canEditAnswer()`). 남들이 읽고 공감한 글의 내용이 뒤바뀌는 걸 막기 위함. 판단 기준은 `date`(= 방송일)가 아니라 `createdAt` — 방송일은 실제 오늘과 어긋날 수 있다.
-- **모더레이션/신고 없음**: MVP는 120자 제한뿐 — 욕설 필터·신고는 후속 과제.
+- **자동 욕설 필터 없음**: 사전 검열은 하지 않는다. 사후 대응(신고 → 임계값 자동 숨김 → 수동 검토)만으로 간다.
+
+### 오늘의 질문 — 신고 · 차단
+
+로그인이 없어도 `device_id`가 이미 "같은 사람이 100번 신고 못 하게" 막는 식별자 역할을 한다. 진짜 문제는 차단이었다 — 피드에 `device_id`를 절대 내려보내지 않으므로 클라이언트에 "이 사람" 을 가리킬 키가 없었다.
+
+- **`author_hash`가 차단 키**: `sha256(device_id || PEPPER)`를 생성 컬럼으로 두고 피드에 함께 내려보낸다. `device_id`는 v4 UUID(122비트)라 역산이 불가능하고, 해시로는 어떤 RLS도 통과할 수 없다(쓰기 경로는 전부 `device_id` 매칭). **PEPPER를 바꾸면 사용자들의 차단 목록이 전부 무효화되므로 고정 값으로 둔다.**
+- **차단은 기기 로컬 전용**(`moderation.ts`). 서버에 사용자별 차단 목록을 걸 주체가 없다. `author_hash`가 기기별로 안정적이라 차단이 다음 날 올라오는 글에도 계속 적용된다. 재설치 시 초기화되지만 `device_id`도 함께 재생성되므로 감수한다.
+- **신고는 낙관적이되 실패는 되돌린다**: 먼저 숨기고, 서버 전송이 실패하면 숨김을 취소하고 토스트로 알린다. 실패를 삼키면 사용자는 접수됐다고 믿는데 서버엔 아무것도 없어 그 글이 영영 검토되지 않는다. "그냥 안 보고 싶다"는 요구는 차단(로컬 전용이라 항상 성공)이 담당한다.
+- **RLS 정책만으로는 안 된다 — GRANT가 필요하다**: 이 프로젝트는 `public` 스키마 기본 권한이 `anon`에게 DML(SELECT/INSERT/UPDATE/DELETE)을 주지 않는다. `TRUNCATE·REFERENCES·TRIGGER`만 딸려온다. 정책은 GRANT로 허용된 것 중 어떤 행인지를 거르는 층이라, **GRANT 없이 정책만 만들면 `permission denied`로 전부 막힌다.** 새 테이블을 만들 때마다 `grant ... to anon;`을 마이그레이션에 명시할 것. (`question_answer_reports`가 이 함정에 걸려 신고가 한 건도 안 들어갔다.)
+- **Modal 중첩 금지**: 차단 확인은 별도 `ConfirmDialog`가 아니라 `AnswerModerationSheet`의 3번째 단계(`confirmBlock`)로 처리한다. `BottomSheet`는 닫기 애니메이션(240ms)이 끝난 뒤에야 내부 Modal을 언마운트하므로, 시트를 내리면서 곧바로 두 번째 Modal을 present하면 iOS가 조용히 무시해 **다이얼로그가 아예 뜨지 않는다**. 시트 위에 뭔가를 더 띄워야 하면 항상 시트 안의 단계로 만들 것.
+- **`author_hash` 방어**: 값이 비어 있으면 차단을 건너뛴다. `Set`에 `undefined`가 들어가면 `author_hash` 없는 글이 전부 한꺼번에 사라진다.
+- **EULA(App Store 심사 지침 1.2)**: 공개 답변 작성 화면(`QuestionAnswerForm`)에 무관용 정책 고지 + `docs/community-guidelines.html` 링크를 노출한다. 기본 visibility가 `public`이라 별도 조작 없이 보인다. 설정 > COMMUNITY에서도 접근 가능하고, 같은 섹션에 "차단한 사용자 N명 · 전체 해제"를 둔다 — **해제 수단이 없으면 심사에서 문제가 된다.**
 
 ### 운세 리뷰
 
@@ -246,6 +276,9 @@ CREATE POLICY "user_devices_anon_select" ON public.user_devices FOR SELECT  TO a
 
 - [ ] `app/app.config.js`의 `version` 필드를 올렸는가?
 - [ ] 이 파일(`CLAUDE.md`) 하단의 "현재 버전"을 같은 값으로 수정했는가?
+- [ ] `app/app/(tabs)/settings.tsx` 푸터의 `v1.5.0` 텍스트도 같이 고쳤는가? (하드코딩되어 있다)
+- [ ] `docs/` 변경분을 push해 GitHub Pages에 반영했는가? (앱 내 링크가 404가 되면 심사에서 걸린다)
+- [ ] `supabase/migrations/` 신규 SQL을 실행했는가? (`supabase/`는 .gitignore 대상이라 CI가 대신 해주지 않는다)
 
 버전은 `app.config.js` 한 곳만 고치면 EAS 빌드에 반영된다. CLAUDE.md의 "현재 버전"은 대화 맥락용 메모이므로 같이 맞춰줘야 한다.
 

@@ -11,9 +11,17 @@ interface AnswerCardProps {
   isMine: boolean;
   liked: boolean;
   onToggleLike: () => void;
+  /** 신고·차단 메뉴 열기. 내 글에는 표시하지 않는다. */
+  onOpenModeration: () => void;
 }
 
-export function AnswerCard({ answer, isMine, liked, onToggleLike }: AnswerCardProps) {
+export function AnswerCard({
+  answer,
+  isMine,
+  liked,
+  onToggleLike,
+  onOpenModeration,
+}: AnswerCardProps) {
   const zodiac = ZODIAC_MAP[answer.zodiac_sign];
 
   return (
@@ -47,6 +55,18 @@ export function AnswerCard({ answer, isMine, liked, onToggleLike }: AnswerCardPr
               {answer.like_count}
             </Text>
           </Pressable>
+
+          {!isMine && (
+            <Pressable
+              onPress={onOpenModeration}
+              hitSlop={8}
+              style={({ pressed }) => [styles.moreBtn, pressed && { opacity: 0.7 }]}
+              accessibilityRole="button"
+              accessibilityLabel="신고 및 차단"
+            >
+              <Feather name="more-horizontal" size={16} color={colors.textSoft} />
+            </Pressable>
+          )}
         </View>
       </View>
 
@@ -114,6 +134,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
+  },
+  moreBtn: {
+    paddingLeft: 2,
   },
   likeCount: {
     fontSize: 12,

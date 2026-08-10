@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 
 import type { ZodiacSign } from '@/src/constants/zodiac';
+import type { ReportReason } from '@/src/lib/moderation';
 
 const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL!;
 const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY!;
@@ -43,9 +44,15 @@ export interface PublicAnswer {
   body: string;
   like_count: number;
   created_at: string;
+  /**
+   * device_id의 단방향 해시. "이 사용자 차단"에 쓸 안정적인 작성자 식별자가 필요하지만
+   * device_id 자체는 노출할 수 없어서 도입했다 (해시로는 어떤 RLS도 통과하지 못한다).
+   */
+  author_hash: string;
 }
 
-const PUBLIC_ANSWER_COLUMNS = 'id, question_date, zodiac_sign, body, like_count, created_at';
+const PUBLIC_ANSWER_COLUMNS =
+  'id, question_date, zodiac_sign, body, like_count, created_at, author_hash';
 
 export async function fetchPublicAnswers(
   date: string,
@@ -55,7 +62,9 @@ export async function fetchPublicAnswers(
   let query = supabase
     .from('question_answers')
     .select(PUBLIC_ANSWER_COLUMNS)
-    .eq('question_date', date);
+    .eq('question_date', date)
+    // 신고 임계값에 도달해 자동 숨김 처리된 글은 제외한다.
+    .is('hidden_at', null);
 
   if (scope !== 'all') {
     query = query.eq('zodiac_sign', scope);
@@ -169,4 +178,33 @@ export async function toggleAnswerLike(
   }
 
   return true;
+}
+
+// ─── 오늘의 질문 — 신고 ────────────────────────────────────────
+// question_answer_reports는 anon에게 INSERT만 열려 있다. SELECT를 열면 신고자들의
+// device_id가 노출되므로, "내가 신고한 글"은 서버에서 되읽지 않고 로컬(moderation.ts)에서 관리한다.
+
+export type ReportResult = { ok: boolean; error?: string };
+
+export async function reportAnswer(
+  answerId: string,
+  deviceId: string,
+  reason: ReportReason,
+): Promise<ReportResult> {
+  // device_id는 로그에 남기지 않는다 — RLS가 이걸 베어러 토큰처럼 신뢰하므로 사실상 자격증명이다.
+  if (__DEV__) {
+    console.log('[supabase] reportAnswer →', { answerId, reason });
+  }
+
+  const { error } = await supabase
+    .from('question_answer_reports')
+    .insert({ answer_id: answerId, device_id: deviceId, reason });
+
+  // 23505 = 이미 신고한 글(기기당 1회 제한). 사용자 입장에서는 성공과 같다.
+  if (error && error.code !== '23505') {
+    console.warn('[supabase] reportAnswer failed:', error.code, error.message);
+    return { ok: false, error: `${error.code ?? '?'} ${error.message}` };
+  }
+
+  return { ok: true };
 }

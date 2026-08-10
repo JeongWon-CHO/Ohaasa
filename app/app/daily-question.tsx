@@ -18,6 +18,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { AnswerCard } from "@/src/components/daily-question/AnswerCard";
 import { AnswerFeedTabs } from "@/src/components/daily-question/AnswerFeedTabs";
+import { AnswerModerationSheet } from "@/src/components/daily-question/AnswerModerationSheet";
 import { AnswerSortToggle } from "@/src/components/daily-question/AnswerSortToggle";
 import { MyAnswerCard } from "@/src/components/daily-question/MyAnswerCard";
 import { QuestionAnswerForm } from "@/src/components/daily-question/QuestionAnswerForm";
@@ -37,7 +38,9 @@ import {
 import { useQuestionAnswerForm } from "@/src/hooks/useQuestionAnswerForm";
 import { useToast } from "@/src/hooks/useToast";
 import { useZodiac } from "@/src/hooks/useZodiac";
+import type { ReportReason } from "@/src/lib/moderation";
 import { getOrCreateDeviceId } from "@/src/lib/storage";
+import type { PublicAnswer } from "@/src/lib/supabase";
 
 type Step = "answer" | "community";
 
@@ -134,11 +137,42 @@ export default function DailyQuestionScreen() {
     likedIds,
     myAnswerId,
     toggleLike,
+    report,
+    blockAuthor,
     loading: feedLoading,
     refetch: refetchFeed,
   } = useAnswerFeed(step === "community" ? questionDate : null, scope, sort, deviceId);
 
   const { showToast, toastProps } = useToast();
+
+  // 신고·차단 메뉴의 대상. 시트는 하나만 두고 대상만 바꿔 끼운다.
+  // 확인 단계까지 시트 안에서 끝내므로 여기서 Modal을 추가로 띄우지 않는다.
+  const [moderationTarget, setModerationTarget] = useState<PublicAnswer | null>(null);
+
+  async function handleReport(reason: ReportReason) {
+    if (!moderationTarget) return;
+    const targetId = moderationTarget.id;
+    setModerationTarget(null);
+
+    const result = await report(targetId, reason);
+    if (result.ok) {
+      showToast("신고했어요. 24시간 내에 검토할게요");
+      return;
+    }
+    // 개발 빌드에서는 실패 원인을 그대로 띄운다 — 콘솔을 못 보는 실기기 QA에서 필요하다.
+    showToast(
+      __DEV__ && result.error
+        ? `신고 실패: ${result.error}`
+        : "신고를 보내지 못했어요. 잠시 후 다시 시도해 주세요",
+    );
+  }
+
+  function handleBlock() {
+    if (!moderationTarget) return;
+    blockAuthor(moderationTarget.author_hash);
+    setModerationTarget(null);
+    showToast("차단했어요. 이 사용자의 글이 보이지 않아요");
+  }
 
   const canSave = form.body.trim().length > 0;
 
@@ -282,6 +316,7 @@ export default function DailyQuestionScreen() {
                               isMine={answer.id === myAnswerId}
                               liked={likedIds.has(answer.id)}
                               onToggleLike={() => toggleLike(answer.id)}
+                              onOpenModeration={() => setModerationTarget(answer)}
                             />
                           ))}
                         </View>
@@ -319,6 +354,13 @@ export default function DailyQuestionScreen() {
         selectedId={filterSign}
         onClose={() => setFilterVisible(false)}
         onSelect={handleSelectFilter}
+      />
+
+      <AnswerModerationSheet
+        visible={moderationTarget !== null}
+        onClose={() => setModerationTarget(null)}
+        onReport={handleReport}
+        onBlock={handleBlock}
       />
 
       <ConfirmDialog
