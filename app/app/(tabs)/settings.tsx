@@ -9,7 +9,6 @@ import {
   Text,
   View,
 } from "react-native";
-import { useBottomTabBarHeight } from "expo-router/js-tabs";
 import { useFocusEffect } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
@@ -41,27 +40,27 @@ import {
   setPlatform,
   clearZodiacSign,
 } from "@/src/lib/storage";
+import { ConfirmDialog } from "@/src/components/common/ConfirmDialog";
 import { COMMUNITY_GUIDELINES_URL, PRIVACY_POLICY_URL } from "@/src/constants/links";
 import {
   clearBlockedAuthors,
   clearModerationState,
   getBlockedAuthorCount,
 } from "@/src/lib/moderation";
-import { deletePublicAnswer, upsertDevice } from "@/src/lib/supabase";
+import { upsertDevice } from "@/src/lib/supabase";
 import { deleteDailyReview } from "@/src/lib/dailyReviews";
-import { deleteQuestionAnswer, getQuestionAnswer } from "@/src/lib/questionAnswers";
 
 // ─── Screen ───────────────────────────────────────────────────
 
 export default function SettingsScreen() {
   const router = useRouter();
-  const tabBarHeight = useBottomTabBarHeight();
   const { zodiacSign } = useZodiac();
   const [notificationsEnabled, setNotificationsEnabledState] = useState(false);
   const [storedPushToken, setStoredPushToken] = useState<string | null>(null);
   const [permStatus, setPermStatus] = useState<NotifPermissionStatus | null>(null);
   const [deniedSheetVisible, setDeniedSheetVisible] = useState(false);
   const [blockedCount, setBlockedCount] = useState(0);
+  const [unblockDialogVisible, setUnblockDialogVisible] = useState(false);
   // 사용자가 바텀시트에서 "설정하러 가기"를 눌렀는지 추적 (경우 1-1 자동 활성화용)
   const pendingActivationRef = useRef(false);
 
@@ -121,23 +120,10 @@ export default function SettingsScreen() {
     setBlockedCount(await getBlockedAuthorCount());
   }, []);
 
-  function handleUnblockAll() {
-    if (blockedCount === 0) return;
-    Alert.alert(
-      "차단을 모두 해제할까요?",
-      `차단한 사용자 ${blockedCount}명의 글이 다시 보이게 됩니다.`,
-      [
-        { text: "취소", style: "cancel" },
-        {
-          text: "전체 해제",
-          style: "destructive",
-          onPress: async () => {
-            await clearBlockedAuthors();
-            setBlockedCount(0);
-          },
-        },
-      ],
-    );
+  async function handleConfirmUnblockAll() {
+    setUnblockDialogVisible(false);
+    await clearBlockedAuthors();
+    setBlockedCount(0);
   }
 
   useFocusEffect(
@@ -290,13 +276,15 @@ export default function SettingsScreen() {
       {/* Header */}
       <FinalHeader subtitle="설정" />
 
-      {/* Scroll — padding '18px 20px 16px' → paddingBottom 96 for tab bar */}
+      {/*
+        Scroll — paddingBottom에 tabBarHeight를 더하지 않는다. tabBarStyle에 position:'absolute'가
+        없어서 탭바는 레이아웃 공간을 차지하고, 스크롤 영역은 이미 탭바 위에서 끝난다.
+        더하면 탭바 높이(Android edge-to-edge 기준 110 이상)만큼 빈 공간이 한 겹 더 생긴다.
+        운세 탭(index.tsx)과 같은 값.
+      */}
       <ScrollView
         ref={scrollRef}
-        contentContainerStyle={[
-          styles.content,
-          { paddingBottom: tabBarHeight + 16 },
-        ]}
+        contentContainerStyle={[styles.content, { paddingBottom: 24 }]}
         showsVerticalScrollIndicator={false}
         style={styles.scroll}
       >
@@ -393,7 +381,7 @@ export default function SettingsScreen() {
                 : `${blockedCount}명 · 눌러서 전체 해제`
             }
             showChevron={blockedCount > 0}
-            onPress={blockedCount > 0 ? handleUnblockAll : undefined}
+            onPress={blockedCount > 0 ? () => setUnblockDialogVisible(true) : undefined}
             style={styles.aboutRow}
           />
         </SettingsSection>
@@ -442,40 +430,6 @@ export default function SettingsScreen() {
               description="로컬 알림 즉시 발송"
               showChevron
               onPress={sendTestNotification}
-              style={[styles.aboutRow, styles.rowBorder]}
-            />
-            <SettingsRow
-              title={storedPushToken ? "토글 비활성화 (초기화)" : "토글 활성화 시뮬레이션"}
-              description={storedPushToken ? "가짜 토큰 제거" : "가짜 토큰으로 토글 ON/OFF 테스트"}
-              showChevron
-              onPress={() =>
-                setStoredPushToken(storedPushToken ? null : "ExponentPushToken[DEV_TEST]")
-              }
-              style={[styles.aboutRow, styles.rowBorder]}
-            />
-            <SettingsRow
-              title="권한 거부 시뮬레이션"
-              description="토글 탭 → 설정 이동 플로우 테스트"
-              showChevron
-              onPress={() =>
-                setPermStatus({ available: true, granted: false, canAskAgain: false })
-              }
-              style={[styles.aboutRow, styles.rowBorder]}
-            />
-            <SettingsRow
-              title="오늘의 질문 초기화"
-              description="오늘 남긴 답변 삭제 → 미답변 상태로 복원"
-              showChevron
-              onPress={async () => {
-                const today = new Date().toISOString().slice(0, 10);
-                const existing = await getQuestionAnswer(today);
-                await deleteQuestionAnswer(today);
-                if (existing?.visibility === "public") {
-                  const deviceId = await getOrCreateDeviceId();
-                  await deletePublicAnswer(today, deviceId);
-                }
-                Alert.alert("완료", "오늘의 질문이 초기화되었습니다. 홈 화면으로 이동하면 다시 답할 수 있어요.");
-              }}
               style={[styles.aboutRow, styles.rowBorder]}
             />
             <SettingsRow
@@ -556,6 +510,15 @@ export default function SettingsScreen() {
           Linking.openSettings();
         }}
         onClose={() => setDeniedSheetVisible(false)}
+      />
+
+      <ConfirmDialog
+        visible={unblockDialogVisible}
+        title="차단을 모두 해제할까요?"
+        description={`차단한 사용자 ${blockedCount}명의 글이 다시 보이게 돼요.`}
+        confirmLabel="전체 해제"
+        onCancel={() => setUnblockDialogVisible(false)}
+        onConfirm={handleConfirmUnblockAll}
       />
     </LinearGradient>
   );

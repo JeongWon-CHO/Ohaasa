@@ -97,7 +97,11 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontFamily: 'NotoSansKR_400Regular',
     color: colors.text,
-    lineHeight: 24,
+    lineHeight: 22,
+    // Android는 캐럿을 line box 높이만큼 그린다. 기본값(true)이면 Noto Sans KR의 자체
+    // 여백이 lineHeight 위에 더 얹혀 커서가 글자에 비해 과하게 길어진다.
+    // 리뷰 메모 입력창(PostcardNoteInput · BoardingPassNoteInput)과 같은 조합.
+    includeFontPadding: false,
     textAlignVertical: 'top',
   },
   inputFooter: {
