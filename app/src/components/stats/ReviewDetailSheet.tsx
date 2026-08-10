@@ -331,11 +331,11 @@ const styles = StyleSheet.create({
     color: '#FFFDF5',
     lineHeight: 22,
   },
-  // 아래쪽은 BottomSheet가 이미 safe area만큼 패딩을 주므로 위쪽만 띄운다.
+  // 위쪽은 content의 gap(16)에 paddingTop이 더해지므로, 아래(gap)와 합을 맞춰 24:24로 둔다.
   emptyWrap: {
-    paddingTop: spacing.lg,
+    paddingTop: spacing.sm,
     alignItems: 'center',
-    gap: spacing.xl,
+    gap: 24,
     alignSelf: 'stretch',
   },
   emptyText: {
