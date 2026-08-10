@@ -1,57 +1,45 @@
-import { Feather } from '@expo/vector-icons';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { colors, radius, shadows, spacing } from '@/src/constants/design';
-import { ZODIAC_MAP, type ZodiacSign } from '@/src/constants/zodiac';
-import type { AnswerFeedScope } from '@/src/hooks/useAnswerFeed';
+import { colors, shadows } from '@/src/constants/design';
+import { type ZodiacSign } from '@/src/constants/zodiac';
+import type { AnswerFeedTab } from '@/src/hooks/useAnswerFeed';
 
 interface AnswerFeedTabsProps {
-  scope: AnswerFeedScope;
+  tab: AnswerFeedTab;
   mySign: ZodiacSign | null;
-  onChangeScope: (scope: AnswerFeedScope) => void;
+  onChangeTab: (tab: AnswerFeedTab) => void;
 }
 
-export function AnswerFeedTabs({ scope, mySign, onChangeScope }: AnswerFeedTabsProps) {
-  const isFiltered = scope !== 'all' && scope !== mySign;
-
+// 별자리 필터가 걸려 있어도 이 세그먼트는 tab state만 따른다 —
+// 필터 활성 여부는 AnswerSortToggle의 필터 버튼 색으로만 표시한다.
+export function AnswerFeedTabs({ tab, mySign, onChangeTab }: AnswerFeedTabsProps) {
   return (
     <View style={styles.container}>
       <View style={styles.segmentTrack}>
         <Pressable
-          onPress={() => onChangeScope('all')}
-          style={[styles.segment, scope === 'all' && styles.segmentActive]}
+          onPress={() => onChangeTab('all')}
+          style={[styles.segment, tab === 'all' && styles.segmentActive]}
         >
-          <Text style={[styles.segmentLabel, scope === 'all' && styles.segmentLabelActive]}>
+          <Text style={[styles.segmentLabel, tab === 'all' && styles.segmentLabelActive]}>
             전체
           </Text>
         </Pressable>
         <Pressable
-          onPress={() => mySign && onChangeScope(mySign)}
+          onPress={() => mySign && onChangeTab('mine')}
           disabled={!mySign}
-          style={[styles.segment, scope === mySign && styles.segmentActive]}
+          style={[styles.segment, tab === 'mine' && styles.segmentActive]}
         >
-          <Text style={[styles.segmentLabel, scope === mySign && styles.segmentLabelActive]}>
+          <Text style={[styles.segmentLabel, tab === 'mine' && styles.segmentLabelActive]}>
             내 별자리
           </Text>
         </Pressable>
       </View>
-
-      {isFiltered && (
-        <View style={styles.filterChip}>
-          <Text style={styles.filterChipText}>{ZODIAC_MAP[scope as ZodiacSign].ko} 답변만 보기</Text>
-          <Pressable onPress={() => onChangeScope('all')} hitSlop={8}>
-            <Feather name="x" size={13} color={colors.apricotDark} />
-          </Pressable>
-        </View>
-      )}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    gap: spacing.sm,
-  },
+  container: {},
   segmentTrack: {
     flexDirection: 'row',
     borderRadius: 14,
@@ -77,21 +65,5 @@ const styles = StyleSheet.create({
   segmentLabelActive: {
     fontFamily: 'NotoSansKR_700Bold',
     color: colors.apricotDark,
-  },
-  filterChip: {
-    alignSelf: 'flex-start',
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    paddingHorizontal: spacing.md,
-    paddingVertical: 6,
-    borderRadius: radius.pill,
-    backgroundColor: 'rgba(240,184,154,0.18)',
-  },
-  filterChipText: {
-    fontSize: 12,
-    fontFamily: 'NotoSansKR_500Medium',
-    color: colors.apricotDark,
-    lineHeight: 18,
   },
 });

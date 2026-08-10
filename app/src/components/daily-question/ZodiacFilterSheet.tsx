@@ -10,7 +10,8 @@ interface ZodiacFilterSheetProps {
   visible: boolean;
   selectedId: ZodiacSign | null;
   onClose: () => void;
-  onSelect: (sign: ZodiacSign) => void;
+  /** null이면 필터 해제(전체 보기). 이미 선택된 별자리를 다시 누르면 null이 전달된다. */
+  onSelect: (sign: ZodiacSign | null) => void;
 }
 
 export function ZodiacFilterSheet({
@@ -27,7 +28,9 @@ export function ZodiacFilterSheet({
           <Feather name="x" size={20} color={colors.textSoft} />
         </Pressable>
       </View>
-      <Text style={styles.description}>궁금한 별자리의 답변만 모아볼 수 있어요</Text>
+      <Text style={styles.description}>
+        궁금한 별자리의 답변만 모아볼 수 있어요.{'\n'}선택하지 않으면 전체 답변이 보여요.
+      </Text>
 
       <View style={styles.grid}>
         {ZODIAC_LIST.map((zodiac) => {
@@ -41,7 +44,7 @@ export function ZodiacFilterSheet({
                 selected && styles.itemSelected,
                 pressed && styles.itemPressed,
               ]}
-              onPress={() => onSelect(zodiac.sign)}
+              onPress={() => onSelect(selected ? null : zodiac.sign)}
               accessibilityRole="button"
               accessibilityState={{ selected }}
             >

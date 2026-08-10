@@ -11,6 +11,8 @@ import {
 
 export type AnswerFeedScope = 'all' | ZodiacSign;
 export type AnswerFeedSort = 'latest' | 'likes';
+/** 상단 세그먼트 탭. 별자리 필터(filterSign)와는 독립적으로 관리된다. */
+export type AnswerFeedTab = 'all' | 'mine';
 
 type UseAnswerFeedResult = {
   answers: PublicAnswer[];

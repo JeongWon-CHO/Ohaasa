@@ -217,18 +217,12 @@ CREATE POLICY "user_devices_anon_select" ON public.user_devices FOR SELECT  TO a
 
 ### 오늘의 질문
 
-이 앱에서 처음으로 서버에 저장되는 공개 UGC(익명 사용자 글)를 다루는 기능. "내 생각을 먼저 남기게" 하는 것이 핵심이라 작성 전에는 커뮤니티 피드를 보여주지 않는다.
+이 앱에서 처음으로 서버에 저장되는 공개 UGC. "내 생각을 먼저 남기게" 하는 것이 핵심이라 작성 전에는 커뮤니티 피드를 보여주지 않는다.
 
-- **질문 콘텐츠**: `dailyQuestions.ts`의 `getQuestionByDate(date)` — 연중 일수(day-of-year) 기준 순환. 오늘의 카드보다 반복 주기가 길어야 해서 날짜의 일(day)이 아니라 day-of-year를 쓴다.
-- **플로우**: `daily-question.tsx` 하나의 화면에서 `step: 'answer' | 'community'` state로 작성/피드를 전환한다.
-  - 홈 배너(미답변) 진입 → `step='answer'` → 저장 성공 시 공개면 `step='community'`로 전환, 비공개면 완료 토스트 후 `router.back()`
-  - 홈 배너(답변완료) 진입 → 바로 `step='community'`
-  - 기록 탭 "수정하기"(`date` 파라미터 있음) 진입 → `step='answer'`로 시작, 저장 후 `router.back()` (커뮤니티 전환 없음 — `daily-review.tsx`와 동일 흐름)
-- **로컬 우선 저장**: 공개/비공개 무관하게 모든 답변은 `questionAnswers.ts`(AsyncStorage, 키 `ohaasa:question_answers:v1`, id = date)에 먼저 저장된다 — 캘린더·수정·삭제의 source of truth. 공개일 때만 `question_answers` 테이블에 `upsert(onConflict: 'question_date,device_id')`로 미러링.
-- **신원/보안**: `device_id`를 `user_devices`와 동일하게 베어러 토큰처럼 신뢰(RLS `USING(true)`). **공개 피드 조회는 `device_id` 컬럼을 절대 select하지 않는다** — 남의 글을 수정/삭제하지 못하도록 하는 유일한 방어선이므로 새 쿼리를 추가할 때도 이 규칙을 지켜야 한다. "내 글인지"는 `fetchMyAnswerId(date, myDeviceId)`로 내 device_id만 필터링해 별도 조회한다.
-- **커뮤니티 피드**: `useAnswerFeed(date, scope, sort, deviceId)` — `scope: 'all' | ZodiacSign` 단일 state로 전체/내 별자리/필터를 통합 관리. 공감(`toggleAnswerLike`)은 낙관적 업데이트 후 실패 시 롤백. 리스트는 `ScrollView`(코드베이스 전체가 FlatList/FlashList 안 씀).
-- **하루 1개 제약**: `question_answers`의 `unique(question_date, device_id)`로 기기당 하루 1개 공개글만 허용 — DB 레벨 방어.
-- **모더레이션/신고 기능 없음**: MVP는 120자 제한만 있고 욕설 필터·신고는 후속 과제.
+- **보안**: 공개 피드 조회는 `device_id` 컬럼을 절대 select하지 않는다 (→ Supabase 설정 섹션). "내 글" 판별은 `fetchMyAnswerId()`로 따로 조회.
+- **로컬 우선 저장**: 공개/비공개 무관하게 `questionAnswers.ts`(AsyncStorage)가 source of truth. 공개일 때만 `question_answers` 테이블에 미러링.
+- **질문 콘텐츠**: `getQuestionByDate(date)` — 반복 주기를 길게 하려고 날짜의 일(day)이 아닌 day-of-year 기준 순환.
+- **모더레이션/신고 없음**: MVP는 120자 제한뿐 — 욕설 필터·신고는 후속 과제.
 
 ### 운세 리뷰
 
