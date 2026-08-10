@@ -34,7 +34,7 @@ type UseQuestionAnswerFormResult = {
 
 const EMPTY_DRAFT: QuestionAnswerDraft = {
   body: '',
-  visibility: 'private',
+  visibility: 'public',
 };
 
 export function useQuestionAnswerForm({
