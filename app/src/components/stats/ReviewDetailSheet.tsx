@@ -8,13 +8,18 @@ import { ConfirmDialog } from '@/src/components/common/ConfirmDialog';
 import { colors, radius, spacing } from '@/src/constants/design';
 import { ZODIAC_MAP } from '@/src/constants/zodiac';
 import type { DailyReview } from '@/src/lib/dailyReviews';
-import { deleteQuestionAnswer, type QuestionAnswer } from '@/src/lib/questionAnswers';
+import {
+  canEditAnswer,
+  deleteQuestionAnswer,
+  type QuestionAnswer,
+} from '@/src/lib/questionAnswers';
 import { getOrCreateDeviceId } from '@/src/lib/storage';
 import { deletePublicAnswer } from '@/src/lib/supabase';
 
 interface ReviewDetailSheetProps {
   visible: boolean;
   date: string | null;
+  todayStr: string;
   review: DailyReview | null;
   answer?: QuestionAnswer | null;
   onAnswerChanged?: () => void;
@@ -30,12 +35,18 @@ function formatDate(dateStr: string): string {
 export function ReviewDetailSheet({
   visible,
   date,
+  todayStr,
   review,
   answer = null,
   onAnswerChanged,
   onClose,
 }: ReviewDetailSheetProps) {
   const [deleteDialogVisible, setDeleteDialogVisible] = useState(false);
+
+  // 아직 오지 않은 날은 남길 기록이 없다.
+  const isFuture = date !== null && date > todayStr;
+
+  const answerEditable = answer !== null && canEditAnswer(answer);
 
   function handleEdit() {
     if (!date) return;
@@ -89,13 +100,21 @@ export function ReviewDetailSheet({
                   <Text style={styles.noteText}>{answer.body}</Text>
                 </View>
 
+                {!answerEditable && (
+                  <Text style={styles.answerLockedText}>
+                    공개한 답변은 올린 날에만 수정할 수 있어요
+                  </Text>
+                )}
+
                 <View style={styles.answerActionsRow}>
-                  <Pressable
-                    onPress={handleEditAnswer}
-                    style={({ pressed }) => [styles.smallBtn, pressed && { opacity: 0.72 }]}
-                  >
-                    <Text style={styles.smallBtnText}>수정하기</Text>
-                  </Pressable>
+                  {answerEditable && (
+                    <Pressable
+                      onPress={handleEditAnswer}
+                      style={({ pressed }) => [styles.smallBtn, pressed && { opacity: 0.72 }]}
+                    >
+                      <Text style={styles.smallBtnText}>수정하기</Text>
+                    </Pressable>
+                  )}
                   <Pressable
                     onPress={() => setDeleteDialogVisible(true)}
                     style={({ pressed }) => [styles.smallBtn, pressed && { opacity: 0.72 }]}
@@ -159,11 +178,25 @@ export function ReviewDetailSheet({
                 </Pressable>
               </>
             ) : (
-              !answer && (
-                <View style={styles.emptyWrap}>
-                  <Text style={styles.emptyText}>이날 남긴 기록이 없어요</Text>
-                </View>
-              )
+              <View style={styles.emptyWrap}>
+                {!answer && (
+                  <Text style={styles.emptyText}>
+                    {isFuture ? '아직 오지 않은 날이에요' : '이날 남긴 운세 리뷰가 없어요'}
+                  </Text>
+                )}
+                {!isFuture && (
+                  <Pressable
+                    onPress={handleEdit}
+                    style={({ pressed }) => [
+                      styles.editBtn,
+                      styles.editBtnStretch,
+                      pressed && { opacity: 0.72 },
+                    ]}
+                  >
+                    <Text style={styles.editBtnText}>리뷰 남기기</Text>
+                  </Pressable>
+                )}
+              </View>
             )}
             </View>
           </ScrollView>
@@ -207,12 +240,20 @@ const styles = StyleSheet.create({
   },
   answerActionsRow: {
     flexDirection: 'row',
+    justifyContent: 'flex-end',
     gap: spacing.sm,
   },
+  answerLockedText: {
+    fontSize: 12,
+    fontFamily: 'NotoSansKR_300Light',
+    color: colors.textSoft,
+    lineHeight: 18,
+  },
+  // 답변 수정/삭제는 보조 액션이다 — 가로를 채우면 하단 primary 버튼과 위계가 뒤엉킨다.
   smallBtn: {
-    flex: 1,
-    paddingVertical: 10,
-    borderRadius: radius.md,
+    paddingVertical: 7,
+    paddingHorizontal: 14,
+    borderRadius: radius.pill,
     borderWidth: 1.5,
     borderColor: colors.cream3,
     backgroundColor: colors.cardSolid,
@@ -280,15 +321,22 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     alignItems: 'center',
   },
+  // emptyWrap은 안내 문구를 가운데 정렬하므로 버튼만 따로 가로를 채운다.
+  editBtnStretch: {
+    alignSelf: 'stretch',
+  },
   editBtnText: {
     fontSize: 15,
     fontFamily: 'NotoSansKR_500Medium',
     color: '#FFFDF5',
     lineHeight: 22,
   },
+  // 위쪽은 content의 gap(16)에 paddingTop이 더해지므로, 아래(gap)와 합을 맞춰 24:24로 둔다.
   emptyWrap: {
-    paddingVertical: spacing.xxl,
+    paddingTop: spacing.sm,
     alignItems: 'center',
+    gap: 24,
+    alignSelf: 'stretch',
   },
   emptyText: {
     fontSize: 14,

@@ -2,8 +2,7 @@ import { Feather } from '@expo/vector-icons';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { colors, shadows, spacing } from '@/src/constants/design';
-import type { AnswerFeedScope, AnswerFeedSort } from '@/src/hooks/useAnswerFeed';
-import type { ZodiacSign } from '@/src/constants/zodiac';
+import type { AnswerFeedSort } from '@/src/hooks/useAnswerFeed';
 
 const OPTIONS: { value: AnswerFeedSort; label: string }[] = [
   { value: 'latest', label: '최신순' },
@@ -13,20 +12,16 @@ const OPTIONS: { value: AnswerFeedSort; label: string }[] = [
 interface AnswerSortToggleProps {
   sort: AnswerFeedSort;
   onChangeSort: (sort: AnswerFeedSort) => void;
-  scope: AnswerFeedScope;
-  mySign: ZodiacSign | null;
+  isFiltered: boolean;
   onOpenFilter: () => void;
 }
 
 export function AnswerSortToggle({
   sort,
   onChangeSort,
-  scope,
-  mySign,
+  isFiltered,
   onOpenFilter,
 }: AnswerSortToggleProps) {
-  const isFiltered = scope !== 'all' && scope !== mySign;
-
   return (
     <View style={styles.row}>
       <View style={styles.sortOptions}>

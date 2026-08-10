@@ -2,7 +2,7 @@ import { Feather } from '@expo/vector-icons';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { colors, radius, shadows, spacing } from '@/src/constants/design';
-import type { QuestionAnswer } from '@/src/lib/questionAnswers';
+import { canEditAnswer, type QuestionAnswer } from '@/src/lib/questionAnswers';
 
 interface MyAnswerCardProps {
   answer: QuestionAnswer;
@@ -12,6 +12,7 @@ interface MyAnswerCardProps {
 
 export function MyAnswerCard({ answer, onEdit, onDelete }: MyAnswerCardProps) {
   const isPublic = answer.visibility === 'public';
+  const editable = canEditAnswer(answer);
 
   return (
     <View style={[styles.card, shadows.card]}>
@@ -22,15 +23,17 @@ export function MyAnswerCard({ answer, onEdit, onDelete }: MyAnswerCardProps) {
             {isPublic ? '공개' : '비공개'}
           </Text>
         </View>
-        <Pressable
-          onPress={onEdit}
-          style={({ pressed }) => [styles.iconButton, pressed && { opacity: 0.64 }]}
-          hitSlop={6}
-          accessibilityRole="button"
-          accessibilityLabel="내 답변 수정하기"
-        >
-          <Feather name="edit-2" size={16} color={colors.textMid} />
-        </Pressable>
+        {editable && (
+          <Pressable
+            onPress={onEdit}
+            style={({ pressed }) => [styles.iconButton, pressed && { opacity: 0.64 }]}
+            hitSlop={6}
+            accessibilityRole="button"
+            accessibilityLabel="내 답변 수정하기"
+          >
+            <Feather name="edit-2" size={16} color={colors.textMid} />
+          </Pressable>
+        )}
         <Pressable
           onPress={onDelete}
           style={({ pressed }) => [styles.iconButton, pressed && { opacity: 0.64 }]}

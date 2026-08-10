@@ -116,10 +116,10 @@ export default function DailyReviewScreen() {
         <ScrollView
           ref={scrollRef}
           style={styles.scroll}
-          contentContainerStyle={[
-            styles.content,
-            { paddingTop: insets.top + 16, paddingBottom: keyboardVisible ? 40 : 32 },
-          ]}
+          contentContainerStyle={{
+            paddingTop: insets.top + 16,
+            paddingBottom: keyboardVisible ? 40 : 32,
+          }}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
@@ -201,15 +201,14 @@ export default function DailyReviewScreen() {
 const styles = StyleSheet.create({
   fill: { flex: 1 },
   scroll: { flex: 1 },
-  content: {
-    paddingHorizontal: 24,
-  },
 
+  // 아이콘 버튼은 글리프 자체 여백이 있어 본문(sections, 24)과 같은 값을 주면 왼쪽이 너무 비어 보인다.
   header: {
     flexDirection: "row",
     alignItems: "center",
     gap: spacing.sm,
     marginBottom: 24,
+    paddingHorizontal: 16,
   },
   headerBtn: {
     width: 36,
@@ -238,6 +237,7 @@ const styles = StyleSheet.create({
 
   sections: {
     gap: 16,
+    paddingHorizontal: 24,
   },
 
   saveArea: {
