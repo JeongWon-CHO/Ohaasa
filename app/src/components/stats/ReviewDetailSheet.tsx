@@ -8,7 +8,11 @@ import { ConfirmDialog } from '@/src/components/common/ConfirmDialog';
 import { colors, radius, spacing } from '@/src/constants/design';
 import { ZODIAC_MAP } from '@/src/constants/zodiac';
 import type { DailyReview } from '@/src/lib/dailyReviews';
-import { deleteQuestionAnswer, type QuestionAnswer } from '@/src/lib/questionAnswers';
+import {
+  canEditAnswer,
+  deleteQuestionAnswer,
+  type QuestionAnswer,
+} from '@/src/lib/questionAnswers';
 import { getOrCreateDeviceId } from '@/src/lib/storage';
 import { deletePublicAnswer } from '@/src/lib/supabase';
 
@@ -41,6 +45,8 @@ export function ReviewDetailSheet({
 
   // 아직 오지 않은 날은 남길 기록이 없다.
   const isFuture = date !== null && date > todayStr;
+
+  const answerEditable = answer !== null && canEditAnswer(answer);
 
   function handleEdit() {
     if (!date) return;
@@ -94,13 +100,21 @@ export function ReviewDetailSheet({
                   <Text style={styles.noteText}>{answer.body}</Text>
                 </View>
 
+                {!answerEditable && (
+                  <Text style={styles.answerLockedText}>
+                    공개한 답변은 올린 날에만 수정할 수 있어요
+                  </Text>
+                )}
+
                 <View style={styles.answerActionsRow}>
-                  <Pressable
-                    onPress={handleEditAnswer}
-                    style={({ pressed }) => [styles.smallBtn, pressed && { opacity: 0.72 }]}
-                  >
-                    <Text style={styles.smallBtnText}>수정하기</Text>
-                  </Pressable>
+                  {answerEditable && (
+                    <Pressable
+                      onPress={handleEditAnswer}
+                      style={({ pressed }) => [styles.smallBtn, pressed && { opacity: 0.72 }]}
+                    >
+                      <Text style={styles.smallBtnText}>수정하기</Text>
+                    </Pressable>
+                  )}
                   <Pressable
                     onPress={() => setDeleteDialogVisible(true)}
                     style={({ pressed }) => [styles.smallBtn, pressed && { opacity: 0.72 }]}
@@ -227,6 +241,12 @@ const styles = StyleSheet.create({
   answerActionsRow: {
     flexDirection: 'row',
     gap: spacing.sm,
+  },
+  answerLockedText: {
+    fontSize: 12,
+    fontFamily: 'NotoSansKR_300Light',
+    color: colors.textSoft,
+    lineHeight: 18,
   },
   smallBtn: {
     flex: 1,

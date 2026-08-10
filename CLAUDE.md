@@ -139,6 +139,7 @@ CREATE POLICY "user_devices_anon_select" ON public.user_devices FOR SELECT  TO a
 - `user_devices`와 동일하게 `device_id`를 베어러 토큰처럼 신뢰하는 RLS(`USING(true)`)를 쓴다 — **앱은 공개 피드 조회 시 절대 `device_id` 컬럼을 select하지 않는다.** 이게 없으면 다른 사용자가 device_id를 알아내 남의 글을 수정/삭제할 수 있다.
 - `question_answers`는 `unique(question_date, device_id)`로 기기당 하루 1개 공개글만 허용 — 작성/수정은 `upsert(onConflict: 'question_date,device_id')`.
 - `like_count`는 `question_answer_likes` insert/delete 트리거(`sync_answer_like_count`)가 자동 동기화 — 클라이언트가 직접 증감시키지 않는다.
+- **"공개글은 올린 날에만 수정" 정책은 현재 앱 UI에서만 막는다**(`canEditAnswer()`). 서버 RLS는 `USING(true)`라 앱을 거치지 않으면 지난 글도 수정 가능하다. 조여야 할 때는 UPDATE 정책에 `created_at::date = current_date` 조건을 건다.
 
 ### 환경변수
 
@@ -214,6 +215,7 @@ CREATE POLICY "user_devices_anon_select" ON public.user_devices FOR SELECT  TO a
 - **보안**: 공개 피드 조회는 `device_id` 컬럼을 절대 select하지 않는다 (→ Supabase 설정 섹션). "내 글" 판별은 `fetchMyAnswerId()`로 따로 조회.
 - **로컬 우선 저장**: 공개/비공개 무관하게 `questionAnswers.ts`(AsyncStorage)가 source of truth. 공개일 때만 `question_answers` 테이블에 미러링.
 - **질문 콘텐츠**: `getQuestionByDate(date)` — 반복 주기를 길게 하려고 날짜의 일(day)이 아닌 day-of-year 기준 순환.
+- **수정 가능 기간**: 비공개 답변은 언제든, 공개 답변은 **올린 날에만** 수정 가능하고 이후에는 삭제만 남긴다(`canEditAnswer()`). 남들이 읽고 공감한 글의 내용이 뒤바뀌는 걸 막기 위함. 판단 기준은 `date`(= 방송일)가 아니라 `createdAt` — 방송일은 실제 오늘과 어긋날 수 있다.
 - **모더레이션/신고 없음**: MVP는 120자 제한뿐 — 욕설 필터·신고는 후속 과제.
 
 ### 운세 리뷰

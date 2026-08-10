@@ -17,6 +17,25 @@ export type QuestionAnswer = {
 
 const STORAGE_KEY = 'ohaasa:question_answers:v1';
 
+function localDateStr(d: Date): string {
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  return `${d.getFullYear()}-${mm}-${dd}`;
+}
+
+/**
+ * 비공개 답변은 내 기록일 뿐이라 언제든 고칠 수 있다.
+ * 공개 답변은 남들이 읽고 공감한 뒤이므로 올린 날에만 수정 가능하고, 이후에는 삭제만 남긴다.
+ *
+ * 기준을 `date`(= question_date)가 아니라 `createdAt`으로 잡는 이유: question_date는 실제 오늘이
+ * 아니라 방송 기준일(horoscope.date)이라, 주말·크론 미실행일에는 방금 남긴 글이 곧바로
+ * "지난 글"로 잠겨버린다.
+ */
+export function canEditAnswer(answer: QuestionAnswer): boolean {
+  if (answer.visibility === 'private') return true;
+  return localDateStr(new Date(answer.createdAt)) === localDateStr(new Date());
+}
+
 async function loadAll(): Promise<Record<string, QuestionAnswer>> {
   const raw = await AsyncStorage.getItem(STORAGE_KEY);
   if (!raw) return {};
