@@ -281,6 +281,19 @@ CREATE POLICY "user_devices_anon_select" ON public.user_devices FOR SELECT  TO a
   - APK: `$ANDROID_HOME/build-tools/<ver>/aapt2 dump permissions <파일>.apk`
   - AAB: aapt2로는 못 읽는다(proto 포맷). `unzip -p <파일>.aab base/manifest/AndroidManifest.xml | strings | grep -o "android\.permission\.[A-Z_]*" | sort -u`
 
+#### iOS privacy manifest (ITMS-91053)
+
+애플은 required reason API를 **바이너리 심볼 기준으로** 검사한다. 코드가 실제로 그 경로를 타는지는 무관하고, 링크된 프레임워크에 심볼이 있으면 선언이 있어야 한다. 선언은 앱 레벨 `PrivacyInfo.xcprivacy`와 각 pod의 `<Pod>_privacy.bundle`을 **합집합**으로 본다.
+
+- **`ExpoFileSystem_privacy.bundle` / `ExpoMediaLibrary_privacy.bundle`은 빈 껍데기로 빌드된다** — podspec에 `resource_bundles`가 선언돼 있고 `node_modules/expo-file-system/ios/PrivacyInfo.xcprivacy` 원본도 있는데, IPA에는 `Info.plist`만 담겨 들어온다. 다른 pod들(`React-Core_privacy` 등)은 정상이라 이 둘만의 문제다.
+- 그 결과 **DiskSpace 선언이 IPA 어디에도 없는데** `ExpoFileSystem.framework`는 `NSFileSystemFreeSize` · `NSURLVolumeAvailableCapacityForImportantUsageKey` · `NSURLVolumeTotalCapacityKey`를 참조한다 → 업로드 시 ITMS-91053. `app.config.js`의 `ios.privacyManifests`로 앱 레벨에 직접 선언해 막았다.
+- **`ios.privacyManifests`는 덮어쓰지 않고 병합한다**(`@expo/config-plugins`의 `PrivacyInfo.js` `mergePrivacyInfo`) — 기본 생성되는 FileTimestamp·UserDefaults·SystemBootTime은 그대로 남으므로 부족한 카테고리만 추가하면 된다.
+- expo/RN 프레임워크가 자체 `PrivacyInfo.xcprivacy`를 안 갖고 있다고 지적하는 스캐너는 **오탐이다.** CocoaPods는 privacy manifest를 프레임워크 안이 아니라 앱 번들 루트의 `<Pod>_privacy.bundle`로 내보낸다. 프레임워크 디렉토리만 뒤지면 전부 "missing"으로 보인다.
+- 검증 (IPA 압축 해제 후 `Payload/*.app` 기준):
+  - 선언 집합: `find . -name "PrivacyInfo.xcprivacy" -exec plutil -p {} \; | grep NSPrivacyAccessedAPIType\"`
+  - 실제 사용: `nm -um Frameworks/<X>.framework/<X> | grep -i "volume\|systemfree\|statfs"`
+  - 이 둘을 대조해 **사용은 있는데 선언이 없는 카테고리**를 찾는다.
+
 ---
 
 ## 배포 전 체크리스트

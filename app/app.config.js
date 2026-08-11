@@ -29,6 +29,21 @@ module.exports = {
       config: {
         usesNonExemptEncryption: false,
       },
+      // ExpoFileSystem.framework가 DiskSpace required-reason API
+      // (NSFileSystemFreeSize · NSURLVolumeAvailableCapacityForImportantUsageKey
+      // · NSURLVolumeTotalCapacityKey)를 참조하는데, 이를 선언해야 할
+      // ExpoFileSystem_privacy.bundle이 빌드에 Info.plist만 담긴 빈 껍데기로
+      // 들어간다. 선언이 IPA 어디에도 없으면 업로드 시 ITMS-91053이 뜬다.
+      // 사유 코드는 expo-file-system/ios/PrivacyInfo.xcprivacy 원본과 동일.
+      // 이 키는 기존 항목을 덮어쓰지 않고 병합된다(PrivacyInfo.js:91 mergePrivacyInfo).
+      privacyManifests: {
+        NSPrivacyAccessedAPITypes: [
+          {
+            NSPrivacyAccessedAPIType: 'NSPrivacyAccessedAPICategoryDiskSpace',
+            NSPrivacyAccessedAPITypeReasons: ['E174.1', '85F4.1'],
+          },
+        ],
+      },
     },
     android: {
       adaptiveIcon: {
