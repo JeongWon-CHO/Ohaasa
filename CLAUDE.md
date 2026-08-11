@@ -30,86 +30,25 @@ React Native Expo (app/)
 
 ---
 
-## 핵심 디렉토리
+## 코드 배치 규칙
+
+> 파일 목록은 디렉토리를 직접 읽는다. 여기엔 **새 코드를 어디에 둘지**만 적는다.
 
 ```
-app/
-├── app/
-│   ├── index.tsx              # 온보딩 완료 여부 분기
-│   ├── onboarding.tsx         # 별자리 선택 → user_devices 선반영
-│   ├── daily-review.tsx       # 운세 리뷰 입력 화면 (router.push로 진입)
-│   ├── daily-question.tsx     # 오늘의 질문 작성/커뮤니티 화면 (router.push로 진입, date 파라미터 지원)
-│   └── (tabs)/
-│       ├── _layout.tsx        # 탭 진입 시 device registration (fire-and-forget)
-│       ├── index.tsx          # 오늘의 운세 + TodayQuestionSection + DailyReviewEntryCard + PushPermissionSheet
-│       ├── rankings.tsx       # 전체 순위
-│       ├── stats.tsx          # 운세 통계 — [흐름/기록] 세그먼트 + 흐름(그래프·순위) / 기록(캘린더·아카이브) — orchestration only
-│       └── settings.tsx       # 알림 토글 · 별자리 변경 · NotificationDeniedSheet
-└── src/
-    ├── context/ZodiacContext.tsx     # 별자리 전역 상태 (ZodiacProvider · useZodiacContext)
-    ├── constants/
-    │   ├── dailyQuestions.ts         # 질문 60~80개 + getQuestionByDate(date) — day-of-year 기반 순환
-    │   └── links.ts                  # 개인정보처리방침 · 커뮤니티 가이드라인(EULA) 외부 URL
-    ├── lib/
-    │   ├── storage.ts                # device_id · zodiac · pushToken · platform · notificationsEnabled · hasAskedPushPermission
-    │   ├── supabase.ts               # anon client + upsertDevice() + 오늘의 질문 공개 답변 CRUD/좋아요/신고 함수
-    │   ├── dailyReviews.ts           # AsyncStorage CRUD — getDailyReview · upsertDailyReview · deleteDailyReview · getAllDailyReviews
-    │   ├── questionAnswers.ts        # AsyncStorage CRUD — getQuestionAnswer · upsertQuestionAnswer · deleteQuestionAnswer · getAllQuestionAnswers
-    │   ├── moderation.ts             # 로컬 신고/차단 상태 — getBlockedAuthors · addBlockedAuthor · clearBlockedAuthors · getHiddenAnswerIds · REPORT_REASONS
-    │   └── notifications.ts          # requestPushToken() · checkPermissionStatus() · setupForegroundHandler() — dynamic import
-    ├── hooks/
-    │   ├── useZodiac · useHoroscope · useShareHoroscope · useToast
-    │   ├── useDailyReview.ts         # 리뷰 폼 상태 + save (upsert)
-    │   ├── useReviewHistory.ts       # 월별 리뷰 집계 — summary · ratingDist · topItems · noteArchive
-    │   ├── useDailyQuestion.ts       # 홈 배너용 — questionText · myAnswer · hasAnswered (로컬, useFocusEffect 리로드)
-    │   ├── useQuestionAnswerForm.ts  # 작성 폼 상태 + save/remove (로컬 upsert + 공개 시 서버 미러링)
-    │   ├── useAnswerFeed.ts          # 커뮤니티 피드 — answers · likedIds · myAnswerId · toggleLike(낙관적 업데이트)
-    │   ├── useQuestionAnswerHistory.ts  # 월별 답변 집계 — answersByDate (기록 탭 캘린더용)
-    │   └── useHoroscopeTrends.ts     # 통계 데이터 훅 — periodLabel · getSummaryComment · SignAverage 타입 export
-    └── components/
-        ├── PushPermissionSheet.tsx   # 최초 알림 권한 요청 바텀시트
-        ├── NotificationDeniedSheet.tsx  # 알림 거부 후 시스템 설정 유도
-        ├── common/BottomSheet.tsx    # 공통 바텀시트 (슬라이드 애니메이션)
-        ├── final/Toggle.tsx          # disabled prop 지원
-        ├── daily-question/           # 오늘의 질문 전용 컴포넌트
-        │   ├── TodayQuestionSection.tsx  # 운세 탭 내 질문 진입 배너 (미답변/답변완료 상태 분기)
-        │   ├── QuestionAnswerForm.tsx    # 답변 입력(120자 제한) + 공개/비공개 Toggle
-        │   ├── AnswerCard.tsx            # 커뮤니티 피드의 짧은 생각 카드 — 공감 버튼 + (남의 글일 때) ⋯ 신고/차단 메뉴
-        │   ├── AnswerModerationSheet.tsx # 신고/차단 바텀시트 — 메뉴 → 신고 사유 2단계
-        │   ├── AnswerFeedTabs.tsx        # 전체/내 별자리 세그먼트 + 별자리 필터 버튼·칩
-        │   ├── AnswerSortToggle.tsx      # 최신순/공감순 텍스트 토글
-        │   └── ZodiacFilterSheet.tsx     # 12별자리 필터 바텀시트 (ZodiacSelectBottomSheet 패턴 적응)
-        ├── daily-review/             # 운세 리뷰 전용 컴포넌트
-        │   ├── DailyReviewEntryCard.tsx  # 운세 탭 내 리뷰 진입 배너 (미작성/작성 상태 분기)
-        │   ├── StarRatingInput.tsx       # 1~5점 별점 입력
-        │   ├── MemorableItemChips.tsx    # 기억에 남는 항목 칩 선택
-        │   ├── BoardingPassNoteInput.tsx # 보딩패스 스타일 한 줄 메모 입력 (플립 애니메이션)
-        │   └── PostcardNoteInput.tsx     # 엽서 스타일 메모 입력 (대안 UI)
-        └── stats/                    # 통계 화면 전용 컴포넌트
-            ├── SummaryCard.tsx       # 내 별자리 요약 (평균 · 최고·최저 · 자세히 토글)
-            ├── ChartCard.tsx         # 순위 흐름 그래프 + 별자리 비교 + 공유 버튼
-            ├── RankingCard.tsx       # 별자리별 평균 순위 리스트
-            ├── ErrorState.tsx        # 에러 일러스트 + 재시도
-            ├── PeriodSelector.tsx    # 7일/30일 세그먼트 컨트롤 (stats.tsx에서 직접 사용 안 함 — FinalHeader rightSlot 텍스트 토글로 대체)
-            ├── RankTrendChart.tsx    # SVG 라인 차트
-            ├── StatsLoadingState.tsx # 로딩 스켈레톤
-            ├── FloatingBadge.tsx     # 별자리 아이콘 (placeholder용)
-            ├── ZodiacSelectBottomSheet.tsx  # 비교 별자리 선택
-            ├── ReviewHistoryTab.tsx  # 기록 탭 오케스트레이터 (월 탐색 state + 하위 카드 조합)
-            ├── ReviewCalendar.tsx    # 월 캘린더 — 리뷰 있는 날 apricot 원, 일/토 색상, 이전/다음 월 네비게이션
-            ├── ReviewDetailSheet.tsx # 날짜 탭 바텀시트 — 리뷰 상세 또는 "기록 없음" + 수정하기
-            ├── ReviewSummaryCard.tsx # 이달 기록 요약 (2×2 그리드 — 리뷰/별점/메모/기억항목 남긴 날)
-            ├── RatingDistributionCard.tsx  # 5★→1★ 별점 분포 바 차트
-            ├── TopMemorableItemsCard.tsx   # 기억 항목 빈도 바 차트
-            └── NoteArchiveCard.tsx   # 한 줄 기록 최신순 목록
-backend/src/
-├── crawler/   fetcher · parser (31 tests)
-├── translator/translate.ts    # GPT 번역
-└── main.ts    # 크롤 + 번역 + 저장 (알림 발송 제외)
-supabase/
-├── functions/send-horoscope-notifications/index.ts  # Deno Edge Function — 알림 발송
-└── migrations/  # 스키마 SQL (수동 실행 — supabase/ 전체가 .gitignore 대상이라 git에는 포함되지 않음)
+app/app/                        expo-router 화면. (tabs)/ 안이 탭, 밖은 router.push 진입
+app/src/context/                전역 상태 (ZodiacContext)
+app/src/constants/              질문 목록 · 외부 URL 등 정적 데이터
+app/src/lib/                    플랫폼·서버 경계 — supabase · AsyncStorage CRUD · notifications
+app/src/hooks/                  화면 간 재사용 로직 (use<도메인>)
+app/src/components/common/      화면 무관 공통 (BottomSheet 등)
+app/src/components/<화면명>/     화면 전용 컴포넌트 (daily-question · daily-review · stats)
+backend/src/                    crawler(fetcher · parser, 31 tests) · translator · main.ts
+supabase/                       Edge Function + migrations — .gitignore 대상이라 git에 없다
 ```
+
+- **화면은 orchestration만 한다** — 훅 호출 · state · 컴포넌트 조합. UI 섹션은 `components/<화면명>/`로, 데이터 로딩·가공은 `hooks/`로 내린다. `stats.tsx`가 이 패턴의 기준점.
+- **로컬 데이터의 source of truth는 `lib/`의 AsyncStorage 모듈**(`dailyReviews` · `questionAnswers` · `moderation`). 화면에서 AsyncStorage를 직접 읽지 않는다.
+- 서버 호출은 전부 `lib/supabase.ts`를 거친다.
 
 ---
 
@@ -169,17 +108,14 @@ CREATE POLICY "user_devices_anon_select" ON public.user_devices FOR SELECT  TO a
 
 ---
 
-## 진행 상황
+## 열린 작업
 
-| Phase / Step | 내용 | 상태 |
-| --- | --- | --- |
-| Phase 1~5 | 파서 · Supabase 스키마 · 파이프라인 · Push 발송 · cron | ✅ |
-| Phase 6 Step 1~9 | Expo 앱 · FCM · Push (Receipt polling 제거됨) | ✅ |
-| Phase 10 Step 1~5 | EAS profile · 아이콘/splash · 개인정보처리방침 | ✅ |
-| Phase 10 Step 6 | Play Console 내부 테스트 트랙 업로드 | ✅ |
-| Phase 11 | Expo SDK 56 업그레이드 검증 (위젯 제외) | ⬜ |
-| Phase 12 | 오늘의 카드 → 오늘의 질문 교체 (작성·공개/비공개·커뮤니티 피드·공감·기록 탭 통합) | ✅ (구현 완료, Supabase 마이그레이션 수동 실행 및 실기기 QA 필요) |
-| Phase 13 | 신고 · 작성자 차단 · 자동 숨김 · 커뮤니티 가이드라인(iOS 심사 대비) | ✅ (구현 완료, 마이그레이션 실행 · GitHub Pages 반영 · 실기기 QA 필요) |
+> 완료된 Phase 이력은 git log에 있다. 여기엔 **아직 안 끝난 것**만 남긴다.
+
+- **Phase 11** — Expo SDK 56 업그레이드 검증 (위젯 제외)
+- **Phase 12·13**(오늘의 질문 · 신고/차단) — 구현은 끝났고 실기기 QA가 남았다. 배포 전 수기 작업은 아래 "배포 전 체크리스트" 참조.
+
+## 고정 정보
 
 - 개인정보처리방침 URL: `https://jeongwon-cho.github.io/Ohaasa/privacy-policy.html`
 - 커뮤니티 가이드라인 URL: `https://jeongwon-cho.github.io/Ohaasa/community-guidelines.html`
@@ -263,10 +199,36 @@ CREATE POLICY "user_devices_anon_select" ON public.user_devices FOR SELECT  TO a
 ### 이미지 저장 / SNS 공유
 
 - **라이브러리**: `expo-media-library` + `expo-sharing` + `react-native-view-shot`
-- **저장**: `saveToLibraryAsync()` + `requestPermissionsAsync(true)` (writeOnly). `plugins/withWriteOnlyMediaLibrary.js`로 READ 권한 manifest에서 제거 필수 (Play Console 경고 방지).
+- **저장**: `saveToLibraryAsync()` + `requestPermissionsAsync(true)` (writeOnly). writeOnly면 granular 권한(READ_MEDIA_*)은 런타임에 아예 요청되지 않는다(`MediaLibraryModule.kt`의 `shouldIncludeGranular = ... && !writeOnly`) — 매니페스트에 남아도 죽은 선언이지만 스토어 권한 목록에는 그대로 노출된다.
 - **공유**: `captureRef()` → `shareAsync(uri, { mimeType: 'image/png' })` — 추가 권한 불필요.
 - **동적 import**: `await import('expo-media-library')` — static import 금지.
 - **구현 위치**: `src/hooks/useShareHoroscope.ts`
+
+#### Android 권한 다이어트
+
+매니페스트는 `expo prebuild`가 생성하고 `android/`는 .gitignore 대상이라, **직접 고친 건 다음 빌드에 전부 날아간다. 반드시 config plugin으로 처리할 것.**
+
+- **granular 권한은 `granularPermissions: []`로 끈다** — `expo-media-library` 플러그인 옵션. 기본값이 `['photo','video','audio']`라 두면 READ_MEDIA_IMAGES/VIDEO/AUDIO 셋이 다 박힌다. 애초에 안 넣는 공식 옵션이 있으므로 넣었다가 빼는 방식보다 낫다.
+- **`SYSTEM_ALERT_WINDOW`는 우리 것도, 라이브러리 것도 아니다** — `@expo/config-plugins`의 bare 템플릿 보일러플레이트(`withAndroidBaseMods.js`, 주석에 "REMOVE WHATEVER YOU DO NOT NEED"라고 적혀 있다). prebuild마다 되살아나므로 `plugins/withoutSystemAlertWindow.js`가 걷어낸다.
+- **이 권한에는 `tools:node="remove"`를 쓰면 안 된다** — main 매니페스트에 넣는 AAR이 없어서 단순 필터로 충분하고, remove를 걸면 `react-native`의 **debug** 매니페스트까지 지워져 개발 빌드의 개발자 메뉴·레드박스 오버레이가 깨진다.
+- **`--clean` 없는 prebuild로는 검증이 안 된다**: 기존 매니페스트에 덧쓰기만 하므로 예전에 추가된 권한은 그대로 남는다. EAS는 레포를 새로 클론해 `android/`가 없는 상태로 시작하니 실제 빌드에는 문제없다.
+- 남아야 정상인 것: `INTERNET · VIBRATE · POST_NOTIFICATIONS · READ/WRITE_EXTERNAL_STORAGE · READ_MEDIA_VISUAL_USER_SELECTED`. 뒤의 셋은 expo-media-library 소스 매니페스트에서 온다.
+- **검증은 반드시 산출물로 한다** — `android/app/src/main/AndroidManifest.xml`은 소스일 뿐이고, `tools:node="remove"` 항목이 그대로 남아 있어 정적 스캐너가 오탐한다. Gradle manifest merger를 거친 최종 결과를 봐야 한다.
+  - APK: `$ANDROID_HOME/build-tools/<ver>/aapt2 dump permissions <파일>.apk`
+  - AAB: aapt2로는 못 읽는다(proto 포맷). `unzip -p <파일>.aab base/manifest/AndroidManifest.xml | strings | grep -o "android\.permission\.[A-Z_]*" | sort -u`
+
+#### iOS privacy manifest (ITMS-91053)
+
+애플은 required reason API를 **바이너리 심볼 기준으로** 검사한다. 코드가 실제로 그 경로를 타는지는 무관하고, 링크된 프레임워크에 심볼이 있으면 선언이 있어야 한다. 선언은 앱 레벨 `PrivacyInfo.xcprivacy`와 각 pod의 `<Pod>_privacy.bundle`을 **합집합**으로 본다.
+
+- **`ExpoFileSystem_privacy.bundle` / `ExpoMediaLibrary_privacy.bundle`은 빈 껍데기로 빌드된다** — podspec에 `resource_bundles`가 선언돼 있고 `node_modules/expo-file-system/ios/PrivacyInfo.xcprivacy` 원본도 있는데, IPA에는 `Info.plist`만 담겨 들어온다. 다른 pod들(`React-Core_privacy` 등)은 정상이라 이 둘만의 문제다.
+- 그 결과 **DiskSpace 선언이 IPA 어디에도 없는데** `ExpoFileSystem.framework`는 `NSFileSystemFreeSize` · `NSURLVolumeAvailableCapacityForImportantUsageKey` · `NSURLVolumeTotalCapacityKey`를 참조한다 → 업로드 시 ITMS-91053. `app.config.js`의 `ios.privacyManifests`로 앱 레벨에 직접 선언해 막았다.
+- **`ios.privacyManifests`는 덮어쓰지 않고 병합한다**(`@expo/config-plugins`의 `PrivacyInfo.js` `mergePrivacyInfo`) — 기본 생성되는 FileTimestamp·UserDefaults·SystemBootTime은 그대로 남으므로 부족한 카테고리만 추가하면 된다.
+- expo/RN 프레임워크가 자체 `PrivacyInfo.xcprivacy`를 안 갖고 있다고 지적하는 스캐너는 **오탐이다.** CocoaPods는 privacy manifest를 프레임워크 안이 아니라 앱 번들 루트의 `<Pod>_privacy.bundle`로 내보낸다. 프레임워크 디렉토리만 뒤지면 전부 "missing"으로 보인다.
+- 검증 (IPA 압축 해제 후 `Payload/*.app` 기준):
+  - 선언 집합: `find . -name "PrivacyInfo.xcprivacy" -exec plutil -p {} \; | grep NSPrivacyAccessedAPIType\"`
+  - 실제 사용: `nm -um Frameworks/<X>.framework/<X> | grep -i "volume\|systemfree\|statfs"`
+  - 이 둘을 대조해 **사용은 있는데 선언이 없는 카테고리**를 찾는다.
 
 ---
 
