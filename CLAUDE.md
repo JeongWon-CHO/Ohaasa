@@ -30,86 +30,25 @@ React Native Expo (app/)
 
 ---
 
-## 핵심 디렉토리
+## 코드 배치 규칙
+
+> 파일 목록은 디렉토리를 직접 읽는다. 여기엔 **새 코드를 어디에 둘지**만 적는다.
 
 ```
-app/
-├── app/
-│   ├── index.tsx              # 온보딩 완료 여부 분기
-│   ├── onboarding.tsx         # 별자리 선택 → user_devices 선반영
-│   ├── daily-review.tsx       # 운세 리뷰 입력 화면 (router.push로 진입)
-│   ├── daily-question.tsx     # 오늘의 질문 작성/커뮤니티 화면 (router.push로 진입, date 파라미터 지원)
-│   └── (tabs)/
-│       ├── _layout.tsx        # 탭 진입 시 device registration (fire-and-forget)
-│       ├── index.tsx          # 오늘의 운세 + TodayQuestionSection + DailyReviewEntryCard + PushPermissionSheet
-│       ├── rankings.tsx       # 전체 순위
-│       ├── stats.tsx          # 운세 통계 — [흐름/기록] 세그먼트 + 흐름(그래프·순위) / 기록(캘린더·아카이브) — orchestration only
-│       └── settings.tsx       # 알림 토글 · 별자리 변경 · NotificationDeniedSheet
-└── src/
-    ├── context/ZodiacContext.tsx     # 별자리 전역 상태 (ZodiacProvider · useZodiacContext)
-    ├── constants/
-    │   ├── dailyQuestions.ts         # 질문 60~80개 + getQuestionByDate(date) — day-of-year 기반 순환
-    │   └── links.ts                  # 개인정보처리방침 · 커뮤니티 가이드라인(EULA) 외부 URL
-    ├── lib/
-    │   ├── storage.ts                # device_id · zodiac · pushToken · platform · notificationsEnabled · hasAskedPushPermission
-    │   ├── supabase.ts               # anon client + upsertDevice() + 오늘의 질문 공개 답변 CRUD/좋아요/신고 함수
-    │   ├── dailyReviews.ts           # AsyncStorage CRUD — getDailyReview · upsertDailyReview · deleteDailyReview · getAllDailyReviews
-    │   ├── questionAnswers.ts        # AsyncStorage CRUD — getQuestionAnswer · upsertQuestionAnswer · deleteQuestionAnswer · getAllQuestionAnswers
-    │   ├── moderation.ts             # 로컬 신고/차단 상태 — getBlockedAuthors · addBlockedAuthor · clearBlockedAuthors · getHiddenAnswerIds · REPORT_REASONS
-    │   └── notifications.ts          # requestPushToken() · checkPermissionStatus() · setupForegroundHandler() — dynamic import
-    ├── hooks/
-    │   ├── useZodiac · useHoroscope · useShareHoroscope · useToast
-    │   ├── useDailyReview.ts         # 리뷰 폼 상태 + save (upsert)
-    │   ├── useReviewHistory.ts       # 월별 리뷰 집계 — summary · ratingDist · topItems · noteArchive
-    │   ├── useDailyQuestion.ts       # 홈 배너용 — questionText · myAnswer · hasAnswered (로컬, useFocusEffect 리로드)
-    │   ├── useQuestionAnswerForm.ts  # 작성 폼 상태 + save/remove (로컬 upsert + 공개 시 서버 미러링)
-    │   ├── useAnswerFeed.ts          # 커뮤니티 피드 — answers · likedIds · myAnswerId · toggleLike(낙관적 업데이트)
-    │   ├── useQuestionAnswerHistory.ts  # 월별 답변 집계 — answersByDate (기록 탭 캘린더용)
-    │   └── useHoroscopeTrends.ts     # 통계 데이터 훅 — periodLabel · getSummaryComment · SignAverage 타입 export
-    └── components/
-        ├── PushPermissionSheet.tsx   # 최초 알림 권한 요청 바텀시트
-        ├── NotificationDeniedSheet.tsx  # 알림 거부 후 시스템 설정 유도
-        ├── common/BottomSheet.tsx    # 공통 바텀시트 (슬라이드 애니메이션)
-        ├── final/Toggle.tsx          # disabled prop 지원
-        ├── daily-question/           # 오늘의 질문 전용 컴포넌트
-        │   ├── TodayQuestionSection.tsx  # 운세 탭 내 질문 진입 배너 (미답변/답변완료 상태 분기)
-        │   ├── QuestionAnswerForm.tsx    # 답변 입력(120자 제한) + 공개/비공개 Toggle
-        │   ├── AnswerCard.tsx            # 커뮤니티 피드의 짧은 생각 카드 — 공감 버튼 + (남의 글일 때) ⋯ 신고/차단 메뉴
-        │   ├── AnswerModerationSheet.tsx # 신고/차단 바텀시트 — 메뉴 → 신고 사유 2단계
-        │   ├── AnswerFeedTabs.tsx        # 전체/내 별자리 세그먼트 + 별자리 필터 버튼·칩
-        │   ├── AnswerSortToggle.tsx      # 최신순/공감순 텍스트 토글
-        │   └── ZodiacFilterSheet.tsx     # 12별자리 필터 바텀시트 (ZodiacSelectBottomSheet 패턴 적응)
-        ├── daily-review/             # 운세 리뷰 전용 컴포넌트
-        │   ├── DailyReviewEntryCard.tsx  # 운세 탭 내 리뷰 진입 배너 (미작성/작성 상태 분기)
-        │   ├── StarRatingInput.tsx       # 1~5점 별점 입력
-        │   ├── MemorableItemChips.tsx    # 기억에 남는 항목 칩 선택
-        │   ├── BoardingPassNoteInput.tsx # 보딩패스 스타일 한 줄 메모 입력 (플립 애니메이션)
-        │   └── PostcardNoteInput.tsx     # 엽서 스타일 메모 입력 (대안 UI)
-        └── stats/                    # 통계 화면 전용 컴포넌트
-            ├── SummaryCard.tsx       # 내 별자리 요약 (평균 · 최고·최저 · 자세히 토글)
-            ├── ChartCard.tsx         # 순위 흐름 그래프 + 별자리 비교 + 공유 버튼
-            ├── RankingCard.tsx       # 별자리별 평균 순위 리스트
-            ├── ErrorState.tsx        # 에러 일러스트 + 재시도
-            ├── PeriodSelector.tsx    # 7일/30일 세그먼트 컨트롤 (stats.tsx에서 직접 사용 안 함 — FinalHeader rightSlot 텍스트 토글로 대체)
-            ├── RankTrendChart.tsx    # SVG 라인 차트
-            ├── StatsLoadingState.tsx # 로딩 스켈레톤
-            ├── FloatingBadge.tsx     # 별자리 아이콘 (placeholder용)
-            ├── ZodiacSelectBottomSheet.tsx  # 비교 별자리 선택
-            ├── ReviewHistoryTab.tsx  # 기록 탭 오케스트레이터 (월 탐색 state + 하위 카드 조합)
-            ├── ReviewCalendar.tsx    # 월 캘린더 — 리뷰 있는 날 apricot 원, 일/토 색상, 이전/다음 월 네비게이션
-            ├── ReviewDetailSheet.tsx # 날짜 탭 바텀시트 — 리뷰 상세 또는 "기록 없음" + 수정하기
-            ├── ReviewSummaryCard.tsx # 이달 기록 요약 (2×2 그리드 — 리뷰/별점/메모/기억항목 남긴 날)
-            ├── RatingDistributionCard.tsx  # 5★→1★ 별점 분포 바 차트
-            ├── TopMemorableItemsCard.tsx   # 기억 항목 빈도 바 차트
-            └── NoteArchiveCard.tsx   # 한 줄 기록 최신순 목록
-backend/src/
-├── crawler/   fetcher · parser (31 tests)
-├── translator/translate.ts    # GPT 번역
-└── main.ts    # 크롤 + 번역 + 저장 (알림 발송 제외)
-supabase/
-├── functions/send-horoscope-notifications/index.ts  # Deno Edge Function — 알림 발송
-└── migrations/  # 스키마 SQL (수동 실행 — supabase/ 전체가 .gitignore 대상이라 git에는 포함되지 않음)
+app/app/                        expo-router 화면. (tabs)/ 안이 탭, 밖은 router.push 진입
+app/src/context/                전역 상태 (ZodiacContext)
+app/src/constants/              질문 목록 · 외부 URL 등 정적 데이터
+app/src/lib/                    플랫폼·서버 경계 — supabase · AsyncStorage CRUD · notifications
+app/src/hooks/                  화면 간 재사용 로직 (use<도메인>)
+app/src/components/common/      화면 무관 공통 (BottomSheet 등)
+app/src/components/<화면명>/     화면 전용 컴포넌트 (daily-question · daily-review · stats)
+backend/src/                    crawler(fetcher · parser, 31 tests) · translator · main.ts
+supabase/                       Edge Function + migrations — .gitignore 대상이라 git에 없다
 ```
+
+- **화면은 orchestration만 한다** — 훅 호출 · state · 컴포넌트 조합. UI 섹션은 `components/<화면명>/`로, 데이터 로딩·가공은 `hooks/`로 내린다. `stats.tsx`가 이 패턴의 기준점.
+- **로컬 데이터의 source of truth는 `lib/`의 AsyncStorage 모듈**(`dailyReviews` · `questionAnswers` · `moderation`). 화면에서 AsyncStorage를 직접 읽지 않는다.
+- 서버 호출은 전부 `lib/supabase.ts`를 거친다.
 
 ---
 
@@ -169,17 +108,14 @@ CREATE POLICY "user_devices_anon_select" ON public.user_devices FOR SELECT  TO a
 
 ---
 
-## 진행 상황
+## 열린 작업
 
-| Phase / Step | 내용 | 상태 |
-| --- | --- | --- |
-| Phase 1~5 | 파서 · Supabase 스키마 · 파이프라인 · Push 발송 · cron | ✅ |
-| Phase 6 Step 1~9 | Expo 앱 · FCM · Push (Receipt polling 제거됨) | ✅ |
-| Phase 10 Step 1~5 | EAS profile · 아이콘/splash · 개인정보처리방침 | ✅ |
-| Phase 10 Step 6 | Play Console 내부 테스트 트랙 업로드 | ✅ |
-| Phase 11 | Expo SDK 56 업그레이드 검증 (위젯 제외) | ⬜ |
-| Phase 12 | 오늘의 카드 → 오늘의 질문 교체 (작성·공개/비공개·커뮤니티 피드·공감·기록 탭 통합) | ✅ (구현 완료, Supabase 마이그레이션 수동 실행 및 실기기 QA 필요) |
-| Phase 13 | 신고 · 작성자 차단 · 자동 숨김 · 커뮤니티 가이드라인(iOS 심사 대비) | ✅ (구현 완료, 마이그레이션 실행 · GitHub Pages 반영 · 실기기 QA 필요) |
+> 완료된 Phase 이력은 git log에 있다. 여기엔 **아직 안 끝난 것**만 남긴다.
+
+- **Phase 11** — Expo SDK 56 업그레이드 검증 (위젯 제외)
+- **Phase 12·13**(오늘의 질문 · 신고/차단) — 구현은 끝났고 실기기 QA가 남았다. 배포 전 수기 작업은 아래 "배포 전 체크리스트" 참조.
+
+## 고정 정보
 
 - 개인정보처리방침 URL: `https://jeongwon-cho.github.io/Ohaasa/privacy-policy.html`
 - 커뮤니티 가이드라인 URL: `https://jeongwon-cho.github.io/Ohaasa/community-guidelines.html`
