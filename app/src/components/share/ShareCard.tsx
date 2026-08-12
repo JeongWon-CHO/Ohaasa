@@ -53,8 +53,16 @@ function ShareInfoGrid({ horoscope }: { horoscope: Horoscope }) {
     horoscope.lucky_item_ohaasa ??
     horoscope.lucky_item_ko ??
     horoscope.lucky_item;
+
+  /* 고고 컬러 열 — 평일 비노출. 메인 화면(GogoInfoGrid)과 같은 규칙을 쓴다.
+     되살릴 때는 두 파일을 함께 고칠 것. */
+  const showGogoColor = horoscope.source === "gogo";
+  const luckyColor = showGogoColor
+    ? horoscope.lucky_color_ko ?? horoscope.lucky_color
+    : null;
+
   const hasLucky =
-    horoscope.lucky_color !== null ||
+    luckyColor !== null ||
     luckyItem !== null ||
     horoscope.lucky_place !== null;
   const hasScore =
@@ -83,7 +91,7 @@ function ShareInfoGrid({ horoscope }: { horoscope: Horoscope }) {
           />
           <LuckyRow
             label="컬러"
-            value={horoscope.lucky_color_ko ?? horoscope.lucky_color}
+            value={luckyColor}
           />
           <LuckyRow
             label="아이템"
