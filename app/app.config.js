@@ -83,6 +83,7 @@ module.exports = {
       ],
       './plugins/withWriteOnlyMediaLibrary',
       './plugins/withoutSystemAlertWindow',
+      './plugins/withGradleJvmArgs',
     ],
     experiments: {
       typedRoutes: true,
