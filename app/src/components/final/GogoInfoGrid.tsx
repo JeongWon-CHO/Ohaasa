@@ -55,8 +55,19 @@ export function GogoInfoGrid({ horoscope, style }: GogoInfoGridProps) {
     horoscope.lucky_item_ohaasa ??
     horoscope.lucky_item_ko ??
     horoscope.lucky_item;
+
+  /* 고고 컬러 열 — 평일에는 노출하지 않는다.
+     오하아사 아이템이 "분홍색"처럼 색으로 내려오는 날이 있어(관측상 5건 중 1건 꼴)
+     고고 컬러와 나란히 뜨면 한 화면에 서로 다른 색이 두 개 보인다.
+     주말(source='gogo')은 고고가 메인 소스라 그대로 보여준다.
+     평일 컬러를 되살리려면 아래를 `const showGogoColor = true;`로 바꾸면 된다. */
+  const showGogoColor = horoscope.source === "gogo";
+  const luckyColor = showGogoColor
+    ? horoscope.lucky_color_ko ?? horoscope.lucky_color
+    : null;
+
   const hasLucky =
-    horoscope.lucky_color !== null ||
+    luckyColor !== null ||
     luckyItem !== null ||
     horoscope.lucky_place !== null;
   const hasScore =
@@ -69,29 +80,33 @@ export function GogoInfoGrid({ horoscope, style }: GogoInfoGridProps) {
 
   return (
     <View style={[styles.infoGrid, style]}>
-      <FinalCard style={styles.gridCard}>
-        <Text style={styles.gridHeader}>행운 아이템</Text>
-        <LuckyRow
-          label="장소"
-          value={horoscope.lucky_place_ko ?? horoscope.lucky_place}
-        />
-        <LuckyRow
-          label="컬러"
-          value={horoscope.lucky_color_ko ?? horoscope.lucky_color}
-        />
-        <LuckyRow
-          label="아이템"
-          value={luckyItem}
-        />
-      </FinalCard>
+      {hasLucky && (
+        <FinalCard style={styles.gridCard}>
+          <Text style={styles.gridHeader}>행운 아이템</Text>
+          <LuckyRow
+            label="장소"
+            value={horoscope.lucky_place_ko ?? horoscope.lucky_place}
+          />
+          <LuckyRow
+            label="컬러"
+            value={luckyColor}
+          />
+          <LuckyRow
+            label="아이템"
+            value={luckyItem}
+          />
+        </FinalCard>
+      )}
 
-      <FinalCard style={styles.gridCard}>
-        <Text style={styles.gridHeader}>오늘의 운 ✦</Text>
-        <StarRow label="연애" value={horoscope.love_score} />
-        <StarRow label="직장" value={horoscope.work_score} />
-        <StarRow label="금운" value={horoscope.money_score} />
-        <StarRow label="건강" value={horoscope.health_score} />
-      </FinalCard>
+      {hasScore && (
+        <FinalCard style={styles.gridCard}>
+          <Text style={styles.gridHeader}>오늘의 운 ✦</Text>
+          <StarRow label="연애" value={horoscope.love_score} />
+          <StarRow label="직장" value={horoscope.work_score} />
+          <StarRow label="금운" value={horoscope.money_score} />
+          <StarRow label="건강" value={horoscope.health_score} />
+        </FinalCard>
+      )}
     </View>
   );
 }

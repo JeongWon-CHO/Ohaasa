@@ -120,7 +120,7 @@ CREATE POLICY "user_devices_anon_select" ON public.user_devices FOR SELECT  TO a
 - 개인정보처리방침 URL: `https://jeongwon-cho.github.io/Ohaasa/privacy-policy.html`
 - 커뮤니티 가이드라인 URL: `https://jeongwon-cho.github.io/Ohaasa/community-guidelines.html`
 - `google-services.json`: 커밋 대상(앱 수신용) · Firebase service account JSON은 커밋 금지
-- 현재 버전: v1.5.0 - 오늘의 질문 기능 추가
+- 현재 버전: v1.5.1 - 평일 행운 정보를 오하아사 아이템 + 고고 점수로 정리
 
 ---
 
