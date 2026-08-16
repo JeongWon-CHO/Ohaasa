@@ -274,7 +274,18 @@ export async function fetchRepliesForAnswers(answerIds: string[]): Promise<Publi
     return [];
   }
 
-  return (data ?? []) as unknown as PublicReply[];
+  const rows = (data ?? []) as unknown as PublicReply[];
+
+  // 상한에 닿으면 초과분이 조용히 잘린다 — 에러도 빈 자리도 남지 않아서, 사용자 눈에는
+  // "답글이 원래 그만큼"으로 보이고 배지 숫자까지 함께 줄어 어디서도 티가 나지 않는다.
+  // 이 경고가 찍히기 시작했다면 피드 페이지네이션 + 답글 지연 로딩으로 옮길 시점이다.
+  if (rows.length >= REPLY_FETCH_LIMIT) {
+    console.warn(
+      `[supabase] fetchRepliesForAnswers: 상한 ${REPLY_FETCH_LIMIT}건에 도달해 일부 답글이 잘렸을 수 있습니다`,
+    );
+  }
+
+  return rows;
 }
 
 /**
