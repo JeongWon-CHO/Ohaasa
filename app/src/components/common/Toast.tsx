@@ -35,6 +35,8 @@ const styles = StyleSheet.create({
   container: {
     position: "absolute",
     alignSelf: "center",
+    // 폭 제한이 없으면 긴 메시지가 화면 밖으로 뻗는다. 개발 빌드는 실패 원인 문자열까지 붙어 길어진다.
+    maxWidth: "88%",
     backgroundColor: colors.text,
     borderRadius: radius.pill,
     paddingVertical: 10,

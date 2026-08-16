@@ -24,6 +24,19 @@ function localDateStr(d: Date): string {
 }
 
 /**
+ * "올린 날에만 수정" 규칙의 유일한 구현. 공개 답변(로컬 createdAt)과 답글(서버 created_at)이
+ * 같이 쓴다 — 답글은 로컬 미러가 없어 서버 값으로 판단한다.
+ *
+ * 서버 created_at은 UTC지만 `new Date(iso)`가 기기 로컬로 렌더하므로,
+ * KST 08:50에 남긴 글(…T23:50Z)도 로컬 기준 오늘로 잡힌다.
+ *
+ * 이 규칙은 앱 UI에서만 막는다 — 서버 RLS는 USING(true)라 앱을 거치지 않으면 지난 글도 수정 가능하다.
+ */
+export function canEditByCreatedAt(createdAtIso: string): boolean {
+  return localDateStr(new Date(createdAtIso)) === localDateStr(new Date());
+}
+
+/**
  * 비공개 답변은 내 기록일 뿐이라 언제든 고칠 수 있다.
  * 공개 답변은 남들이 읽고 공감한 뒤이므로 올린 날에만 수정 가능하고, 이후에는 삭제만 남긴다.
  *
@@ -33,7 +46,7 @@ function localDateStr(d: Date): string {
  */
 export function canEditAnswer(answer: QuestionAnswer): boolean {
   if (answer.visibility === 'private') return true;
-  return localDateStr(new Date(answer.createdAt)) === localDateStr(new Date());
+  return canEditByCreatedAt(answer.createdAt);
 }
 
 async function loadAll(): Promise<Record<string, QuestionAnswer>> {

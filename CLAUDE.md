@@ -96,6 +96,17 @@ CREATE POLICY "user_devices_anon_select" ON public.user_devices FOR SELECT  TO a
 - 숨김 필터는 RLS가 아니라 쿼리(`.is('hidden_at', null)`)에 있다. RLS SELECT에 걸면 숨겨진 행이 `upsert`의 `ON CONFLICT` → UPDATE RLS에서 막혀 에러가 나고 `deletePublicAnswer`도 조용히 실패한다.
 - **허위신고 복구는 두 단계**: 신고 기록 `delete` + `hidden_at = null`. 숨김만 풀면 `report_count`가 임계값 이상으로 남아 다음 신고 1건에 즉시 재숨김된다. 운영 SQL은 마이그레이션 파일 하단 주석 참고.
 
+### question_answer_replies / _reply_likes / _reply_reports (답글)
+
+`supabase/migrations/20260814000000_question_answer_replies.sql` 참고. 위 세 테이블의 규칙(RLS `USING(true)` · `device_id` 비노출 · `author_hash` · 자동 숨김 · GRANT 필수)이 그대로 반복된다.
+
+- **`unique(answer_id, device_id)`** — 기기당 원글 1개에 답글 1개. 재작성은 `upsert(onConflict: 'answer_id,device_id')`.
+- **부모 답변 삭제 → `on delete cascade`.** 답변 작성자가 자기 글을 지우면 남의 답글도 같이 사라진다(수용한 대가).
+- **부모가 자동 숨김되면 트리거 없이 답글도 도달 불가**가 된다 — 부모 id가 `.in()` 목록에 안 들어가기 때문이다. 숨김 cascade 트리거를 달면 오신고 복구가 3단계가 되고, 빠뜨리면 복구된 답변의 답글이 영영 안 보인다.
+- `author_hash`의 PEPPER(`'ohaasa-author-hash-v1'`)는 `question_answers`와 **바이트 단위로 동일해야 한다.** 한 글자만 달라도 같은 사람이 답변/답글에서 다른 해시를 갖게 되어 사용자의 차단이 절반만 걸린다.
+- `hide_threshold`가 답변(4)보다 낮은 **3**이다 — 답글은 접힌 영역에 있어 노출이 훨씬 적어서, 같은 값이면 자동 숨김이 사실상 안 걸린다.
+- `question_answer_reply_reports`도 anon에게 **INSERT만** 연다(신고자 `device_id` 노출 방지).
+
 ### 환경변수
 
 | 변수                            | 용도                                   |
@@ -114,6 +125,7 @@ CREATE POLICY "user_devices_anon_select" ON public.user_devices FOR SELECT  TO a
 
 - **Phase 11** — Expo SDK 56 업그레이드 검증 (위젯 제외)
 - **Phase 12·13**(오늘의 질문 · 신고/차단) — 구현은 끝났고 실기기 QA가 남았다. 배포 전 수기 작업은 아래 "배포 전 체크리스트" 참조.
+- **Phase 14**(답글) — 구현은 끝났고 마이그레이션 실행 + 실기기 QA가 남았다.
 
 ## 고정 정보
 
@@ -182,7 +194,23 @@ CREATE POLICY "user_devices_anon_select" ON public.user_devices FOR SELECT  TO a
 - **RLS 정책만으로는 안 된다 — GRANT가 필요하다**: 이 프로젝트는 `public` 스키마 기본 권한이 `anon`에게 DML(SELECT/INSERT/UPDATE/DELETE)을 주지 않는다. `TRUNCATE·REFERENCES·TRIGGER`만 딸려온다. 정책은 GRANT로 허용된 것 중 어떤 행인지를 거르는 층이라, **GRANT 없이 정책만 만들면 `permission denied`로 전부 막힌다.** 새 테이블을 만들 때마다 `grant ... to anon;`을 마이그레이션에 명시할 것. (`question_answer_reports`가 이 함정에 걸려 신고가 한 건도 안 들어갔다.)
 - **Modal 중첩 금지**: 차단 확인은 별도 `ConfirmDialog`가 아니라 `AnswerModerationSheet`의 3번째 단계(`confirmBlock`)로 처리한다. `BottomSheet`는 닫기 애니메이션(240ms)이 끝난 뒤에야 내부 Modal을 언마운트하므로, 시트를 내리면서 곧바로 두 번째 Modal을 present하면 iOS가 조용히 무시해 **다이얼로그가 아예 뜨지 않는다**. 시트 위에 뭔가를 더 띄워야 하면 항상 시트 안의 단계로 만들 것.
 - **`author_hash` 방어**: 값이 비어 있으면 차단을 건너뛴다. `Set`에 `undefined`가 들어가면 `author_hash` 없는 글이 전부 한꺼번에 사라진다.
-- **EULA(App Store 심사 지침 1.2)**: 공개 답변 작성 화면(`QuestionAnswerForm`)에 무관용 정책 고지 + `docs/community-guidelines.html` 링크를 노출한다. 기본 visibility가 `public`이라 별도 조작 없이 보인다. 설정 > COMMUNITY에서도 접근 가능하고, 같은 섹션에 "차단한 사용자 N명 · 전체 해제"를 둔다 — **해제 수단이 없으면 심사에서 문제가 된다.**
+- **EULA(App Store 심사 지침 1.2)**: 공개 답변 작성 화면(`QuestionAnswerForm`)에 무관용 정책 고지 + `docs/community-guidelines.html` 링크를 노출한다. 기본 visibility가 `public`이라 별도 조작 없이 보인다. 설정 > COMMUNITY에서도 접근 가능하고, 같은 섹션에 "차단한 사용자 N명 · 전체 해제"를 둔다 — **해제 수단이 없으면 심사에서 문제가 된다.** 답글 작성창에는 이 고지를 **두지 않는다** — 커뮤니티 피드는 답변을 남겨야만 들어올 수 있어서 답글을 쓸 수 있는 사람은 전원 `QuestionAnswerForm`의 고지를 이미 거쳤다. 1.2가 실제로 요구하는 신고·차단 수단은 답글의 ⋯ 메뉴에 있다.
+
+### 오늘의 질문 — 답글
+
+`AnswerCard` 안에서 인라인으로 펼쳐지는 1단계 답글(답글의 답글은 없다). 서버 스키마는 위 "Supabase 설정" 참고.
+
+- **`reply_count` 비정규화 컬럼을 두지 않았다.** 배지에 보여야 하는 건 "서버의 답글 수"가 아니라 **"이 기기에 보이는 답글 수"**인데, 차단·로컬 숨김은 서버가 알 수 없고 자동 숨김도 부모 카운트를 줄여주지 않는다. 대신 하루치를 `fetchRepliesForAnswers(answerIds)` 한 번으로 받아 배지와 목록을 **같은 배열**에서 뽑는다 — 둘이 어긋날 수가 없다.
+- **이 설계는 "피드가 무페이지네이션"이라는 전제 위에 있다.** 페이지네이션을 도입하는 순간 답글은 펼칠 때 지연 로딩으로 가야 하고, 그때는 배지용 `reply_count`가 (부정확함을 감수하고) 다시 필요해진다. `REPLY_FETCH_LIMIT = 1000`이 그 한계선이다.
+- **차단 Set은 `useAnswerFeed`가 소유하고 `useAnswerReplies`는 넘겨받는다.** 각자 `getBlockedAuthors()`를 읽으면 답글에서 차단했을 때 그 사람의 답변 카드는 화면에 남고 그 아래 답글만 사라진다.
+- **`upsertPublicAnswer`가 `ON CONFLICT DO UPDATE`여야 답글이 산다.** delete + insert로 바꾸면 답변을 수정할 때마다 달린 답글이 cascade로 전부 날아간다.
+- **소유권 판정은 `fetchMyReplyIds`**(`answer_id → reply_id`). `device_id`가 클라이언트에 없어 피드만으로는 내 글을 알 수 없다. 이 조회는 **`hidden_at`을 필터하지 않는다** — 자동 숨김된 내 답글이 있는데 작성창을 다시 열어주면 숨김을 우회해 새로 쓸 수 있다. 대신 "숨겨졌어요 + 삭제" 안내만 남긴다.
+- **저장은 낙관적이지 않다**(`saveReply`). `id`·`created_at`·`author_hash`가 서버 생성인데 공감·삭제·수정기한 판정에 즉시 필요해서, `.select().single()`로 저장된 행을 받아 목록에 끼워 넣는다. 삭제·공감·신고는 낙관적 + 롤백(답변과 동일).
+- **"올린 날에만 수정"은 답글도 같다**(`canEditByCreatedAt`). 로컬 미러가 없어 서버 `created_at`으로 판단하며, 답변과 마찬가지로 **앱 UI에서만 막는다**(RLS는 `USING(true)`).
+- **본문 100자가 두 곳에 정의돼 있다** — SQL `check`와 `ReplyComposer.MAX_LENGTH`. 어긋나면 앱은 통과시키고 서버가 거절해 `console.warn`만 남고 조용히 실패한다.
+- **`ConfirmDialog`가 두 개(답변 삭제·답글 삭제)다.** 동시에 `visible`이 되면 iOS가 하나를 조용히 무시하므로 `pendingDeleteReplyId !== null && !deleteDialogVisible`로 구조적으로 막아둔다. 모더레이션 시트가 열린 상태에서 다이얼로그를 띄우는 경로는 만들지 않는다.
+- **당겨서 새로고침**은 커뮤니티 단계에만 붙는다(`RefreshControl`). 실시간 구독이 없어 남이 쓴 답글은 재진입해야 보였다. `refreshing`을 내릴 때 `sawBusyRef`를 거치는 이유: `refetch`는 tick만 올리는 동기 함수라 그 렌더의 `feedLoading`이 아직 `false`다 — 그대로 비교하면 로딩이 시작되기도 전에 스피너가 꺼진다.
+- **키보드**: 인라인 작성창이 생기면서 `TouchableWithoutFeedback onPress={Keyboard.dismiss}`를 `step === "answer"` 분기만 감싸도록 옮겼다. 커뮤니티 단계까지 감싸면 작성창 여백·카운터를 눌러도 키보드가 내려간다. iOS는 `behavior="padding"`이 포커스된 입력창을 스크롤해주지 않으므로 포커스 시 `measureInWindow` + `scrollTo`로 직접 올린다(`androidKeyboardHeight`는 안드로이드 전용 패딩이라 별도 `keyboardHeightRef`를 쓴다 — 섞으면 iOS에서 이중 패딩이 된다).
 
 ### 운세 리뷰
 
@@ -238,9 +266,11 @@ CREATE POLICY "user_devices_anon_select" ON public.user_devices FOR SELECT  TO a
 
 - [ ] `app/app.config.js`의 `version` 필드를 올렸는가?
 - [ ] 이 파일(`CLAUDE.md`) 하단의 "현재 버전"을 같은 값으로 수정했는가?
-- [ ] `app/app/(tabs)/settings.tsx` 푸터의 `v1.5.0` 텍스트도 같이 고쳤는가? (하드코딩되어 있다)
+- [ ] `app/app/(tabs)/settings.tsx` 푸터의 버전 텍스트(현재 `v1.5.1`)도 같이 고쳤는가? (하드코딩되어 있다)
 - [ ] `docs/` 변경분을 push해 GitHub Pages에 반영했는가? (앱 내 링크가 404가 되면 심사에서 걸린다)
 - [ ] `supabase/migrations/` 신규 SQL을 실행했는가? (`supabase/`는 .gitignore 대상이라 CI가 대신 해주지 않는다)
+- [ ] **GRANT가 실제로 붙었는지 확인했는가?** 새 테이블마다 필수다 — `question_answer_reports`가 이 함정에 걸려 신고가 한 건도 안 들어간 적이 있다. 검증 SQL은 답글 마이그레이션 하단 `-- (f)` 주석 참고.
+- [ ] **`author_hash` PEPPER가 테이블 간 일치하는가?** 오타 하나면 차단이 절반만 걸린다. 검증 SQL은 같은 파일 `-- (g)` 주석 참고.
 
 버전은 `app.config.js` 한 곳만 고치면 EAS 빌드에 반영된다. CLAUDE.md의 "현재 버전"은 대화 맥락용 메모이므로 같이 맞춰줘야 한다.
 

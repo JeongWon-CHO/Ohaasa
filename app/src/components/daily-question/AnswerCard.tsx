@@ -1,4 +1,5 @@
 import { Feather } from '@expo/vector-icons';
+import type { ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { ConstellationBadge } from '@/src/components/final/ConstellationBadge';
@@ -13,6 +14,12 @@ interface AnswerCardProps {
   onToggleLike: () => void;
   /** 신고·차단 메뉴 열기. 내 글에는 표시하지 않는다. */
   onOpenModeration: () => void;
+  /** 답글 수. null이면 아직 로딩 중이라 숫자 없이 "답글"만 보여준다(숫자가 튀는 것 방지). */
+  replyCount: number | null;
+  repliesExpanded: boolean;
+  onToggleReplies: () => void;
+  /** 펼쳤을 때 카드 테두리 안쪽에 렌더링되는 답글 영역(ReplyThread). */
+  children?: ReactNode;
 }
 
 export function AnswerCard({
@@ -21,6 +28,10 @@ export function AnswerCard({
   liked,
   onToggleLike,
   onOpenModeration,
+  replyCount,
+  repliesExpanded,
+  onToggleReplies,
+  children,
 }: AnswerCardProps) {
   const zodiac = ZODIAC_MAP[answer.zodiac_sign];
 
@@ -71,6 +82,30 @@ export function AnswerCard({
       </View>
 
       <Text style={styles.body}>{answer.body}</Text>
+
+      {/* 답글이 0개여도 보여준다 — 첫 답글을 유도하는 어포던스이기 때문이다. */}
+      <View style={styles.replySection}>
+        <Pressable
+          onPress={onToggleReplies}
+          hitSlop={8}
+          style={({ pressed }) => [styles.replyToggle, pressed && { opacity: 0.6 }]}
+          accessibilityRole="button"
+          accessibilityState={{ expanded: repliesExpanded }}
+          accessibilityLabel={replyCount === null ? '답글 보기' : `답글 ${replyCount}개 보기`}
+        >
+          <Feather name="message-circle" size={13} color={colors.textSoft} />
+          <Text style={styles.replyLabel}>
+            {replyCount === null ? '답글' : `답글 ${replyCount}`}
+          </Text>
+          <Feather
+            name={repliesExpanded ? 'chevron-up' : 'chevron-down'}
+            size={14}
+            color={colors.textSoft}
+          />
+        </Pressable>
+
+        {repliesExpanded && children}
+      </View>
     </View>
   );
 }
@@ -147,5 +182,23 @@ const styles = StyleSheet.create({
   likeCountActive: {
     fontFamily: 'NotoSansKR_600SemiBold',
     color: colors.apricotDark,
+  },
+  replySection: {
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+    paddingTop: spacing.md,
+    gap: spacing.md,
+  },
+  replyToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    alignSelf: 'flex-start',
+  },
+  replyLabel: {
+    fontSize: 12,
+    fontFamily: 'NotoSansKR_400Regular',
+    color: colors.textSoft,
+    lineHeight: 18,
   },
 });

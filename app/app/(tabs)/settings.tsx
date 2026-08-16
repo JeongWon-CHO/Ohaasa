@@ -450,14 +450,14 @@ export default function SettingsScreen() {
             />
             <SettingsRow
               title="신고 · 차단 기록 초기화"
-              description="숨긴 글과 차단 목록 삭제 → 피드에 다시 표시"
+              description="숨긴 글·답글과 차단 목록 삭제 → 피드에 다시 표시"
               showChevron
               onPress={async () => {
                 await clearModerationState();
                 setBlockedCount(0);
                 Alert.alert(
                   "완료",
-                  "숨긴 글과 차단이 초기화되었습니다. 서버의 신고 기록은 그대로입니다.",
+                  "숨긴 글·답글과 차단이 초기화되었습니다. 서버의 신고 기록은 그대로입니다.",
                 );
               }}
               style={[styles.aboutRow, styles.rowBorder]}

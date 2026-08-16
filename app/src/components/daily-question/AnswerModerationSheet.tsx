@@ -13,6 +13,8 @@ interface AnswerModerationSheetProps {
   onReport: (reason: ReportReason) => void;
   /** 차단 확정. 확인 단계는 시트 안에서 처리하므로 호출부는 바로 차단하면 된다. */
   onBlock: () => void;
+  /** 문구에 들어갈 대상 이름. 답변이면 '글', 답글이면 '답글'. 시트 자체는 대상 비의존이다. */
+  subject?: string;
 }
 
 /**
@@ -27,6 +29,7 @@ export function AnswerModerationSheet({
   onClose,
   onReport,
   onBlock,
+  subject = '글',
 }: AnswerModerationSheetProps) {
   const [step, setStep] = useState<Step>('menu');
   const [selectedReason, setSelectedReason] = useState<ReportReason | null>(null);
@@ -43,7 +46,7 @@ export function AnswerModerationSheet({
       <View style={styles.titleRow}>
         <Text style={styles.title}>
           {step === 'menu'
-            ? '이 글이 불편하신가요?'
+            ? `이 ${subject}이 불편하신가요?`
             : step === 'reason'
               ? '신고 사유를 알려주세요'
               : '이 사용자를 차단할까요?'}
@@ -80,7 +83,7 @@ export function AnswerModerationSheet({
       ) : step === 'menu' ? (
         <>
           <Text style={styles.description}>
-            신고하거나 차단하면 이 글은 바로 보이지 않게 돼요.
+            신고하거나 차단하면 이 {subject}은 바로 보이지 않게 돼요.
           </Text>
 
           <View style={styles.list}>
