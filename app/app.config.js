@@ -12,7 +12,7 @@ module.exports = {
   expo: {
     name: appName,
     slug: 'ohaasa',
-    version: '1.5.1',
+    version: '1.6.0',
     orientation: 'portrait',
     icon: './assets/images/icon.png',
     scheme: 'ohaasa',

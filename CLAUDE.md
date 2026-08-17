@@ -124,15 +124,17 @@ CREATE POLICY "user_devices_anon_select" ON public.user_devices FOR SELECT  TO a
 > 완료된 Phase 이력은 git log에 있다. 여기엔 **아직 안 끝난 것**만 남긴다.
 
 - **Phase 11** — Expo SDK 56 업그레이드 검증 (위젯 제외)
-- **Phase 12·13**(오늘의 질문 · 신고/차단) — 구현은 끝났고 실기기 QA가 남았다. 배포 전 수기 작업은 아래 "배포 전 체크리스트" 참조.
-- **Phase 14**(답글) — 구현은 끝났고 마이그레이션 실행 + 실기기 QA가 남았다.
+- **답글 푸시 알림** — 답글이 달렸는지 알려면 앱을 열어야 한다. 필요한 것은 `question_answer_replies` INSERT 트리거 → Edge Function → 부모 `device_id`의 push token 조회 (→ "오늘의 질문 — 내 답변 고정 카드 · 새 답글 배지").
+- **운영 확인 주기** — `hide_threshold`가 답변 4 · 답글 3으로 높은 편이라 자동 숨김이 잘 안 걸린다. 글의 노출 수명이 24시간이므로 신고 큐를 **매일** 봐야 한다 (→ "Supabase 설정").
+
+> Phase 12·13·14(오늘의 질문 · 신고/차단 · 답글)는 마이그레이션 실행과 실기기 QA까지 끝났다(2026-08-17).
 
 ## 고정 정보
 
 - 개인정보처리방침 URL: `https://jeongwon-cho.github.io/Ohaasa/privacy-policy.html`
 - 커뮤니티 가이드라인 URL: `https://jeongwon-cho.github.io/Ohaasa/community-guidelines.html`
 - `google-services.json`: 커밋 대상(앱 수신용) · Firebase service account JSON은 커밋 금지
-- 현재 버전: v1.5.1 - 평일 행운 정보를 오하아사 아이템 + 고고 점수로 정리
+- 현재 버전: v1.6.0 - 오늘의 질문 답글 + 내 답변 고정 카드 · 새 답글 배지
 
 ---
 
@@ -278,13 +280,16 @@ CREATE POLICY "user_devices_anon_select" ON public.user_devices FOR SELECT  TO a
 
 - [ ] `app/app.config.js`의 `version` 필드를 올렸는가?
 - [ ] 이 파일(`CLAUDE.md`) 하단의 "현재 버전"을 같은 값으로 수정했는가?
-- [ ] `app/app/(tabs)/settings.tsx` 푸터의 버전 텍스트(현재 `v1.5.1`)도 같이 고쳤는가? (하드코딩되어 있다)
+- [ ] `app/app/(tabs)/settings.tsx` 푸터의 버전 텍스트(현재 `v1.6.0`)도 같이 고쳤는가? (하드코딩되어 있다)
 - [ ] `docs/` 변경분을 push해 GitHub Pages에 반영했는가? (앱 내 링크가 404가 되면 심사에서 걸린다)
 - [ ] `supabase/migrations/` 신규 SQL을 실행했는가? (`supabase/`는 .gitignore 대상이라 CI가 대신 해주지 않는다)
 - [ ] **GRANT가 실제로 붙었는지 확인했는가?** 새 테이블마다 필수다 — `question_answer_reports`가 이 함정에 걸려 신고가 한 건도 안 들어간 적이 있다. 검증 SQL은 답글 마이그레이션 하단 `-- (f)` 주석 참고.
 - [ ] **`author_hash` PEPPER가 테이블 간 일치하는가?** 오타 하나면 차단이 절반만 걸린다. 검증 SQL은 같은 파일 `-- (g)` 주석 참고.
 
 버전은 `app.config.js` 한 곳만 고치면 EAS 빌드에 반영된다. CLAUDE.md의 "현재 버전"은 대화 맥락용 메모이므로 같이 맞춰줘야 한다.
+
+- **`versionCode`·`buildNumber`는 손대지 않는다** — `eas.json`이 `appVersionSource: "remote"` + production `autoIncrement: true`라 EAS가 서버에서 관리한다. `app.config.js`에 적으면 원격 값과 두 개의 진실이 된다. 수기로 올릴 것은 마케팅 버전(`version`)뿐이다.
+- **`expo-doctor`의 "Patch version mismatches"는 세트로만 움직인다.** doctor가 말하는 `expected`는 설치된 expo의 `bundledNativeModules`가 아니라 **Expo API의 최신 패치 목록**이다(그래서 expo 자신이 요구하는 버전보다 높게 뜬다). 일부만 올리면 `expo`가 요구하는 예전 버전이 `node_modules/expo/` 아래에 중첩 설치되어 **같은 네이티브 모듈이 두 벌**이 된다 — 오토링킹 사고. `npx expo install --fix`로 전부 같이 올리거나, 전부 두거나 둘 중 하나다. 패치 차이만 남은 상태로 배포하는 건 문제없다(EAS는 lockfile로 설치하고, lockfile은 내부적으로 일관된 한 세대다). 2026-08-17에는 `expo@56.0.20`이 요구하는 `expo-file-system@~56.0.10`이 npm에 없어서(`sdk-56` 태그가 56.0.9에서 멈춤) `--fix` 자체가 불가능했다 — 업스트림 publish 누락이므로 기다렸다가 다시 돌린다.
 
 ---
 
