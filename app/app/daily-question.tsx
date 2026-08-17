@@ -39,13 +39,18 @@ import {
   type AnswerFeedTab,
 } from "@/src/hooks/useAnswerFeed";
 import { useAnswerReplies } from "@/src/hooks/useAnswerReplies";
+import { useNewReplyBadge } from "@/src/hooks/useNewReplyBadge";
 import { useQuestionAnswerForm } from "@/src/hooks/useQuestionAnswerForm";
 import { useToast } from "@/src/hooks/useToast";
 import { useZodiac } from "@/src/hooks/useZodiac";
 import type { ReportReason } from "@/src/lib/moderation";
 import { getOrCreateDeviceId } from "@/src/lib/storage";
+import type { PublicReply } from "@/src/lib/supabase";
 
 type Step = "answer" | "community";
+
+/** repliesByAnswer.get()이 비었을 때 매 렌더 새 배열이 생기지 않게 고정 참조를 쓴다. */
+const NO_REPLIES: PublicReply[] = [];
 
 function todayLocalDate(): string {
   const now = new Date();
@@ -154,7 +159,25 @@ export default function DailyQuestionScreen() {
     refetch: refetchFeed,
   } = useAnswerFeed(step === "community" ? questionDate : null, scope, sort, deviceId);
 
-  const answerIds = useMemo(() => answers.map((a) => a.id), [answers]);
+  // 내 답변은 상단 고정 카드가 전담하므로 목록에서는 뺀다 — 남겨두면 같은 글이 두 번 나오고,
+  // 정작 답글이 달린 쪽이 스크롤해야 나오는 쪽이 된다.
+  const feedAnswers = useMemo(
+    () => (myAnswerId ? answers.filter((a) => a.id !== myAnswerId) : answers),
+    [answers, myAnswerId],
+  );
+  const myServerAnswer = useMemo(
+    () => (myAnswerId ? (answers.find((a) => a.id === myAnswerId) ?? null) : null),
+    [answers, myAnswerId],
+  );
+
+  // 답글 조회는 feedAnswers가 아니라 answers(내 답변을 빼기 전) 기준이다 — 상단 고정 카드도
+  // 답글을 보여줘야 한다. 다른 별자리로 필터를 걸면 answers에서도 내 답변이 빠지지만 카드는
+  // 그대로 남으므로, 그때는 id를 따로 얹어 그 카드의 답글까지 사라지지 않게 한다.
+  const answerIds = useMemo(() => {
+    const ids = answers.map((a) => a.id);
+    if (myAnswerId && !ids.includes(myAnswerId)) ids.push(myAnswerId);
+    return ids;
+  }, [answers, myAnswerId]);
   const {
     repliesByAnswer,
     likedReplyIds,
@@ -208,6 +231,17 @@ export default function DailyQuestionScreen() {
   const [moderationTarget, setModerationTarget] = useState<ModerationTarget | null>(null);
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
   const [pendingDeleteReplyId, setPendingDeleteReplyId] = useState<string | null>(null);
+
+  const myReplies = myAnswerId ? (repliesByAnswer.get(myAnswerId) ?? NO_REPLIES) : NO_REPLIES;
+  const myReplyToMyAnswer = myAnswerId ? (myReplyIdByAnswer.get(myAnswerId) ?? null) : null;
+  const myAnswerExpanded = myAnswerId !== null && expandedIds.has(myAnswerId);
+  const newReplyCount = useNewReplyBadge({
+    answerId: myAnswerId,
+    replies: myReplies,
+    myReplyId: myReplyToMyAnswer,
+    expanded: myAnswerExpanded,
+    loaded: repliesLoaded,
+  });
 
   async function handleReport(reason: ReportReason) {
     if (!moderationTarget) return;
@@ -431,6 +465,37 @@ export default function DailyQuestionScreen() {
                         answer={existingAnswer}
                         onEdit={handleEditMine}
                         onDelete={() => setDeleteDialogVisible(true)}
+                        likeCount={myServerAnswer?.like_count ?? null}
+                        // 비공개 답변은 서버에 행이 없어 답글이 달릴 수 없다 → 영역 자체를 붙이지 않는다.
+                        replies={
+                          myAnswerId === null
+                            ? undefined
+                            : {
+                                count: repliesLoaded ? myReplies.length : null,
+                                newCount: newReplyCount,
+                                expanded: myAnswerExpanded,
+                                onToggle: () => handleToggleReplies(myAnswerId),
+                                thread: (
+                                  <ReplyThread
+                                    replies={myReplies}
+                                    likedReplyIds={likedReplyIds}
+                                    myReplyId={myReplyToMyAnswer}
+                                    canWrite={zodiacSign !== null}
+                                    onToggleLike={toggleReplyLike}
+                                    onOpenModeration={(reply) =>
+                                      setModerationTarget({
+                                        kind: "reply",
+                                        id: reply.id,
+                                        authorHash: reply.author_hash,
+                                      })
+                                    }
+                                    onSave={(body) => handleSaveReply(myAnswerId, body)}
+                                    onRequestDelete={setPendingDeleteReplyId}
+                                    onComposerFocusBottom={handleComposerFocusBottom}
+                                  />
+                                ),
+                              }
+                        }
                       />
                     )}
 
@@ -438,13 +503,17 @@ export default function DailyQuestionScreen() {
                       <View style={styles.feedLoading}>
                         <ActivityIndicator color={colors.apricotDark} />
                       </View>
-                    ) : answers.length === 0 ? (
+                    ) : feedAnswers.length === 0 ? (
                       <View style={styles.feedEmpty}>
-                        <Text style={styles.feedEmptyText}>아직 남겨진 생각이 없어요</Text>
+                        <Text style={styles.feedEmptyText}>
+                          {myServerAnswer
+                            ? "아직 다른 사람의 생각이 없어요"
+                            : "아직 남겨진 생각이 없어요"}
+                        </Text>
                       </View>
                     ) : (
                       <View style={styles.answerList}>
-                        {answers.map((answer) => {
+                        {feedAnswers.map((answer) => {
                           const replies = repliesByAnswer.get(answer.id) ?? [];
                           return (
                             <AnswerCard

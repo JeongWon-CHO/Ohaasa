@@ -212,6 +212,18 @@ CREATE POLICY "user_devices_anon_select" ON public.user_devices FOR SELECT  TO a
 - **당겨서 새로고침**은 커뮤니티 단계에만 붙는다(`RefreshControl`). 실시간 구독이 없어 남이 쓴 답글은 재진입해야 보였다. `refreshing`을 내릴 때 `sawBusyRef`를 거치는 이유: `refetch`는 tick만 올리는 동기 함수라 그 렌더의 `feedLoading`이 아직 `false`다 — 그대로 비교하면 로딩이 시작되기도 전에 스피너가 꺼진다.
 - **키보드**: 인라인 작성창이 생기면서 `TouchableWithoutFeedback onPress={Keyboard.dismiss}`를 `step === "answer"` 분기만 감싸도록 옮겼다. 커뮤니티 단계까지 감싸면 작성창 여백·카운터를 눌러도 키보드가 내려간다. iOS는 `behavior="padding"`이 포커스된 입력창을 스크롤해주지 않으므로 포커스 시 `measureInWindow` + `scrollTo`로 직접 올린다(`androidKeyboardHeight`는 안드로이드 전용 패딩이라 별도 `keyboardHeightRef`를 쓴다 — 섞으면 iOS에서 이중 패딩이 된다).
 
+### 오늘의 질문 — 내 답변 고정 카드 · 새 답글 배지
+
+내 글에 달린 답글을 보려면 피드를 스크롤해 내 카드를 찾아야 했다. 사용자가 늘수록 나빠지는 구조라 **내 답변을 목록에서 빼고 상단 고정 카드(`MyAnswerCard`)가 전담**하게 했다. 스크롤 위치를 계산해 이동시키는 대신 자리를 고정한 이유: `ScrollView` + `map` 구조라 카드마다 `onLayout`을 달아야 하고, 그래도 사용자는 "가서 봐야" 한다.
+
+- **`MyAnswerCard`는 로컬·서버 혼합이다.** 본문·공개여부·수정가능 판정은 AsyncStorage(`existingAnswer`)가 source of truth고, 공감 수와 답글만 서버에서 온다. 비공개 답변은 서버에 행이 없어 답글이 달릴 수 없으므로 `replies` prop 자체를 넘기지 않는다 — 전부 있거나 전부 없거나라서 값 하나로 묶어 타입이 강제하게 했다.
+- **`answerIds`는 `feedAnswers`가 아니라 `answers` 기준이어야 한다.** 목록에서 뺀 내 답변의 답글까지 조회에서 빠지면 고정 카드가 빈 채로 남는다. 다른 별자리 필터를 걸면 `answers`에서도 내 답변이 빠지므로 그때는 `myAnswerId`를 따로 얹는다(공감 수는 못 받아오므로 `likeCount = null`로 숫자를 감춘다).
+- **읽음 기준값은 `now()`가 아니라 본 답글의 `created_at`이다**(`lib/replySeen.ts`). `created_at`은 서버 시계라, 기기 시계가 조금이라도 뒤처지면 `now()`로 저장한 순간 방금 읽은 답글이 그 기준보다 미래가 되어 영영 새 답글로 남는다.
+- **읽음 처리는 펼침 이벤트가 아니라 "펼쳐져 있는 동안"의 상태로 잡는다**(`useNewReplyBadge`). 당겨서 새로고침으로 답글이 들어오는 경로가 있어서, 이벤트에만 걸면 이미 화면에 보이는 답글에 배지가 다시 붙는다.
+- `replySeen.ts`를 `moderation.ts`와 나눈 이유: 저쪽은 "안 보기로 한 것"의 목록이고 이쪽은 열람 기록이라 `clearModerationState()`가 같이 지우면 안 된다(차단만 풀었는데 배지가 되살아난다).
+- 피드가 비었을 때 문구가 갈린다 — 내 공개 답변이 있으면 "아직 다른 사람의 생각이 없어요", 없으면 "아직 남겨진 생각이 없어요".
+- **답글 푸시 알림은 아직 없다.** 위치 문제는 이걸로 사라지지만 "반응이 왔는지"를 알려면 앱을 열어야 한다. 하려면 `question_answer_replies` INSERT 트리거 → Edge Function → 부모 `device_id`의 push token 조회가 필요하다(피드에 `device_id`를 안 내려보내므로 발송 판단은 서버에서만 가능).
+
 ### 운세 리뷰
 
 - **저장소**: AsyncStorage 로컬 전용(`ohaasa:daily_reviews:v1`, 레코드 id = `{date}:{zodiacSign}`). `syncedAt/remoteId`는 미래 서버 동기화용 예약 필드.
