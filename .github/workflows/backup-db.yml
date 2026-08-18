@@ -20,6 +20,18 @@ concurrency:
 permissions:
   contents: read
 
+env:
+  # 접속 정보 중 비밀이 아닌 것은 여기 둔다. secret은 비밀번호 하나뿐이다.
+  #
+  # 비밀번호를 URL에 박지 않는 이유: @ : / ? # 가 하나라도 들어가면 libpq의 URI
+  # 파싱이 깨지면서 엉뚱한 사용자로 접속을 시도하고, 서버는 그저
+  # "password authentication failed"라고만 답한다. 원인을 찾기 아주 어렵다.
+  # PGPASSWORD로 넘기면 어떤 문자가 들어 있든 그대로 전달된다.
+  PGHOST: aws-1-ap-northeast-2.pooler.supabase.com
+  PGPORT: "5432" # Session pooler. Transaction pooler(6543)로는 pg_dump가 실패한다.
+  PGUSER: postgres.khszicvinkgtqsyqiecc # pooler는 사용자명 뒤 project ref로 테넌트를 찾는다
+  PGDATABASE: postgres
+
 jobs:
   backup:
     runs-on: ubuntu-latest
@@ -28,24 +40,24 @@ jobs:
     steps:
       - name: Dump public schema
         env:
-          # Supabase는 IPv4 직접 접속을 유료화했고 GitHub Actions 러너는 IPv6를 쓸 수 없다.
-          # 반드시 **Session pooler** connection string을 넣을 것 (Dashboard → Settings →
-          # Database → Connection string → Session mode). Direct 주소를 넣으면
-          # "could not translate host name" 으로 실패한다.
-          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          PGPASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
         run: |
           set -euo pipefail
 
-          if [ -z "${SUPABASE_DB_URL:-}" ]; then
-            echo "::error::SUPABASE_DB_URL secret이 비어 있습니다."
+          if [ -z "${PGPASSWORD:-}" ]; then
+            echo "::error::SUPABASE_DB_PASSWORD secret이 비어 있습니다."
             exit 1
           fi
 
           # 서버가 Postgres 17이라 pg_dump도 17이어야 한다. 러너 기본 클라이언트는
           # 구버전이라 "server version mismatch"로 거부당하므로 컨테이너로 버전을 맞춘다.
-          # URL은 -e로만 넘긴다 — 커맨드라인에 두면 프로세스 목록에 남는다.
-          docker run --rm -e PGURL="$SUPABASE_DB_URL" postgres:17-alpine \
-            sh -c 'pg_dump --schema=public --no-owner --no-privileges "$PGURL"' \
+          # -e VAR (값 없음)은 호스트의 값을 그대로 넘긴다 — 커맨드라인에 남지 않는다.
+          # --entrypoint로 pg_dump를 직접 부른다. 이미지 기본 entrypoint는
+          # 인자를 보고 서버를 띄우려 들 수 있어서 우회하는 편이 확실하다.
+          docker run --rm --entrypoint pg_dump \
+            -e PGHOST -e PGPORT -e PGUSER -e PGDATABASE -e PGPASSWORD \
+            postgres:17-alpine \
+            --schema=public --no-owner --no-privileges \
             > backup.sql
 
           echo "덤프 크기: $(wc -c < backup.sql) bytes"

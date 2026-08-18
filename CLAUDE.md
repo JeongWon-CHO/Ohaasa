@@ -112,7 +112,8 @@ CREATE POLICY "user_devices_anon_select" ON public.user_devices FOR SELECT  TO a
 무료 티어는 자동 백업이 없다. 매일 KST 07:30(크롤링이 재시도까지 끝난 뒤)에 `public` 스키마를 통째로 덤프해 GitHub Actions 아티팩트로 30일 보관한다.
 
 - **가장 아픈 손실은 `horoscopes`다.** 아사히 API는 당일치만 주므로 누적분이 날아가면 **복구 수단이 아예 없고** 통계 화면의 추이를 처음부터 다시 모아야 한다. `user_devices`가 날아가면 전 사용자가 앱을 다시 열 때까지 알림이 끊긴다.
-- **`SUPABASE_DB_URL`은 반드시 Session pooler 문자열이어야 한다.** Supabase가 IPv4 직접 접속을 유료화했고 Actions 러너는 IPv6를 못 쓴다 — direct 주소를 넣으면 호스트 이름 해석에서 실패한다.
+- **접속 정보는 워크플로우 `env`에 두고 secret은 비밀번호 하나뿐이다.** 호스트는 반드시 **Session pooler**여야 한다 — Supabase가 IPv4 직접 접속을 유료화했고 Actions 러너는 IPv6를 못 써서, direct 주소를 넣으면 호스트 이름 해석에서 실패한다. 포트도 5432(session)여야 하며 6543(transaction)으로는 `pg_dump`가 실패한다. pooler는 사용자명 뒤 project ref로 테넌트를 찾으므로 `postgres.<ref>` 형식이 필수다.
+- **비밀번호를 접속 URL에 박지 않는다 — `PGPASSWORD`로 넘긴다.** `@ : / ? #`가 하나라도 들어가면 libpq의 URI 파싱이 깨져 엉뚱한 사용자로 접속을 시도하고, 서버는 그저 `password authentication failed`라고만 답한다. 원인을 짚기 어려운 실패라 구조로 막아둔다. secret에는 **원문 그대로** 넣는다(URL 인코딩 금지).
 - **`pg_dump`는 컨테이너(`postgres:17-alpine`)로 돌린다.** 서버가 Postgres 17이라 러너 기본 클라이언트로는 버전 불일치로 거부당한다. 접속 문자열은 `-e`로만 넘긴다(커맨드라인에 두면 프로세스 목록에 남는다).
 - **검증 스텝이 핵심이다.** 백업의 최악은 조용히 빈 파일이 쌓여 복원이 필요한 날에야 아는 것이다. 그래서 덤프 크기와 핵심 테이블 4개의 `COPY` 구문 존재를 확인해 하나라도 없으면 **워크플로우를 실패시킨다**. 테이블이 있고 행이 0인 경우는 통과시킨다(스키마 누락과 데이터 누락을 구분).
 - **복원**: `gunzip -c backup.sql.gz | psql "<connection string>"`. 전체 복원이 아니라 특정 테이블만 되돌릴 때는 덤프에서 해당 `COPY` 블록만 잘라 쓴다.
@@ -123,7 +124,7 @@ CREATE POLICY "user_devices_anon_select" ON public.user_devices FOR SELECT  TO a
 | 변수                            | 용도                                   |
 | ------------------------------- | -------------------------------------- |
 | `SUPABASE_URL`                  | backend/Actions 전용                   |
-| `SUPABASE_DB_URL`               | 백업 워크플로우 전용 — **Session pooler** 문자열 |
+| `SUPABASE_DB_PASSWORD`          | 백업 워크플로우 전용 — DB 비밀번호 **원문**(URL 인코딩 금지) |
 | `SUPABASE_SERVICE_ROLE_KEY`     | service_role JWT — 앱 절대 노출 금지   |
 | `OPENAI_API_KEY`                | GPT 번역 — backend/Actions 전용        |
 | `EXPO_PUBLIC_SUPABASE_URL`      | 앱용 anon 접속 URL                     |
