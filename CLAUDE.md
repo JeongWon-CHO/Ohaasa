@@ -125,6 +125,9 @@ CREATE POLICY "user_devices_anon_select" ON public.user_devices FOR SELECT  TO a
 
 - **Phase 11** — Expo SDK 56 업그레이드 검증 (위젯 제외)
 - **답글 푸시 알림** — 답글이 달렸는지 알려면 앱을 열어야 한다. 필요한 것은 `question_answer_replies` INSERT 트리거 → Edge Function → 부모 `device_id`의 push token 조회 (→ "오늘의 질문 — 내 답변 고정 카드 · 새 답글 배지").
+- **무료 티어 egress(5GB/월)** — 현재 약 1GB/월(실측 2026-08-18). DAU 약 1,200에서 한도를 넘는다. 주범은 커뮤니티 피드가 아니라 **운세 화면의 중복 조회**다: `useHoroscope.ts`가 `select('*')`로 장문 `advice`까지 12행을 받고, 이걸 홈·순위·별자리상세·데일리리뷰가 **각자 독립 fetch**한다(`HoroscopeDateContext`처럼 Context로 올릴 자리). 더해서 `HoroscopeDateSheet`가 항상 마운트돼 열지 않아도 120행 쿼리가 화면당 1회 돌고, `useHoroscopeTrends`는 `compareSign`이 deps에 있어 클라이언트 필터일 뿐인 비교 토글마다 396행을 재조회한다.
+- **피드 페이지네이션** — `fetchPublicAnswers`는 `ANSWER_FETCH_LIMIT = 1000`으로 상한만 걸어둔 상태다(도달 시 `console.warn`). 하루 답변이 ~400개를 넘으면 그 전에 `.in()`의 UUID 배열이 URL 길이 한계에 먼저 걸린다. 착수하면 답글이 지연 로딩으로 바뀌고 배지용 `reply_count`가 다시 필요해진다 (→ "오늘의 질문 — 답글").
+- **자동 백업 없음** — 무료 티어는 백업을 제공하지 않는다. 답변·답글은 서버가 유일한 사본이라(로컬 미러는 자기 글만) 운영 SQL 실수 한 번이면 복구 수단이 없다. 규모와 무관하게 이미 있는 리스크.
 - **운영 확인 주기** — `hide_threshold`가 답변 4 · 답글 3으로 높은 편이라 자동 숨김이 잘 안 걸린다. 글의 노출 수명이 24시간이므로 신고 큐를 **매일** 봐야 한다 (→ "Supabase 설정").
 
 > Phase 12·13·14(오늘의 질문 · 신고/차단 · 답글)는 마이그레이션 실행과 실기기 QA까지 끝났다(2026-08-17).
@@ -152,6 +155,9 @@ CREATE POLICY "user_devices_anon_select" ON public.user_devices FOR SELECT  TO a
 - **발송 주체**: Supabase Edge Function (`send-horoscope-notifications`). backend/main.ts는 알림을 직접 발송하지 않는다.
 - **트리거**: horoscopes 테이블 INSERT → Database Webhook `horoscope_notify` → Edge Function. `zodiac_sign = 'aries'` row 1개만 처리해 중복 실행 방지.
 - **dedup**: `notification_log` 테이블 — date 컬럼에 UNIQUE constraint 필수. INSERT 충돌(23505) 시 즉시 리턴.
+- **기기 조회는 반드시 페이지네이션한다**(`fetchActiveDevices`, `DEVICE_PAGE_SIZE = 500`): PostgREST의 `db-max-rows`(기본 1000)는 초과분을 **에러 없이** 자른다. 상한 없이 받으면 발송 대상이 1000을 넘는 순간 1001번째부터 알림이 끊기는데 로그에는 `devices=1000`만 찍혀 정상으로 보인다. **이 상한은 플랜과 무관한 프로젝트 설정**(Settings → API → Max Rows)이라 Pro 전환으로 풀리지 않는다.
+  - 페이지 크기는 `db-max-rows`보다 **작아야** 한다 — 같으면 "요청한 만큼 왔는가"로 다음 페이지 유무를 판정할 수 없다. 반대로 **`db-max-rows`를 `DEVICE_PAGE_SIZE` 이하로 낮추면 첫 페이지부터 500개 미만이 와서 루프가 즉시 끝난다** — 고치려던 조용한 잘림이 그대로 돌아온다. Max Rows를 건드릴 일이 생기면 이 상수도 같이 봐야 한다. (2026-08-18 실측: 이 프로젝트의 `db-max-rows`는 **1000**)
+  - **`.order("device_id")`가 load-bearing이다.** `range`는 LIMIT/OFFSET이고 정렬 없는 OFFSET은 페이지 간 행 순서를 보장하지 않아 중복 발송·누락이 난다. **소규모 테이블에서는 재현되지 않으므로**(seq scan이 우연히 안정적) 테스트 통과를 근거로 빼면 안 된다.
 - **재배포**: Edge Function 변경 시 `supabase functions deploy send-horoscope-notifications --project-ref khszicvinkgtqsyqiecc`
 - **Android Expo Go (SDK 53+)**: remote push 제거됨. `push_token = NULL · platform = NULL · notifications_enabled = false`가 정상.
 - **`expo-notifications` static import 금지**: `ExecutionEnvironment.StoreClient` guard 통과 후 `await import('expo-notifications')`로 동적 import.

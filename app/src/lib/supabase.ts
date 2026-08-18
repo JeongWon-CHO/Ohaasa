@@ -54,6 +54,15 @@ export interface PublicAnswer {
 const PUBLIC_ANSWER_COLUMNS =
   'id, question_date, zodiac_sign, body, like_count, created_at, author_hash';
 
+/**
+ * 하루치 공개 답변을 한 번에 받는 상한.
+ *
+ * 서버의 db-max-rows와 같은 값이라(2026-08-18 실측: 1000) 잘리는 지점은 지금 당장 동일하다.
+ * 그런데도 직접 거는 이유는 상한을 앱 쪽에 고정하기 위해서다 — 대시보드에서 Max Rows를 올리면
+ * 이 쿼리는 소리 없이 그만큼 더 받아오게 되고, 아래 경고까지 함께 무력해진다.
+ */
+const ANSWER_FETCH_LIMIT = 1000;
+
 export async function fetchPublicAnswers(
   date: string,
   scope: 'all' | ZodiacSign,
@@ -75,14 +84,25 @@ export async function fetchPublicAnswers(
       ? query.order('like_count', { ascending: false }).order('created_at', { ascending: false })
       : query.order('created_at', { ascending: false });
 
-  const { data, error } = await query;
+  const { data, error } = await query.limit(ANSWER_FETCH_LIMIT);
 
   if (error) {
     console.warn('[supabase] fetchPublicAnswers failed:', error.message);
     return [];
   }
 
-  return data ?? [];
+  const rows = data ?? [];
+
+  // 상한에 닿으면 초과분이 조용히 잘린다 — 에러도 빈 자리도 남지 않아서, 사용자 눈에는
+  // "오늘은 글이 이만큼"으로 보인다. 이 경고가 찍히기 시작했다면 피드 페이지네이션으로
+  // 옮길 시점이다 (답글도 함께 지연 로딩으로 가야 한다 — REPLY_FETCH_LIMIT 주석 참고).
+  if (rows.length >= ANSWER_FETCH_LIMIT) {
+    console.warn(
+      `[supabase] fetchPublicAnswers: 상한 ${ANSWER_FETCH_LIMIT}건에 도달해 일부 답변이 잘렸을 수 있습니다`,
+    );
+  }
+
+  return rows;
 }
 
 /**
