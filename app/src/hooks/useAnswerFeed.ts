@@ -36,6 +36,12 @@ type UseAnswerFeedResult = {
   report: (answerId: string, reason: ReportReason) => Promise<ReportResult>;
   /** 작성자 차단 → 이 기기에서 해당 작성자의 글이 오늘 것도 앞으로 올라올 것도 보이지 않는다. */
   blockAuthor: (authorHash: string) => void;
+  /**
+   * 답글 목록(useAnswerReplies)이 같은 Set을 보게 하려고 노출한다.
+   * 각자 getBlockedAuthors()를 읽으면 답글에서 차단했을 때 그 사람의 답변 카드는 화면에 남고
+   * 그 아래 답글만 사라진다 — 쓰기 주체(blockAuthor)도 여기 하나로 유지한다.
+   */
+  blockedAuthors: Set<string>;
   loading: boolean;
   error: boolean;
   refetch: () => void;
@@ -210,6 +216,7 @@ export function useAnswerFeed(
     toggleLike,
     report,
     blockAuthor,
+    blockedAuthors,
     loading,
     error,
     refetch,

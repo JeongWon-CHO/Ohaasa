@@ -96,11 +96,34 @@ CREATE POLICY "user_devices_anon_select" ON public.user_devices FOR SELECT  TO a
 - 숨김 필터는 RLS가 아니라 쿼리(`.is('hidden_at', null)`)에 있다. RLS SELECT에 걸면 숨겨진 행이 `upsert`의 `ON CONFLICT` → UPDATE RLS에서 막혀 에러가 나고 `deletePublicAnswer`도 조용히 실패한다.
 - **허위신고 복구는 두 단계**: 신고 기록 `delete` + `hidden_at = null`. 숨김만 풀면 `report_count`가 임계값 이상으로 남아 다음 신고 1건에 즉시 재숨김된다. 운영 SQL은 마이그레이션 파일 하단 주석 참고.
 
+### question_answer_replies / _reply_likes / _reply_reports (답글)
+
+`supabase/migrations/20260814000000_question_answer_replies.sql` 참고. 위 세 테이블의 규칙(RLS `USING(true)` · `device_id` 비노출 · `author_hash` · 자동 숨김 · GRANT 필수)이 그대로 반복된다.
+
+- **`unique(answer_id, device_id)`** — 기기당 원글 1개에 답글 1개. 재작성은 `upsert(onConflict: 'answer_id,device_id')`.
+- **부모 답변 삭제 → `on delete cascade`.** 답변 작성자가 자기 글을 지우면 남의 답글도 같이 사라진다(수용한 대가).
+- **부모가 자동 숨김되면 트리거 없이 답글도 도달 불가**가 된다 — 부모 id가 `.in()` 목록에 안 들어가기 때문이다. 숨김 cascade 트리거를 달면 오신고 복구가 3단계가 되고, 빠뜨리면 복구된 답변의 답글이 영영 안 보인다.
+- `author_hash`의 PEPPER(`'ohaasa-author-hash-v1'`)는 `question_answers`와 **바이트 단위로 동일해야 한다.** 한 글자만 달라도 같은 사람이 답변/답글에서 다른 해시를 갖게 되어 사용자의 차단이 절반만 걸린다.
+- `hide_threshold`가 답변(4)보다 낮은 **3**이다 — 답글은 접힌 영역에 있어 노출이 훨씬 적어서, 같은 값이면 자동 숨김이 사실상 안 걸린다.
+- `question_answer_reply_reports`도 anon에게 **INSERT만** 연다(신고자 `device_id` 노출 방지).
+
+### 백업 (`.github/workflows/backup-db.yml`)
+
+무료 티어는 자동 백업이 없다. 매일 KST 07:30(크롤링이 재시도까지 끝난 뒤)에 `public` 스키마를 통째로 덤프해 GitHub Actions 아티팩트로 30일 보관한다.
+
+- **가장 아픈 손실은 `horoscopes`다.** 아사히 API는 당일치만 주므로 누적분이 날아가면 **복구 수단이 아예 없고** 통계 화면의 추이를 처음부터 다시 모아야 한다. `user_devices`가 날아가면 전 사용자가 앱을 다시 열 때까지 알림이 끊긴다.
+- **`SUPABASE_DB_URL`은 반드시 Session pooler 문자열이어야 한다.** Supabase가 IPv4 직접 접속을 유료화했고 Actions 러너는 IPv6를 못 쓴다 — direct 주소를 넣으면 호스트 이름 해석에서 실패한다.
+- **`pg_dump`는 컨테이너(`postgres:17-alpine`)로 돌린다.** 서버가 Postgres 17이라 러너 기본 클라이언트로는 버전 불일치로 거부당한다. 접속 문자열은 `-e`로만 넘긴다(커맨드라인에 두면 프로세스 목록에 남는다).
+- **검증 스텝이 핵심이다.** 백업의 최악은 조용히 빈 파일이 쌓여 복원이 필요한 날에야 아는 것이다. 그래서 덤프 크기와 핵심 테이블 4개의 `COPY` 구문 존재를 확인해 하나라도 없으면 **워크플로우를 실패시킨다**. 테이블이 있고 행이 0인 경우는 통과시킨다(스키마 누락과 데이터 누락을 구분).
+- **복원**: `gunzip -c backup.sql.gz | psql "<connection string>"`. 전체 복원이 아니라 특정 테이블만 되돌릴 때는 덤프에서 해당 `COPY` 블록만 잘라 쓴다.
+- 신고 처리용 `delete` SQL을 대시보드에서 손으로 실행하는 구조라(→ "Supabase 설정") `where` 절 사고가 이 백업이 막아주는 주된 시나리오다.
+
 ### 환경변수
 
 | 변수                            | 용도                                   |
 | ------------------------------- | -------------------------------------- |
 | `SUPABASE_URL`                  | backend/Actions 전용                   |
+| `SUPABASE_DB_URL`               | 백업 워크플로우 전용 — **Session pooler** 문자열 |
 | `SUPABASE_SERVICE_ROLE_KEY`     | service_role JWT — 앱 절대 노출 금지   |
 | `OPENAI_API_KEY`                | GPT 번역 — backend/Actions 전용        |
 | `EXPO_PUBLIC_SUPABASE_URL`      | 앱용 anon 접속 URL                     |
@@ -113,14 +136,20 @@ CREATE POLICY "user_devices_anon_select" ON public.user_devices FOR SELECT  TO a
 > 완료된 Phase 이력은 git log에 있다. 여기엔 **아직 안 끝난 것**만 남긴다.
 
 - **Phase 11** — Expo SDK 56 업그레이드 검증 (위젯 제외)
-- **Phase 12·13**(오늘의 질문 · 신고/차단) — 구현은 끝났고 실기기 QA가 남았다. 배포 전 수기 작업은 아래 "배포 전 체크리스트" 참조.
+- **답글 푸시 알림** — 답글이 달렸는지 알려면 앱을 열어야 한다. 필요한 것은 `question_answer_replies` INSERT 트리거 → Edge Function → 부모 `device_id`의 push token 조회 (→ "오늘의 질문 — 내 답변 고정 카드 · 새 답글 배지").
+- **무료 티어 egress(5GB/월)** — 현재 약 1GB/월(실측 2026-08-18). DAU 약 1,200에서 한도를 넘는다. 주범은 커뮤니티 피드가 아니라 **운세 화면의 중복 조회**다: `useHoroscope.ts`가 `select('*')`로 장문 `advice`까지 12행을 받고, 이걸 홈·순위·별자리상세·데일리리뷰가 **각자 독립 fetch**한다(`HoroscopeDateContext`처럼 Context로 올릴 자리). 더해서 `HoroscopeDateSheet`가 항상 마운트돼 열지 않아도 120행 쿼리가 화면당 1회 돌고, `useHoroscopeTrends`는 `compareSign`이 deps에 있어 클라이언트 필터일 뿐인 비교 토글마다 396행을 재조회한다.
+- **피드 페이지네이션** — `fetchPublicAnswers`는 `ANSWER_FETCH_LIMIT = 1000`으로 상한만 걸어둔 상태다(도달 시 `console.warn`). 하루 답변이 ~400개를 넘으면 그 전에 `.in()`의 UUID 배열이 URL 길이 한계에 먼저 걸린다. 착수하면 답글이 지연 로딩으로 바뀌고 배지용 `reply_count`가 다시 필요해진다 (→ "오늘의 질문 — 답글").
+- **백업 secret 등록** — `backup-db.yml`은 만들었지만 `SUPABASE_DB_URL`(Session pooler 문자열)을 GitHub Secret에 넣어야 실제로 돈다. 등록 후 `workflow_dispatch`로 한 번 수동 실행해 아티팩트가 생기는지 확인할 것 (→ "백업").
+- **운영 확인 주기** — `hide_threshold`가 답변 4 · 답글 3으로 높은 편이라 자동 숨김이 잘 안 걸린다. 글의 노출 수명이 24시간이므로 신고 큐를 **매일** 봐야 한다 (→ "Supabase 설정").
+
+> Phase 12·13·14(오늘의 질문 · 신고/차단 · 답글)는 마이그레이션 실행과 실기기 QA까지 끝났다(2026-08-17).
 
 ## 고정 정보
 
 - 개인정보처리방침 URL: `https://jeongwon-cho.github.io/Ohaasa/privacy-policy.html`
 - 커뮤니티 가이드라인 URL: `https://jeongwon-cho.github.io/Ohaasa/community-guidelines.html`
 - `google-services.json`: 커밋 대상(앱 수신용) · Firebase service account JSON은 커밋 금지
-- 현재 버전: v1.5.1 - 평일 행운 정보를 오하아사 아이템 + 고고 점수로 정리
+- 현재 버전: v1.6.0 - 오늘의 질문 답글 + 내 답변 고정 카드 · 새 답글 배지
 
 ---
 
@@ -138,6 +167,9 @@ CREATE POLICY "user_devices_anon_select" ON public.user_devices FOR SELECT  TO a
 - **발송 주체**: Supabase Edge Function (`send-horoscope-notifications`). backend/main.ts는 알림을 직접 발송하지 않는다.
 - **트리거**: horoscopes 테이블 INSERT → Database Webhook `horoscope_notify` → Edge Function. `zodiac_sign = 'aries'` row 1개만 처리해 중복 실행 방지.
 - **dedup**: `notification_log` 테이블 — date 컬럼에 UNIQUE constraint 필수. INSERT 충돌(23505) 시 즉시 리턴.
+- **기기 조회는 반드시 페이지네이션한다**(`fetchActiveDevices`, `DEVICE_PAGE_SIZE = 500`): PostgREST의 `db-max-rows`(기본 1000)는 초과분을 **에러 없이** 자른다. 상한 없이 받으면 발송 대상이 1000을 넘는 순간 1001번째부터 알림이 끊기는데 로그에는 `devices=1000`만 찍혀 정상으로 보인다. **이 상한은 플랜과 무관한 프로젝트 설정**(Settings → API → Max Rows)이라 Pro 전환으로 풀리지 않는다.
+  - 페이지 크기는 `db-max-rows`보다 **작아야** 한다 — 같으면 "요청한 만큼 왔는가"로 다음 페이지 유무를 판정할 수 없다. 반대로 **`db-max-rows`를 `DEVICE_PAGE_SIZE` 이하로 낮추면 첫 페이지부터 500개 미만이 와서 루프가 즉시 끝난다** — 고치려던 조용한 잘림이 그대로 돌아온다. Max Rows를 건드릴 일이 생기면 이 상수도 같이 봐야 한다. (2026-08-18 실측: 이 프로젝트의 `db-max-rows`는 **1000**)
+  - **`.order("device_id")`가 load-bearing이다.** `range`는 LIMIT/OFFSET이고 정렬 없는 OFFSET은 페이지 간 행 순서를 보장하지 않아 중복 발송·누락이 난다. **소규모 테이블에서는 재현되지 않으므로**(seq scan이 우연히 안정적) 테스트 통과를 근거로 빼면 안 된다.
 - **재배포**: Edge Function 변경 시 `supabase functions deploy send-horoscope-notifications --project-ref khszicvinkgtqsyqiecc`
 - **Android Expo Go (SDK 53+)**: remote push 제거됨. `push_token = NULL · platform = NULL · notifications_enabled = false`가 정상.
 - **`expo-notifications` static import 금지**: `ExecutionEnvironment.StoreClient` guard 통과 후 `await import('expo-notifications')`로 동적 import.
@@ -182,7 +214,35 @@ CREATE POLICY "user_devices_anon_select" ON public.user_devices FOR SELECT  TO a
 - **RLS 정책만으로는 안 된다 — GRANT가 필요하다**: 이 프로젝트는 `public` 스키마 기본 권한이 `anon`에게 DML(SELECT/INSERT/UPDATE/DELETE)을 주지 않는다. `TRUNCATE·REFERENCES·TRIGGER`만 딸려온다. 정책은 GRANT로 허용된 것 중 어떤 행인지를 거르는 층이라, **GRANT 없이 정책만 만들면 `permission denied`로 전부 막힌다.** 새 테이블을 만들 때마다 `grant ... to anon;`을 마이그레이션에 명시할 것. (`question_answer_reports`가 이 함정에 걸려 신고가 한 건도 안 들어갔다.)
 - **Modal 중첩 금지**: 차단 확인은 별도 `ConfirmDialog`가 아니라 `AnswerModerationSheet`의 3번째 단계(`confirmBlock`)로 처리한다. `BottomSheet`는 닫기 애니메이션(240ms)이 끝난 뒤에야 내부 Modal을 언마운트하므로, 시트를 내리면서 곧바로 두 번째 Modal을 present하면 iOS가 조용히 무시해 **다이얼로그가 아예 뜨지 않는다**. 시트 위에 뭔가를 더 띄워야 하면 항상 시트 안의 단계로 만들 것.
 - **`author_hash` 방어**: 값이 비어 있으면 차단을 건너뛴다. `Set`에 `undefined`가 들어가면 `author_hash` 없는 글이 전부 한꺼번에 사라진다.
-- **EULA(App Store 심사 지침 1.2)**: 공개 답변 작성 화면(`QuestionAnswerForm`)에 무관용 정책 고지 + `docs/community-guidelines.html` 링크를 노출한다. 기본 visibility가 `public`이라 별도 조작 없이 보인다. 설정 > COMMUNITY에서도 접근 가능하고, 같은 섹션에 "차단한 사용자 N명 · 전체 해제"를 둔다 — **해제 수단이 없으면 심사에서 문제가 된다.**
+- **EULA(App Store 심사 지침 1.2)**: 공개 답변 작성 화면(`QuestionAnswerForm`)에 무관용 정책 고지 + `docs/community-guidelines.html` 링크를 노출한다. 기본 visibility가 `public`이라 별도 조작 없이 보인다. 설정 > COMMUNITY에서도 접근 가능하고, 같은 섹션에 "차단한 사용자 N명 · 전체 해제"를 둔다 — **해제 수단이 없으면 심사에서 문제가 된다.** 답글 작성창에는 이 고지를 **두지 않는다** — 커뮤니티 피드는 답변을 남겨야만 들어올 수 있어서 답글을 쓸 수 있는 사람은 전원 `QuestionAnswerForm`의 고지를 이미 거쳤다. 1.2가 실제로 요구하는 신고·차단 수단은 답글의 ⋯ 메뉴에 있다.
+
+### 오늘의 질문 — 답글
+
+`AnswerCard` 안에서 인라인으로 펼쳐지는 1단계 답글(답글의 답글은 없다). 서버 스키마는 위 "Supabase 설정" 참고.
+
+- **`reply_count` 비정규화 컬럼을 두지 않았다.** 배지에 보여야 하는 건 "서버의 답글 수"가 아니라 **"이 기기에 보이는 답글 수"**인데, 차단·로컬 숨김은 서버가 알 수 없고 자동 숨김도 부모 카운트를 줄여주지 않는다. 대신 하루치를 `fetchRepliesForAnswers(answerIds)` 한 번으로 받아 배지와 목록을 **같은 배열**에서 뽑는다 — 둘이 어긋날 수가 없다.
+- **이 설계는 "피드가 무페이지네이션"이라는 전제 위에 있다.** 페이지네이션을 도입하는 순간 답글은 펼칠 때 지연 로딩으로 가야 하고, 그때는 배지용 `reply_count`가 (부정확함을 감수하고) 다시 필요해진다. `REPLY_FETCH_LIMIT = 1000`이 그 한계선이다.
+- **차단 Set은 `useAnswerFeed`가 소유하고 `useAnswerReplies`는 넘겨받는다.** 각자 `getBlockedAuthors()`를 읽으면 답글에서 차단했을 때 그 사람의 답변 카드는 화면에 남고 그 아래 답글만 사라진다.
+- **`upsertPublicAnswer`가 `ON CONFLICT DO UPDATE`여야 답글이 산다.** delete + insert로 바꾸면 답변을 수정할 때마다 달린 답글이 cascade로 전부 날아간다.
+- **소유권 판정은 `fetchMyReplyIds`**(`answer_id → reply_id`). `device_id`가 클라이언트에 없어 피드만으로는 내 글을 알 수 없다. 이 조회는 **`hidden_at`을 필터하지 않는다** — 자동 숨김된 내 답글이 있는데 작성창을 다시 열어주면 숨김을 우회해 새로 쓸 수 있다. 대신 "숨겨졌어요 + 삭제" 안내만 남긴다.
+- **저장은 낙관적이지 않다**(`saveReply`). `id`·`created_at`·`author_hash`가 서버 생성인데 공감·삭제·수정기한 판정에 즉시 필요해서, `.select().single()`로 저장된 행을 받아 목록에 끼워 넣는다. 삭제·공감·신고는 낙관적 + 롤백(답변과 동일).
+- **"올린 날에만 수정"은 답글도 같다**(`canEditByCreatedAt`). 로컬 미러가 없어 서버 `created_at`으로 판단하며, 답변과 마찬가지로 **앱 UI에서만 막는다**(RLS는 `USING(true)`).
+- **본문 100자가 두 곳에 정의돼 있다** — SQL `check`와 `ReplyComposer.MAX_LENGTH`. 어긋나면 앱은 통과시키고 서버가 거절해 `console.warn`만 남고 조용히 실패한다.
+- **`ConfirmDialog`가 두 개(답변 삭제·답글 삭제)다.** 동시에 `visible`이 되면 iOS가 하나를 조용히 무시하므로 `pendingDeleteReplyId !== null && !deleteDialogVisible`로 구조적으로 막아둔다. 모더레이션 시트가 열린 상태에서 다이얼로그를 띄우는 경로는 만들지 않는다.
+- **당겨서 새로고침**은 커뮤니티 단계에만 붙는다(`RefreshControl`). 실시간 구독이 없어 남이 쓴 답글은 재진입해야 보였다. `refreshing`을 내릴 때 `sawBusyRef`를 거치는 이유: `refetch`는 tick만 올리는 동기 함수라 그 렌더의 `feedLoading`이 아직 `false`다 — 그대로 비교하면 로딩이 시작되기도 전에 스피너가 꺼진다.
+- **키보드**: 인라인 작성창이 생기면서 `TouchableWithoutFeedback onPress={Keyboard.dismiss}`를 `step === "answer"` 분기만 감싸도록 옮겼다. 커뮤니티 단계까지 감싸면 작성창 여백·카운터를 눌러도 키보드가 내려간다. iOS는 `behavior="padding"`이 포커스된 입력창을 스크롤해주지 않으므로 포커스 시 `measureInWindow` + `scrollTo`로 직접 올린다(`androidKeyboardHeight`는 안드로이드 전용 패딩이라 별도 `keyboardHeightRef`를 쓴다 — 섞으면 iOS에서 이중 패딩이 된다).
+
+### 오늘의 질문 — 내 답변 고정 카드 · 새 답글 배지
+
+내 글에 달린 답글을 보려면 피드를 스크롤해 내 카드를 찾아야 했다. 사용자가 늘수록 나빠지는 구조라 **내 답변을 목록에서 빼고 상단 고정 카드(`MyAnswerCard`)가 전담**하게 했다. 스크롤 위치를 계산해 이동시키는 대신 자리를 고정한 이유: `ScrollView` + `map` 구조라 카드마다 `onLayout`을 달아야 하고, 그래도 사용자는 "가서 봐야" 한다.
+
+- **`MyAnswerCard`는 로컬·서버 혼합이다.** 본문·공개여부·수정가능 판정은 AsyncStorage(`existingAnswer`)가 source of truth고, 공감 수와 답글만 서버에서 온다. 비공개 답변은 서버에 행이 없어 답글이 달릴 수 없으므로 `replies` prop 자체를 넘기지 않는다 — 전부 있거나 전부 없거나라서 값 하나로 묶어 타입이 강제하게 했다.
+- **`answerIds`는 `feedAnswers`가 아니라 `answers` 기준이어야 한다.** 목록에서 뺀 내 답변의 답글까지 조회에서 빠지면 고정 카드가 빈 채로 남는다. 다른 별자리 필터를 걸면 `answers`에서도 내 답변이 빠지므로 그때는 `myAnswerId`를 따로 얹는다(공감 수는 못 받아오므로 `likeCount = null`로 숫자를 감춘다).
+- **읽음 기준값은 `now()`가 아니라 본 답글의 `created_at`이다**(`lib/replySeen.ts`). `created_at`은 서버 시계라, 기기 시계가 조금이라도 뒤처지면 `now()`로 저장한 순간 방금 읽은 답글이 그 기준보다 미래가 되어 영영 새 답글로 남는다.
+- **읽음 처리는 펼침 이벤트가 아니라 "펼쳐져 있는 동안"의 상태로 잡는다**(`useNewReplyBadge`). 당겨서 새로고침으로 답글이 들어오는 경로가 있어서, 이벤트에만 걸면 이미 화면에 보이는 답글에 배지가 다시 붙는다.
+- `replySeen.ts`를 `moderation.ts`와 나눈 이유: 저쪽은 "안 보기로 한 것"의 목록이고 이쪽은 열람 기록이라 `clearModerationState()`가 같이 지우면 안 된다(차단만 풀었는데 배지가 되살아난다).
+- 피드가 비었을 때 문구가 갈린다 — 내 공개 답변이 있으면 "아직 다른 사람의 생각이 없어요", 없으면 "아직 남겨진 생각이 없어요".
+- **답글 푸시 알림은 아직 없다.** 위치 문제는 이걸로 사라지지만 "반응이 왔는지"를 알려면 앱을 열어야 한다. 하려면 `question_answer_replies` INSERT 트리거 → Edge Function → 부모 `device_id`의 push token 조회가 필요하다(피드에 `device_id`를 안 내려보내므로 발송 판단은 서버에서만 가능).
 
 ### 운세 리뷰
 
@@ -238,11 +298,16 @@ CREATE POLICY "user_devices_anon_select" ON public.user_devices FOR SELECT  TO a
 
 - [ ] `app/app.config.js`의 `version` 필드를 올렸는가?
 - [ ] 이 파일(`CLAUDE.md`) 하단의 "현재 버전"을 같은 값으로 수정했는가?
-- [ ] `app/app/(tabs)/settings.tsx` 푸터의 `v1.5.0` 텍스트도 같이 고쳤는가? (하드코딩되어 있다)
+- [ ] `app/app/(tabs)/settings.tsx` 푸터의 버전 텍스트(현재 `v1.6.0`)도 같이 고쳤는가? (하드코딩되어 있다)
 - [ ] `docs/` 변경분을 push해 GitHub Pages에 반영했는가? (앱 내 링크가 404가 되면 심사에서 걸린다)
 - [ ] `supabase/migrations/` 신규 SQL을 실행했는가? (`supabase/`는 .gitignore 대상이라 CI가 대신 해주지 않는다)
+- [ ] **GRANT가 실제로 붙었는지 확인했는가?** 새 테이블마다 필수다 — `question_answer_reports`가 이 함정에 걸려 신고가 한 건도 안 들어간 적이 있다. 검증 SQL은 답글 마이그레이션 하단 `-- (f)` 주석 참고.
+- [ ] **`author_hash` PEPPER가 테이블 간 일치하는가?** 오타 하나면 차단이 절반만 걸린다. 검증 SQL은 같은 파일 `-- (g)` 주석 참고.
 
 버전은 `app.config.js` 한 곳만 고치면 EAS 빌드에 반영된다. CLAUDE.md의 "현재 버전"은 대화 맥락용 메모이므로 같이 맞춰줘야 한다.
+
+- **`versionCode`·`buildNumber`는 손대지 않는다** — `eas.json`이 `appVersionSource: "remote"` + production `autoIncrement: true`라 EAS가 서버에서 관리한다. `app.config.js`에 적으면 원격 값과 두 개의 진실이 된다. 수기로 올릴 것은 마케팅 버전(`version`)뿐이다.
+- **`expo-doctor`의 "Patch version mismatches"는 세트로만 움직인다.** doctor가 말하는 `expected`는 설치된 expo의 `bundledNativeModules`가 아니라 **Expo API의 최신 패치 목록**이다(그래서 expo 자신이 요구하는 버전보다 높게 뜬다). 일부만 올리면 `expo`가 요구하는 예전 버전이 `node_modules/expo/` 아래에 중첩 설치되어 **같은 네이티브 모듈이 두 벌**이 된다 — 오토링킹 사고. `npx expo install --fix`로 전부 같이 올리거나, 전부 두거나 둘 중 하나다. 패치 차이만 남은 상태로 배포하는 건 문제없다(EAS는 lockfile로 설치하고, lockfile은 내부적으로 일관된 한 세대다). 2026-08-17에는 `expo@56.0.20`이 요구하는 `expo-file-system@~56.0.10`이 npm에 없어서(`sdk-56` 태그가 56.0.9에서 멈춤) `--fix` 자체가 불가능했다 — 업스트림 publish 누락이므로 기다렸다가 다시 돌린다.
 
 ---
 

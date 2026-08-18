@@ -7,13 +7,15 @@ import {
   KeyboardAvoidingView,
   Platform,
   Pressable,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
   TouchableWithoutFeedback,
   View,
+  useWindowDimensions,
 } from "react-native";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { AnswerCard } from "@/src/components/daily-question/AnswerCard";
@@ -22,6 +24,7 @@ import { AnswerModerationSheet } from "@/src/components/daily-question/AnswerMod
 import { AnswerSortToggle } from "@/src/components/daily-question/AnswerSortToggle";
 import { MyAnswerCard } from "@/src/components/daily-question/MyAnswerCard";
 import { QuestionAnswerForm } from "@/src/components/daily-question/QuestionAnswerForm";
+import { ReplyThread } from "@/src/components/daily-question/ReplyThread";
 import { ZodiacFilterSheet } from "@/src/components/daily-question/ZodiacFilterSheet";
 import { ConfirmDialog } from "@/src/components/common/ConfirmDialog";
 import { ResponsiveContainer } from "@/src/components/common/ResponsiveContainer";
@@ -35,14 +38,19 @@ import {
   type AnswerFeedSort,
   type AnswerFeedTab,
 } from "@/src/hooks/useAnswerFeed";
+import { useAnswerReplies } from "@/src/hooks/useAnswerReplies";
+import { useNewReplyBadge } from "@/src/hooks/useNewReplyBadge";
 import { useQuestionAnswerForm } from "@/src/hooks/useQuestionAnswerForm";
 import { useToast } from "@/src/hooks/useToast";
 import { useZodiac } from "@/src/hooks/useZodiac";
 import type { ReportReason } from "@/src/lib/moderation";
 import { getOrCreateDeviceId } from "@/src/lib/storage";
-import type { PublicAnswer } from "@/src/lib/supabase";
+import type { PublicReply } from "@/src/lib/supabase";
 
 type Step = "answer" | "community";
+
+/** repliesByAnswer.get()이 비었을 때 매 렌더 새 배열이 생기지 않게 고정 참조를 쓴다. */
+const NO_REPLIES: PublicReply[] = [];
 
 function todayLocalDate(): string {
   const now = new Date();
@@ -53,18 +61,25 @@ function todayLocalDate(): string {
 
 export default function DailyQuestionScreen() {
   const insets = useSafeAreaInsets();
+  const { height: windowHeight } = useWindowDimensions();
   const scrollRef = useRef<ScrollView>(null);
+  const scrollYRef = useRef(0);
   const [keyboardVisible, setKeyboardVisible] = useState(false);
   const [androidKeyboardHeight, setAndroidKeyboardHeight] = useState(0);
+  // 답글 작성창을 키보드 위로 올릴 때 쓰는 높이. androidKeyboardHeight와 분리해 둔다 —
+  // 저쪽은 KeyboardAvoidingView 대신 쓰는 안드로이드 전용 패딩이라 iOS 값을 넣으면 이중 패딩이 된다.
+  const keyboardHeightRef = useRef(0);
   const [deleteDialogVisible, setDeleteDialogVisible] = useState(false);
 
   useEffect(() => {
     const showSub = Keyboard.addListener("keyboardDidShow", (e) => {
       if (Platform.OS === "android") setAndroidKeyboardHeight(e.endCoordinates.height);
+      keyboardHeightRef.current = e.endCoordinates.height;
       setKeyboardVisible(true);
     });
     const hideSub = Keyboard.addListener("keyboardDidHide", () => {
       if (Platform.OS === "android") setAndroidKeyboardHeight(0);
+      keyboardHeightRef.current = 0;
       setKeyboardVisible(false);
     });
     return () => {
@@ -139,39 +154,169 @@ export default function DailyQuestionScreen() {
     toggleLike,
     report,
     blockAuthor,
+    blockedAuthors,
     loading: feedLoading,
     refetch: refetchFeed,
   } = useAnswerFeed(step === "community" ? questionDate : null, scope, sort, deviceId);
 
+  // 내 답변은 상단 고정 카드가 전담하므로 목록에서는 뺀다 — 남겨두면 같은 글이 두 번 나오고,
+  // 정작 답글이 달린 쪽이 스크롤해야 나오는 쪽이 된다.
+  const feedAnswers = useMemo(
+    () => (myAnswerId ? answers.filter((a) => a.id !== myAnswerId) : answers),
+    [answers, myAnswerId],
+  );
+  const myServerAnswer = useMemo(
+    () => (myAnswerId ? (answers.find((a) => a.id === myAnswerId) ?? null) : null),
+    [answers, myAnswerId],
+  );
+
+  // 답글 조회는 feedAnswers가 아니라 answers(내 답변을 빼기 전) 기준이다 — 상단 고정 카드도
+  // 답글을 보여줘야 한다. 다른 별자리로 필터를 걸면 answers에서도 내 답변이 빠지지만 카드는
+  // 그대로 남으므로, 그때는 id를 따로 얹어 그 카드의 답글까지 사라지지 않게 한다.
+  const answerIds = useMemo(() => {
+    const ids = answers.map((a) => a.id);
+    if (myAnswerId && !ids.includes(myAnswerId)) ids.push(myAnswerId);
+    return ids;
+  }, [answers, myAnswerId]);
+  const {
+    repliesByAnswer,
+    likedReplyIds,
+    myReplyIdByAnswer,
+    loaded: repliesLoaded,
+    loading: repliesLoading,
+    saveReply,
+    deleteReply,
+    toggleReplyLike,
+    reportReply,
+    refetch: refetchReplies,
+  } = useAnswerReplies(answerIds, deviceId, zodiacSign ?? null, blockedAuthors);
+
   const { showToast, toastProps } = useToast();
+
+  /**
+   * 당겨서 새로고침.
+   *
+   * 답변/답글 모두 작성한 기기에서만 즉시 반영되고 남의 기기는 재진입해야 보였다.
+   * 실시간 구독 없이 사용자가 직접 갱신할 수 있는 최소 수단이다.
+   *
+   * 스피너를 내리는 판단에 sawBusy가 필요한 이유: refetch는 tick만 올리는 동기 함수라
+   * 이번 렌더의 feedLoading은 아직 false다. 그대로 비교하면 로딩이 시작되기도 전에
+   * 스피너가 꺼진다. 로딩이 true였던 걸 한 번 본 뒤에만 내린다.
+   */
+  const [refreshing, setRefreshing] = useState(false);
+  const sawBusyRef = useRef(false);
+
+  function handleRefresh() {
+    setRefreshing(true);
+    sawBusyRef.current = false;
+    refetchFeed();
+    refetchReplies();
+  }
+
+  useEffect(() => {
+    if (!refreshing) return;
+    if (feedLoading || repliesLoading) {
+      sawBusyRef.current = true;
+      return;
+    }
+    if (sawBusyRef.current) setRefreshing(false);
+  }, [refreshing, feedLoading, repliesLoading]);
+
+  // 답변/답글 어느 쪽이든 같은 시트를 쓴다. 행 전체가 아니라 필요한 세 값만 들고 있으면
+  // 핸들러가 kind만 보면 되고, 낡은 타깃이 이미 바뀐 행을 붙들 일도 없다.
+  type ModerationTarget = { kind: "answer" | "reply"; id: string; authorHash: string };
 
   // 신고·차단 메뉴의 대상. 시트는 하나만 두고 대상만 바꿔 끼운다.
   // 확인 단계까지 시트 안에서 끝내므로 여기서 Modal을 추가로 띄우지 않는다.
-  const [moderationTarget, setModerationTarget] = useState<PublicAnswer | null>(null);
+  const [moderationTarget, setModerationTarget] = useState<ModerationTarget | null>(null);
+  const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
+  const [pendingDeleteReplyId, setPendingDeleteReplyId] = useState<string | null>(null);
+
+  const myReplies = myAnswerId ? (repliesByAnswer.get(myAnswerId) ?? NO_REPLIES) : NO_REPLIES;
+  const myReplyToMyAnswer = myAnswerId ? (myReplyIdByAnswer.get(myAnswerId) ?? null) : null;
+  const myAnswerExpanded = myAnswerId !== null && expandedIds.has(myAnswerId);
+  const newReplyCount = useNewReplyBadge({
+    answerId: myAnswerId,
+    replies: myReplies,
+    myReplyId: myReplyToMyAnswer,
+    expanded: myAnswerExpanded,
+    loaded: repliesLoaded,
+  });
 
   async function handleReport(reason: ReportReason) {
     if (!moderationTarget) return;
-    const targetId = moderationTarget.id;
+    const target = moderationTarget;
     setModerationTarget(null);
 
-    const result = await report(targetId, reason);
+    const result =
+      target.kind === "answer"
+        ? await report(target.id, reason)
+        : await reportReply(target.id, reason);
     if (result.ok) {
       showToast("신고했어요. 24시간 내에 검토할게요");
       return;
     }
-    // 개발 빌드에서는 실패 원인을 그대로 띄운다 — 콘솔을 못 보는 실기기 QA에서 필요하다.
-    showToast(
-      __DEV__ && result.error
-        ? `신고 실패: ${result.error}`
-        : "신고를 보내지 못했어요. 잠시 후 다시 시도해 주세요",
-    );
+    // 서버에 닿지도 못한 경우에만 네트워크를 안내한다. 서버가 거절한 건 사용자가 할 수 있는 게 없다.
+    const message = result.offline
+      ? "신고를 보내지 못했어요. 네트워크 연결을 확인해 주세요"
+      : "신고를 보내지 못했어요. 잠시 후 다시 시도해 주세요";
+    // 개발 빌드에서는 원인을 뒤에 덧붙인다 — 콘솔을 못 보는 실기기 QA에서 필요하다.
+    // 사용자에게 보이는 문장을 대체하지는 않는다.
+    showToast(__DEV__ && result.error ? `${message} (${result.error})` : message);
   }
 
   function handleBlock() {
     if (!moderationTarget) return;
-    blockAuthor(moderationTarget.author_hash);
+    // 답변·답글이 같은 차단 Set(useAnswerFeed 소유)을 보므로 한 번 호출로 양쪽이 함께 사라진다.
+    blockAuthor(moderationTarget.authorHash);
     setModerationTarget(null);
     showToast("차단했어요. 이 사용자의 글이 보이지 않아요");
+  }
+
+  function handleToggleReplies(answerId: string) {
+    setExpandedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(answerId)) {
+        next.delete(answerId);
+        // 작성창에 포커스가 있는 채로 접히면 키보드만 덩그러니 남는다.
+        Keyboard.dismiss();
+      } else {
+        next.add(answerId);
+      }
+      return next;
+    });
+  }
+
+  async function handleSaveReply(answerId: string, body: string): Promise<boolean> {
+    const ok = await saveReply(answerId, body);
+    if (ok) {
+      Keyboard.dismiss();
+    } else {
+      showToast("답글을 저장하지 못했어요. 잠시 후 다시 시도해 주세요");
+    }
+    return ok;
+  }
+
+  async function confirmDeleteReply() {
+    const replyId = pendingDeleteReplyId;
+    setPendingDeleteReplyId(null);
+    if (!replyId) return;
+
+    const ok = await deleteReply(replyId);
+    showToast(ok ? "삭제했어요" : "답글을 삭제하지 못했어요. 잠시 후 다시 시도해 주세요");
+  }
+
+  /**
+   * iOS의 KeyboardAvoidingView(behavior="padding")는 컨테이너만 줄이고 포커스된 입력창을
+   * 스크롤해주지 않는다. 피드 아래쪽 카드의 작성창은 그대로 키보드 뒤에 가리므로 직접 올린다.
+   */
+  function handleComposerFocusBottom(bottomInWindow: number) {
+    const visibleBottom = windowHeight - keyboardHeightRef.current - 24;
+    if (bottomInWindow <= visibleBottom) return;
+    scrollRef.current?.scrollTo({
+      y: scrollYRef.current + (bottomInWindow - visibleBottom),
+      animated: true,
+    });
   }
 
   const canSave = form.body.trim().length > 0;
@@ -233,99 +378,187 @@ export default function DailyQuestionScreen() {
             }}
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
+            // 답글 작성창을 키보드 위로 올릴 때 현재 오프셋이 필요하다. ref라 리렌더가 없다.
+            onScroll={(e) => {
+              scrollYRef.current = e.nativeEvent.contentOffset.y;
+            }}
+            scrollEventThrottle={16}
+            // 답변 작성 단계에는 갱신할 목록이 없다.
+            refreshControl={
+              step === "community" ? (
+                <RefreshControl
+                  refreshing={refreshing}
+                  onRefresh={handleRefresh}
+                  tintColor={colors.apricotDark}
+                  colors={[colors.apricotDark]}
+                />
+              ) : undefined
+            }
           >
-            <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-              <View>
-                <View style={styles.header}>
-                  <Pressable
-                    onPress={handleBack}
-                    style={({ pressed }) => [styles.headerBtn, pressed && { opacity: 0.6 }]}
-                    hitSlop={12}
-                  >
-                    <Feather name="chevron-left" size={24} color={colors.text} />
-                  </Pressable>
+            <View>
+              <View style={styles.header}>
+                <Pressable
+                  onPress={handleBack}
+                  style={({ pressed }) => [styles.headerBtn, pressed && { opacity: 0.6 }]}
+                  hitSlop={12}
+                >
+                  <Feather name="chevron-left" size={24} color={colors.text} />
+                </Pressable>
 
-                  <View style={styles.headerCenter}>
-                    <Text style={styles.headerTitle}>
-                      {step === "answer" ? "오늘의 질문" : "다른 사람들의 생각"}
-                    </Text>
-                  </View>
-
-                  <View style={styles.headerBtn} />
+                <View style={styles.headerCenter}>
+                  <Text style={styles.headerTitle}>
+                    {step === "answer" ? "오늘의 질문" : "다른 사람들의 생각"}
+                  </Text>
                 </View>
 
-                <View style={styles.body}>
-                  {step === "answer" ? (
-                    questionText && (
-                      <QuestionAnswerForm
-                        questionText={questionText}
-                        body={form.body}
-                        onChangeBody={(body) => setForm((f) => ({ ...f, body }))}
-                        isPublic={form.visibility === "public"}
-                        onChangeIsPublic={(isPublic) =>
-                          setForm((f) => ({ ...f, visibility: isPublic ? "public" : "private" }))
+                <View style={styles.headerBtn} />
+              </View>
+
+              <View style={styles.body}>
+                {step === "answer" ? (
+                  // 빈 곳을 눌러 키보드를 내리는 동작은 답변 작성 단계에만 건다.
+                  // 커뮤니티 단계까지 감싸면 답글 작성창의 여백·카운터를 눌러도 키보드가 내려간다.
+                  <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+                    <View>
+                      {questionText && (
+                        <QuestionAnswerForm
+                          questionText={questionText}
+                          body={form.body}
+                          onChangeBody={(body) => setForm((f) => ({ ...f, body }))}
+                          isPublic={form.visibility === "public"}
+                          onChangeIsPublic={(isPublic) =>
+                            setForm((f) => ({
+                              ...f,
+                              visibility: isPublic ? "public" : "private",
+                            }))
+                          }
+                        />
+                      )}
+                    </View>
+                  </TouchableWithoutFeedback>
+                ) : (
+                  <View style={styles.communitySection}>
+                    <AnswerFeedTabs
+                      tab={tab}
+                      mySign={zodiacSign}
+                      onChangeTab={handleChangeTab}
+                    />
+
+                    <View style={styles.sortRow}>
+                      <AnswerSortToggle
+                        sort={sort}
+                        onChangeSort={setSort}
+                        isFiltered={filterSign !== null}
+                        onOpenFilter={() => setFilterVisible(true)}
+                      />
+                    </View>
+
+                    {questionText && (
+                      <View style={styles.questionSummary}>
+                        <Text style={styles.questionSummaryLabel}>오늘의 질문</Text>
+                        <Text style={styles.questionSummaryText}>{questionText}</Text>
+                      </View>
+                    )}
+
+                    {existingAnswer && (
+                      <MyAnswerCard
+                        answer={existingAnswer}
+                        onEdit={handleEditMine}
+                        onDelete={() => setDeleteDialogVisible(true)}
+                        likeCount={myServerAnswer?.like_count ?? null}
+                        // 비공개 답변은 서버에 행이 없어 답글이 달릴 수 없다 → 영역 자체를 붙이지 않는다.
+                        replies={
+                          myAnswerId === null
+                            ? undefined
+                            : {
+                                count: repliesLoaded ? myReplies.length : null,
+                                newCount: newReplyCount,
+                                expanded: myAnswerExpanded,
+                                onToggle: () => handleToggleReplies(myAnswerId),
+                                thread: (
+                                  <ReplyThread
+                                    replies={myReplies}
+                                    likedReplyIds={likedReplyIds}
+                                    myReplyId={myReplyToMyAnswer}
+                                    canWrite={zodiacSign !== null}
+                                    onToggleLike={toggleReplyLike}
+                                    onOpenModeration={(reply) =>
+                                      setModerationTarget({
+                                        kind: "reply",
+                                        id: reply.id,
+                                        authorHash: reply.author_hash,
+                                      })
+                                    }
+                                    onSave={(body) => handleSaveReply(myAnswerId, body)}
+                                    onRequestDelete={setPendingDeleteReplyId}
+                                    onComposerFocusBottom={handleComposerFocusBottom}
+                                  />
+                                ),
+                              }
                         }
                       />
-                    )
-                  ) : (
-                    <View style={styles.communitySection}>
-                      <AnswerFeedTabs
-                        tab={tab}
-                        mySign={zodiacSign}
-                        onChangeTab={handleChangeTab}
-                      />
+                    )}
 
-                      <View style={styles.sortRow}>
-                        <AnswerSortToggle
-                          sort={sort}
-                          onChangeSort={setSort}
-                          isFiltered={filterSign !== null}
-                          onOpenFilter={() => setFilterVisible(true)}
-                        />
+                    {feedLoading ? (
+                      <View style={styles.feedLoading}>
+                        <ActivityIndicator color={colors.apricotDark} />
                       </View>
-
-                      {questionText && (
-                        <View style={styles.questionSummary}>
-                          <Text style={styles.questionSummaryLabel}>오늘의 질문</Text>
-                          <Text style={styles.questionSummaryText}>{questionText}</Text>
-                        </View>
-                      )}
-
-                      {existingAnswer && (
-                        <MyAnswerCard
-                          answer={existingAnswer}
-                          onEdit={handleEditMine}
-                          onDelete={() => setDeleteDialogVisible(true)}
-                        />
-                      )}
-
-                      {feedLoading ? (
-                        <View style={styles.feedLoading}>
-                          <ActivityIndicator color={colors.apricotDark} />
-                        </View>
-                      ) : answers.length === 0 ? (
-                        <View style={styles.feedEmpty}>
-                          <Text style={styles.feedEmptyText}>아직 남겨진 생각이 없어요</Text>
-                        </View>
-                      ) : (
-                        <View style={styles.answerList}>
-                          {answers.map((answer) => (
+                    ) : feedAnswers.length === 0 ? (
+                      <View style={styles.feedEmpty}>
+                        <Text style={styles.feedEmptyText}>
+                          {myServerAnswer
+                            ? "아직 다른 사람의 생각이 없어요"
+                            : "아직 남겨진 생각이 없어요"}
+                        </Text>
+                      </View>
+                    ) : (
+                      <View style={styles.answerList}>
+                        {feedAnswers.map((answer) => {
+                          const replies = repliesByAnswer.get(answer.id) ?? [];
+                          return (
                             <AnswerCard
                               key={answer.id}
                               answer={answer}
                               isMine={answer.id === myAnswerId}
                               liked={likedIds.has(answer.id)}
                               onToggleLike={() => toggleLike(answer.id)}
-                              onOpenModeration={() => setModerationTarget(answer)}
-                            />
-                          ))}
-                        </View>
-                      )}
-                    </View>
-                  )}
-                </View>
+                              onOpenModeration={() =>
+                                setModerationTarget({
+                                  kind: "answer",
+                                  id: answer.id,
+                                  authorHash: answer.author_hash,
+                                })
+                              }
+                              replyCount={repliesLoaded ? replies.length : null}
+                              repliesExpanded={expandedIds.has(answer.id)}
+                              onToggleReplies={() => handleToggleReplies(answer.id)}
+                            >
+                              <ReplyThread
+                                replies={replies}
+                                likedReplyIds={likedReplyIds}
+                                myReplyId={myReplyIdByAnswer.get(answer.id) ?? null}
+                                canWrite={zodiacSign !== null}
+                                onToggleLike={toggleReplyLike}
+                                onOpenModeration={(reply) =>
+                                  setModerationTarget({
+                                    kind: "reply",
+                                    id: reply.id,
+                                    authorHash: reply.author_hash,
+                                  })
+                                }
+                                onSave={(body) => handleSaveReply(answer.id, body)}
+                                onRequestDelete={setPendingDeleteReplyId}
+                                onComposerFocusBottom={handleComposerFocusBottom}
+                              />
+                            </AnswerCard>
+                          );
+                        })}
+                      </View>
+                    )}
+                  </View>
+                )}
               </View>
-            </TouchableWithoutFeedback>
+            </View>
           </ScrollView>
 
           {step === "answer" && (
@@ -361,6 +594,7 @@ export default function DailyQuestionScreen() {
         onClose={() => setModerationTarget(null)}
         onReport={handleReport}
         onBlock={handleBlock}
+        subject={moderationTarget?.kind === "reply" ? "답글" : "글"}
       />
 
       <ConfirmDialog
@@ -370,6 +604,19 @@ export default function DailyQuestionScreen() {
         confirmLabel="삭제"
         onCancel={() => setDeleteDialogVisible(false)}
         onConfirm={confirmDeleteMine}
+      />
+
+      {/*
+        Modal 두 개가 동시에 present되면 iOS가 뒤엣것을 조용히 무시한다(BottomSheet 240ms 규칙과 같은 이유).
+        현재 경로상 겹칠 일은 없지만, 답변 삭제 다이얼로그가 떠 있으면 이쪽은 아예 뜨지 않게 구조로 막아둔다.
+      */}
+      <ConfirmDialog
+        visible={pendingDeleteReplyId !== null && !deleteDialogVisible}
+        title="답글을 삭제할까요?"
+        description="삭제한 답글은 되돌릴 수 없어요."
+        confirmLabel="삭제"
+        onCancel={() => setPendingDeleteReplyId(null)}
+        onConfirm={() => void confirmDeleteReply()}
       />
 
       <Toast {...toastProps} />
