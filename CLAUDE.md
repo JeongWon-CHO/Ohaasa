@@ -107,11 +107,23 @@ CREATE POLICY "user_devices_anon_select" ON public.user_devices FOR SELECT  TO a
 - `hide_threshold`가 답변(4)보다 낮은 **3**이다 — 답글은 접힌 영역에 있어 노출이 훨씬 적어서, 같은 값이면 자동 숨김이 사실상 안 걸린다.
 - `question_answer_reply_reports`도 anon에게 **INSERT만** 연다(신고자 `device_id` 노출 방지).
 
+### 백업 (`.github/workflows/backup-db.yml`)
+
+무료 티어는 자동 백업이 없다. 매일 KST 07:30(크롤링이 재시도까지 끝난 뒤)에 `public` 스키마를 통째로 덤프해 GitHub Actions 아티팩트로 30일 보관한다.
+
+- **가장 아픈 손실은 `horoscopes`다.** 아사히 API는 당일치만 주므로 누적분이 날아가면 **복구 수단이 아예 없고** 통계 화면의 추이를 처음부터 다시 모아야 한다. `user_devices`가 날아가면 전 사용자가 앱을 다시 열 때까지 알림이 끊긴다.
+- **`SUPABASE_DB_URL`은 반드시 Session pooler 문자열이어야 한다.** Supabase가 IPv4 직접 접속을 유료화했고 Actions 러너는 IPv6를 못 쓴다 — direct 주소를 넣으면 호스트 이름 해석에서 실패한다.
+- **`pg_dump`는 컨테이너(`postgres:17-alpine`)로 돌린다.** 서버가 Postgres 17이라 러너 기본 클라이언트로는 버전 불일치로 거부당한다. 접속 문자열은 `-e`로만 넘긴다(커맨드라인에 두면 프로세스 목록에 남는다).
+- **검증 스텝이 핵심이다.** 백업의 최악은 조용히 빈 파일이 쌓여 복원이 필요한 날에야 아는 것이다. 그래서 덤프 크기와 핵심 테이블 4개의 `COPY` 구문 존재를 확인해 하나라도 없으면 **워크플로우를 실패시킨다**. 테이블이 있고 행이 0인 경우는 통과시킨다(스키마 누락과 데이터 누락을 구분).
+- **복원**: `gunzip -c backup.sql.gz | psql "<connection string>"`. 전체 복원이 아니라 특정 테이블만 되돌릴 때는 덤프에서 해당 `COPY` 블록만 잘라 쓴다.
+- 신고 처리용 `delete` SQL을 대시보드에서 손으로 실행하는 구조라(→ "Supabase 설정") `where` 절 사고가 이 백업이 막아주는 주된 시나리오다.
+
 ### 환경변수
 
 | 변수                            | 용도                                   |
 | ------------------------------- | -------------------------------------- |
 | `SUPABASE_URL`                  | backend/Actions 전용                   |
+| `SUPABASE_DB_URL`               | 백업 워크플로우 전용 — **Session pooler** 문자열 |
 | `SUPABASE_SERVICE_ROLE_KEY`     | service_role JWT — 앱 절대 노출 금지   |
 | `OPENAI_API_KEY`                | GPT 번역 — backend/Actions 전용        |
 | `EXPO_PUBLIC_SUPABASE_URL`      | 앱용 anon 접속 URL                     |
@@ -127,7 +139,7 @@ CREATE POLICY "user_devices_anon_select" ON public.user_devices FOR SELECT  TO a
 - **답글 푸시 알림** — 답글이 달렸는지 알려면 앱을 열어야 한다. 필요한 것은 `question_answer_replies` INSERT 트리거 → Edge Function → 부모 `device_id`의 push token 조회 (→ "오늘의 질문 — 내 답변 고정 카드 · 새 답글 배지").
 - **무료 티어 egress(5GB/월)** — 현재 약 1GB/월(실측 2026-08-18). DAU 약 1,200에서 한도를 넘는다. 주범은 커뮤니티 피드가 아니라 **운세 화면의 중복 조회**다: `useHoroscope.ts`가 `select('*')`로 장문 `advice`까지 12행을 받고, 이걸 홈·순위·별자리상세·데일리리뷰가 **각자 독립 fetch**한다(`HoroscopeDateContext`처럼 Context로 올릴 자리). 더해서 `HoroscopeDateSheet`가 항상 마운트돼 열지 않아도 120행 쿼리가 화면당 1회 돌고, `useHoroscopeTrends`는 `compareSign`이 deps에 있어 클라이언트 필터일 뿐인 비교 토글마다 396행을 재조회한다.
 - **피드 페이지네이션** — `fetchPublicAnswers`는 `ANSWER_FETCH_LIMIT = 1000`으로 상한만 걸어둔 상태다(도달 시 `console.warn`). 하루 답변이 ~400개를 넘으면 그 전에 `.in()`의 UUID 배열이 URL 길이 한계에 먼저 걸린다. 착수하면 답글이 지연 로딩으로 바뀌고 배지용 `reply_count`가 다시 필요해진다 (→ "오늘의 질문 — 답글").
-- **자동 백업 없음** — 무료 티어는 백업을 제공하지 않는다. 답변·답글은 서버가 유일한 사본이라(로컬 미러는 자기 글만) 운영 SQL 실수 한 번이면 복구 수단이 없다. 규모와 무관하게 이미 있는 리스크.
+- **백업 secret 등록** — `backup-db.yml`은 만들었지만 `SUPABASE_DB_URL`(Session pooler 문자열)을 GitHub Secret에 넣어야 실제로 돈다. 등록 후 `workflow_dispatch`로 한 번 수동 실행해 아티팩트가 생기는지 확인할 것 (→ "백업").
 - **운영 확인 주기** — `hide_threshold`가 답변 4 · 답글 3으로 높은 편이라 자동 숨김이 잘 안 걸린다. 글의 노출 수명이 24시간이므로 신고 큐를 **매일** 봐야 한다 (→ "Supabase 설정").
 
 > Phase 12·13·14(오늘의 질문 · 신고/차단 · 답글)는 마이그레이션 실행과 실기기 QA까지 끝났다(2026-08-17).

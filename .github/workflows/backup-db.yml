@@ -1,0 +1,94 @@
+name: Backup database
+
+# 무료 티어는 자동 백업을 제공하지 않는다. 데이터가 세상에 한 벌뿐이라
+# 신고 처리용 delete SQL을 손으로 실행하다 where 절을 빠뜨리면 그대로 끝이다.
+#
+# 특히 horoscopes는 되돌릴 방법이 아예 없다 — 아사히 API는 당일치만 주므로
+# 누적된 과거 데이터가 날아가면 통계 화면의 추이를 다시 모으는 수밖에 없다.
+
+on:
+  schedule:
+    # UTC 기준. KST 07:30 — 크롤링(KST 05:59)이 재시도까지 끝난 뒤에 뜬다.
+    # 그날 크롤링 결과가 포함된 상태로 백업하기 위함.
+    - cron: "30 22 * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: ohaasa-backup-db
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Dump public schema
+        env:
+          # Supabase는 IPv4 직접 접속을 유료화했고 GitHub Actions 러너는 IPv6를 쓸 수 없다.
+          # 반드시 **Session pooler** connection string을 넣을 것 (Dashboard → Settings →
+          # Database → Connection string → Session mode). Direct 주소를 넣으면
+          # "could not translate host name" 으로 실패한다.
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          set -euo pipefail
+
+          if [ -z "${SUPABASE_DB_URL:-}" ]; then
+            echo "::error::SUPABASE_DB_URL secret이 비어 있습니다."
+            exit 1
+          fi
+
+          # 서버가 Postgres 17이라 pg_dump도 17이어야 한다. 러너 기본 클라이언트는
+          # 구버전이라 "server version mismatch"로 거부당하므로 컨테이너로 버전을 맞춘다.
+          # URL은 -e로만 넘긴다 — 커맨드라인에 두면 프로세스 목록에 남는다.
+          docker run --rm -e PGURL="$SUPABASE_DB_URL" postgres:17-alpine \
+            sh -c 'pg_dump --schema=public --no-owner --no-privileges "$PGURL"' \
+            > backup.sql
+
+          echo "덤프 크기: $(wc -c < backup.sql) bytes"
+
+      - name: Verify dump
+        # 백업에서 가장 나쁜 실패는 "조용히 빈 파일이 쌓이는 것"이다.
+        # 복원이 필요한 날에야 알게 되므로, 여기서 반드시 터뜨린다.
+        run: |
+          set -euo pipefail
+
+          SIZE=$(wc -c < backup.sql)
+          if [ "$SIZE" -lt 10000 ]; then
+            echo "::error::덤프가 비정상적으로 작습니다 (${SIZE} bytes). 접속 또는 권한을 확인하세요."
+            exit 1
+          fi
+
+          # 핵심 테이블이 실제로 담겼는지 확인한다. 테이블이 존재하는데 행이 0이면
+          # COPY 구문은 남으므로, 스키마 누락과 데이터 누락을 모두 잡는다.
+          MISSING=""
+          for T in horoscopes user_devices question_answers question_answer_replies; do
+            if ! grep -q "COPY public\.${T} " backup.sql; then
+              MISSING="$MISSING $T"
+            fi
+          done
+
+          if [ -n "$MISSING" ]; then
+            echo "::error::덤프에 다음 테이블이 없습니다:$MISSING"
+            exit 1
+          fi
+
+          # 참고용 행 수 (COPY 블록은 \. 로 끝난다)
+          for T in horoscopes user_devices question_answers; do
+            N=$(awk "/^COPY public\.${T} /{f=1;next} f&&/^\\\\\.$/{f=0} f{c++} END{print c+0}" backup.sql)
+            echo "  ${T}: ${N} rows"
+          done
+
+          gzip -9 backup.sql
+          echo "압축 후: $(wc -c < backup.sql.gz) bytes"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ohaasa-db-backup-${{ github.run_id }}
+          path: backup.sql.gz
+          retention-days: 30
+          if-no-files-found: error
