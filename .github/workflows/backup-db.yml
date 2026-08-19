@@ -49,6 +49,26 @@ jobs:
             exit 1
           fi
 
+          # ── secret 형태 진단 ────────────────────────────────────────
+          # 값 자체는 절대 찍지 않는다. 인증 실패는 원인이 값 안에 있는데 값을 볼 수 없어
+          # 진단이 막히므로, 흔한 실수 세 가지만 형태로 판별한다.
+          echo "비밀번호 길이: ${#PGPASSWORD}자"
+
+          case "$PGPASSWORD" in
+            postgres://*|postgresql://*)
+              echo "::error::접속 URL 전체가 들어 있습니다. 비밀번호 문자열만 넣어주세요."
+              exit 1 ;;
+            *"[YOUR-PASSWORD]"*|*"["*"]"*)
+              echo "::error::대괄호 자리표시자가 그대로 남아 있습니다."
+              exit 1 ;;
+          esac
+
+          TRIMMED=$(printf '%s' "$PGPASSWORD" | tr -d '[:space:]')
+          if [ "${#TRIMMED}" -ne "${#PGPASSWORD}" ]; then
+            echo "::error::공백 또는 개행이 섞여 있습니다 (복사할 때 딸려온 경우가 많습니다). 길이 ${#PGPASSWORD} → 공백 제거 시 ${#TRIMMED}"
+            exit 1
+          fi
+
           # 서버가 Postgres 17이라 pg_dump도 17이어야 한다. 러너 기본 클라이언트는
           # 구버전이라 "server version mismatch"로 거부당하므로 컨테이너로 버전을 맞춘다.
           # -e VAR (값 없음)은 호스트의 값을 그대로 넘긴다 — 커맨드라인에 남지 않는다.
