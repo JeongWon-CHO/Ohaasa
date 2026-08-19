@@ -109,14 +109,15 @@ CREATE POLICY "user_devices_anon_select" ON public.user_devices FOR SELECT  TO a
 
 ### 백업 (`.github/workflows/backup-db.yml`)
 
-무료 티어는 자동 백업이 없다. 매일 KST 07:30(크롤링이 재시도까지 끝난 뒤)에 `public` 스키마를 통째로 덤프해 GitHub Actions 아티팩트로 30일 보관한다.
+무료 티어는 자동 백업이 없다. 매일 KST 07:30(크롤링이 재시도까지 끝난 뒤)에 전 테이블을 떠서 GitHub Actions 아티팩트로 30일 보관한다.
 
 - **가장 아픈 손실은 `horoscopes`다.** 아사히 API는 당일치만 주므로 누적분이 날아가면 **복구 수단이 아예 없고** 통계 화면의 추이를 처음부터 다시 모아야 한다. `user_devices`가 날아가면 전 사용자가 앱을 다시 열 때까지 알림이 끊긴다.
-- **접속 정보는 워크플로우 `env`에 두고 secret은 비밀번호 하나뿐이다.** 호스트는 반드시 **Session pooler**여야 한다 — Supabase가 IPv4 직접 접속을 유료화했고 Actions 러너는 IPv6를 못 써서, direct 주소를 넣으면 호스트 이름 해석에서 실패한다. 포트도 5432(session)여야 하며 6543(transaction)으로는 `pg_dump`가 실패한다. pooler는 사용자명 뒤 project ref로 테넌트를 찾으므로 `postgres.<ref>` 형식이 필수다.
-- **비밀번호를 접속 URL에 박지 않는다 — `PGPASSWORD`로 넘긴다.** `@ : / ? #`가 하나라도 들어가면 libpq의 URI 파싱이 깨져 엉뚱한 사용자로 접속을 시도하고, 서버는 그저 `password authentication failed`라고만 답한다. 원인을 짚기 어려운 실패라 구조로 막아둔다. secret에는 **원문 그대로** 넣는다(URL 인코딩 금지).
-- **`pg_dump`는 컨테이너(`postgres:17-alpine`)로 돌린다.** 서버가 Postgres 17이라 러너 기본 클라이언트로는 버전 불일치로 거부당한다. 접속 문자열은 `-e`로만 넘긴다(커맨드라인에 두면 프로세스 목록에 남는다).
-- **검증 스텝이 핵심이다.** 백업의 최악은 조용히 빈 파일이 쌓여 복원이 필요한 날에야 아는 것이다. 그래서 덤프 크기와 핵심 테이블 4개의 `COPY` 구문 존재를 확인해 하나라도 없으면 **워크플로우를 실패시킨다**. 테이블이 있고 행이 0인 경우는 통과시킨다(스키마 누락과 데이터 누락을 구분).
-- **복원**: `gunzip -c backup.sql.gz | psql "<connection string>"`. 전체 복원이 아니라 특정 테이블만 되돌릴 때는 덤프에서 해당 `COPY` 블록만 잘라 쓴다.
+- **`pg_dump`가 아니라 PostgREST로 뜬다**(`.github/scripts/backup-tables.py`). DB 비밀번호가 필요 없고 크롤러가 이미 쓰는 `SUPABASE_SERVICE_ROLE_KEY` 하나로 끝나기 때문이다. pg_dump 경로는 Session pooler 접속·비밀번호 URL 인코딩·클라이언트 버전(서버가 PG17)까지 전부 맞아야 해서 실패 지점이 많았다.
+  - **대신 스키마 DDL은 담기지 않는다 — 데이터만이다.** 테이블이 통째로 사라진 경우엔 `supabase/migrations/`로 스키마를 먼저 세워야 한다. 그런데 `horoscopes` · `user_devices` · `notification_log`는 **마이그레이션 파일 자체가 없다**(대시보드에서 수동 생성). 이 셋의 DDL을 마이그레이션으로 남겨두지 않으면 백업이 있어도 복원이 반쪽이다.
+  - **반드시 `service_role` 키여야 한다.** `anon`은 `notification_log` · `question_answer_reports` · `question_answer_reply_reports`에 SELECT 권한이 없어 `permission denied`로 막힌다(신고자 `device_id` 비노출 정책의 결과 — → "Supabase 설정").
+- **페이지 크기는 `db-max-rows`보다 작아야 한다**(`PAGE = 500`). 같거나 크면 "요청한 만큼 왔는가"로 다음 페이지 유무를 판정할 수 없어 조용히 잘린다. 정렬 키도 필수다 — 정렬 없는 OFFSET은 페이지 간 행 순서를 보장하지 않아 중복·누락이 난다(합성 PK 테이블은 두 컬럼 모두 지정).
+- **조용한 실패를 막는 장치가 셋이다.** ① 응답이 배열이 아니면(에러 JSON) 즉시 중단 — 이걸 빈 결과로 흘리면 "0행짜리 정상 백업"이 된다. ② `horoscopes` · `user_devices`가 0행이면 실패. ③ `manifest.json`에 테이블별 행 수를 남겨 복원 전에 대조할 수 있게 한다.
+- **복원**: 아티팩트를 풀면 테이블별 `.jsonl`이 나온다. `service_role` 키로 PostgREST에 `POST`(`Prefer: resolution=merge-duplicates`)하거나, JSONL을 `INSERT` 문으로 바꿔 SQL Editor에서 실행한다. 전체가 아니라 특정 테이블만 되돌릴 때는 해당 `.jsonl`만 쓰면 된다.
 - 신고 처리용 `delete` SQL을 대시보드에서 손으로 실행하는 구조라(→ "Supabase 설정") `where` 절 사고가 이 백업이 막아주는 주된 시나리오다.
 
 ### 환경변수
@@ -124,7 +125,6 @@ CREATE POLICY "user_devices_anon_select" ON public.user_devices FOR SELECT  TO a
 | 변수                            | 용도                                   |
 | ------------------------------- | -------------------------------------- |
 | `SUPABASE_URL`                  | backend/Actions 전용                   |
-| `SUPABASE_DB_PASSWORD`          | 백업 워크플로우 전용 — DB 비밀번호 **원문**(URL 인코딩 금지) |
 | `SUPABASE_SERVICE_ROLE_KEY`     | service_role JWT — 앱 절대 노출 금지   |
 | `OPENAI_API_KEY`                | GPT 번역 — backend/Actions 전용        |
 | `EXPO_PUBLIC_SUPABASE_URL`      | 앱용 anon 접속 URL                     |
@@ -140,7 +140,7 @@ CREATE POLICY "user_devices_anon_select" ON public.user_devices FOR SELECT  TO a
 - **답글 푸시 알림** — 답글이 달렸는지 알려면 앱을 열어야 한다. 필요한 것은 `question_answer_replies` INSERT 트리거 → Edge Function → 부모 `device_id`의 push token 조회 (→ "오늘의 질문 — 내 답변 고정 카드 · 새 답글 배지").
 - **무료 티어 egress(5GB/월)** — 현재 약 1GB/월(실측 2026-08-18). DAU 약 1,200에서 한도를 넘는다. 주범은 커뮤니티 피드가 아니라 **운세 화면의 중복 조회**다: `useHoroscope.ts`가 `select('*')`로 장문 `advice`까지 12행을 받고, 이걸 홈·순위·별자리상세·데일리리뷰가 **각자 독립 fetch**한다(`HoroscopeDateContext`처럼 Context로 올릴 자리). 더해서 `HoroscopeDateSheet`가 항상 마운트돼 열지 않아도 120행 쿼리가 화면당 1회 돌고, `useHoroscopeTrends`는 `compareSign`이 deps에 있어 클라이언트 필터일 뿐인 비교 토글마다 396행을 재조회한다.
 - **피드 페이지네이션** — `fetchPublicAnswers`는 `ANSWER_FETCH_LIMIT = 1000`으로 상한만 걸어둔 상태다(도달 시 `console.warn`). 하루 답변이 ~400개를 넘으면 그 전에 `.in()`의 UUID 배열이 URL 길이 한계에 먼저 걸린다. 착수하면 답글이 지연 로딩으로 바뀌고 배지용 `reply_count`가 다시 필요해진다 (→ "오늘의 질문 — 답글").
-- **백업 secret 등록** — `backup-db.yml`은 만들었지만 `SUPABASE_DB_URL`(Session pooler 문자열)을 GitHub Secret에 넣어야 실제로 돈다. 등록 후 `workflow_dispatch`로 한 번 수동 실행해 아티팩트가 생기는지 확인할 것 (→ "백업").
+- **`horoscopes` · `user_devices` · `notification_log`의 DDL이 마이그레이션에 없다** — 대시보드에서 수동 생성돼 스키마가 코드로 남아 있지 않다. 백업이 데이터만 담으므로 테이블이 통째로 사라지면 복원할 스키마가 없다 (→ "백업").
 - **운영 확인 주기** — `hide_threshold`가 답변 4 · 답글 3으로 높은 편이라 자동 숨김이 잘 안 걸린다. 글의 노출 수명이 24시간이므로 신고 큐를 **매일** 봐야 한다 (→ "Supabase 설정").
 
 > Phase 12·13·14(오늘의 질문 · 신고/차단 · 답글)는 마이그레이션 실행과 실기기 QA까지 끝났다(2026-08-17).
