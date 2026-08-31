@@ -52,7 +52,7 @@ export const StatsShareCard = forwardRef<View, StatsShareCardProps>(
     const lastPoint = points[points.length - 1];
     const isLatestToday = lastPoint.date === format(new Date(), "yyyy-MM-dd");
     const latestLabel = isLatestToday ? "오늘" : getPeriodMonth(period) ? "마지막" : "최근";
-    // '이번 달'은 일수가 고정이 아니라 periodLabel을 그대로 쓴다 ("최근 7일" · "최근 30일" · "이번 달")
+    // 월간은 일수가 고정이 아니라 periodLabel을 그대로 쓴다 ("최근 7일" · "최근 14일" · "2026년 8월")
     const periodHeadline = `${periodLabel(period)} 운세 흐름`;
     const comment = getSummaryComment(averageRank);
     const dateRangeLabel = formatShareDateRange(points);

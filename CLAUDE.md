@@ -138,7 +138,7 @@ CREATE POLICY "user_devices_anon_select" ON public.user_devices FOR SELECT  TO a
 
 - **Phase 11** — Expo SDK 56 업그레이드 검증 (위젯 제외)
 - **답글 푸시 알림** — 답글이 달렸는지 알려면 앱을 열어야 한다. 필요한 것은 `question_answer_replies` INSERT 트리거 → Edge Function → 부모 `device_id`의 push token 조회 (→ "오늘의 질문 — 내 답변 고정 카드 · 새 답글 배지").
-- **무료 티어 egress(5GB/월)** — 현재 약 1GB/월(실측 2026-08-18). DAU 약 1,200에서 한도를 넘는다. 주범은 커뮤니티 피드가 아니라 **운세 화면의 중복 조회**다: `useHoroscope.ts`가 `select('*')`로 장문 `advice`까지 12행을 받고, 이걸 홈·순위·별자리상세·데일리리뷰가 **각자 독립 fetch**한다(`HoroscopeDateContext`처럼 Context로 올릴 자리). 더해서 `HoroscopeDateSheet`가 항상 마운트돼 열지 않아도 120행 쿼리가 화면당 1회 돌고, `useHoroscopeTrends`는 `compareSign`이 deps에 있어 클라이언트 필터일 뿐인 비교 토글마다 396행을 재조회한다.
+- **무료 티어 egress(5GB/월)** — 현재 약 1GB/월(실측 2026-08-18). DAU 약 1,200에서 한도를 넘는다. 주범은 커뮤니티 피드가 아니라 **운세 화면의 중복 조회**다: `useHoroscope.ts`가 `select('*')`로 장문 `advice`까지 12행을 받고, 이걸 홈·순위·별자리상세·데일리리뷰가 **각자 독립 fetch**한다(`HoroscopeDateContext`처럼 Context로 올릴 자리). 더해서 `HoroscopeDateSheet`가 항상 마운트돼 열지 않아도 120행 쿼리가 화면당 1회 돌고, `useHoroscopeTrends`는 `compareSign`이 deps에 있어 클라이언트 필터일 뿐인 비교 토글마다 전 기간을 재조회한다(14일 기준 204행).
 - **피드 페이지네이션** — `fetchPublicAnswers`는 `ANSWER_FETCH_LIMIT = 1000`으로 상한만 걸어둔 상태다(도달 시 `console.warn`). 하루 답변이 ~400개를 넘으면 그 전에 `.in()`의 UUID 배열이 URL 길이 한계에 먼저 걸린다. 착수하면 답글이 지연 로딩으로 바뀌고 배지용 `reply_count`가 다시 필요해진다 (→ "오늘의 질문 — 답글").
 - **`horoscopes` · `user_devices` · `notification_log`의 DDL이 마이그레이션에 없다** — 대시보드에서 수동 생성돼 스키마가 코드로 남아 있지 않다. 백업이 데이터만 담으므로 테이블이 통째로 사라지면 복원할 스키마가 없다 (→ "백업").
 - **운영 확인 주기** — `hide_threshold`가 답변 4 · 답글 3으로 높은 편이라 자동 숨김이 잘 안 걸린다. 글의 노출 수명이 24시간이므로 신고 큐를 **매일** 봐야 한다 (→ "Supabase 설정").
@@ -192,7 +192,7 @@ CREATE POLICY "user_devices_anon_select" ON public.user_devices FOR SELECT  TO a
 
 - **역할 분리**: `stats.tsx`는 orchestration(훅 호출 · state · 카드 조합)만 담당하고, UI 섹션은 `src/components/stats/`의 독립 컴포넌트로 둔다.
 - **데이터 훅**: `useHoroscopeTrends(zodiacSign, period, compareSign?)` — 기간 내 전체 별자리 rank rows를 한 번에 받아 클라이언트에서 가공. `CUTOFF_BUFFER_DAYS = 3`으로 크론 미실행 날 대응.
-- **기간은 `7d · 30d · 월간`** — 월간은 `"m:2026-08"` 문자열(`MonthPeriod`)이다. 객체가 아니라 문자열로 둔 건 state 비교·`useEffect` deps·Map 키를 그대로 쓰기 위해서다. 헤더의 세 번째 토글은 기간 선택이 아니라 **`MonthSelectSheet`를 여는 버튼**이다("어느 달?"을 먼저 물어야 하므로).
+- **기간은 `7d · 14d · 월간`** — 월간은 `"m:2026-08"` 문자열(`MonthPeriod`)이다. 객체가 아니라 문자열로 둔 건 state 비교·`useEffect` deps·Map 키를 그대로 쓰기 위해서다. 헤더의 세 번째 토글은 기간 선택이 아니라 **`MonthSelectSheet`를 여는 버튼**이다("어느 달?"을 먼저 물어야 하므로).
   - 월간은 개수가 아니라 캘린더 경계라 `takeWindow()`(개수 slice)를 태우지 않는다 — **31일 달에 `slice(-30)`을 걸면 1일치가 조용히 빠진다.** 버퍼도 두지 않는다(두면 지난달 말일이 평균에 섞인다).
   - **화살표 기준이 기간마다 다르다** — 일수 기간은 전날 대비(같은 길이 윈도우를 하루 앞당겨 재계산), 월간은 **전월 대비**(이전 달 전체 평균). 그래서 월간 조회는 이전 달까지 2개월치(약 744행)를 받는다. 캡션 문구는 `trendBaselineLabel()`이 만든다.
   - **지난 달은 `pastMonthCache`에 캐시한다**(행이 더 늘지 않으므로). 이번 달은 매일 늘어나서 제외 — `isPastMonth()` 판정이 그 경계다.

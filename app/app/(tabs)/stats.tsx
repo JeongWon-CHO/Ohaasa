@@ -35,7 +35,7 @@ type StatsTab = "trend" | "history";
 
 const DAY_PERIODS: { value: TrendsPeriod; label: string }[] = [
   { value: "7d", label: "7일" },
-  { value: "30d", label: "30일" },
+  { value: "14d", label: "14일" },
 ];
 
 // 헤더는 자리가 좁아 "8월"만 쓰지만, 해가 넘어간 달은 연도까지 붙여야 구분된다

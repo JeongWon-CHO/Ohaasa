@@ -7,7 +7,7 @@ import type { ZodiacSign } from '@/src/constants/zodiac';
 // 월간 기간은 "m:2026-08" 형태의 문자열이다 — 객체가 아니라 문자열이라
 // state 비교 · useEffect deps · Map 키를 그대로 쓸 수 있다.
 export type MonthPeriod = `m:${string}`;
-export type TrendsPeriod = '7d' | '30d' | MonthPeriod;
+export type TrendsPeriod = '7d' | '14d' | MonthPeriod;
 export type Trend = 'up' | 'down' | 'flat';
 
 export interface RankPoint {
@@ -86,7 +86,7 @@ function computeRoundedRankMap(sorted: { sign: ZodiacSign; averageRank: number }
 export function periodLabel(period: TrendsPeriod): string {
   const month = getPeriodMonth(period);
   if (month) return formatMonthLabel(month);
-  return period === '7d' ? '최근 7일' : '최근 30일';
+  return period === '7d' ? '최근 7일' : '최근 14일';
 }
 
 // 화살표 캡션·공유 카드처럼 "무엇 대비인가"를 말해야 하는 곳에서 쓴다
@@ -116,7 +116,7 @@ export function getSummaryComment(averageRank: number | null): string {
 const CUTOFF_BUFFER_DAYS = 3;
 
 function getTargetCount(period: TrendsPeriod): number {
-  return period === '7d' ? 7 : 30;
+  return period === '7d' ? 7 : 14;
 }
 
 function getCutoffDate(period: TrendsPeriod): string {
@@ -124,7 +124,7 @@ function getCutoffDate(period: TrendsPeriod): string {
   return format(subDays(new Date(), daysBack), 'yyyy-MM-dd');
 }
 
-// '7d'·'30d'는 버퍼만큼 넓게 받아온 뒤 최근 N개만 쓴다.
+// '7d'·'14d'는 버퍼만큼 넓게 받아온 뒤 최근 N개만 쓴다.
 // 월간에는 쓰지 않는다 — 쿼리(gte 월초 · lt 다음 달 1일)가 이미 정확한 범위라
 // 31일 달에 slice(-30)을 걸면 1일치가 조용히 빠진다.
 function takeWindow<T>(rows: T[], period: TrendsPeriod): T[] {
@@ -236,7 +236,7 @@ export function useHoroscopeTrends(
         const monthStart = month ? `${month}-01` : null;
 
         // 월간은 받아온 2개월치를 "선택한 달"과 "그 전 달"로 가른다.
-        // 일수 기간('7d'·'30d')은 같은 배열을 두 번 쓰되 baseline만 하루 앞당겨 자른다.
+        // 일수 기간('7d'·'14d')은 같은 배열을 두 번 쓰되 baseline만 하루 앞당겨 자른다.
         const windowRows = monthStart ? allRows.filter((row) => row.date >= monthStart) : allRows;
         const baselineRows = monthStart ? allRows.filter((row) => row.date < monthStart) : allRows;
 
