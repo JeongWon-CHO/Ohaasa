@@ -192,8 +192,12 @@ CREATE POLICY "user_devices_anon_select" ON public.user_devices FOR SELECT  TO a
 
 - **역할 분리**: `stats.tsx`는 orchestration(훅 호출 · state · 카드 조합)만 담당하고, UI 섹션은 `src/components/stats/`의 독립 컴포넌트로 둔다.
 - **데이터 훅**: `useHoroscopeTrends(zodiacSign, period, compareSign?)` — 기간 내 전체 별자리 rank rows를 한 번에 받아 클라이언트에서 가공. `CUTOFF_BUFFER_DAYS = 3`으로 크론 미실행 날 대응.
-- **기간은 `7d · 30d · 1m`** — `1m`("이번 달")만 개수가 아니라 캘린더 경계다. 쿼리가 `gte(월초)`로 이미 정확히 잘라 오므로 `takeWindow()`가 개수 slice를 건너뛴다 — **31일 달에 `slice(-30)`을 걸면 1일치가 조용히 빠진다.** 버퍼도 두지 않는다(두면 지난달 말일이 평균에 섞인다).
-  - 매달 1일 크론(KST 05:59) 전에는 `1m` 기간에 row가 0개다 — `RankingCard`가 "데이터가 아직 없어요"로, `ChartCard`는 기존 7일 미만 플레이스홀더로 받는다.
+- **기간은 `7d · 30d · 월간`** — 월간은 `"m:2026-08"` 문자열(`MonthPeriod`)이다. 객체가 아니라 문자열로 둔 건 state 비교·`useEffect` deps·Map 키를 그대로 쓰기 위해서다. 헤더의 세 번째 토글은 기간 선택이 아니라 **`MonthSelectSheet`를 여는 버튼**이다("어느 달?"을 먼저 물어야 하므로).
+  - 월간은 개수가 아니라 캘린더 경계라 `takeWindow()`(개수 slice)를 태우지 않는다 — **31일 달에 `slice(-30)`을 걸면 1일치가 조용히 빠진다.** 버퍼도 두지 않는다(두면 지난달 말일이 평균에 섞인다).
+  - **화살표 기준이 기간마다 다르다** — 일수 기간은 전날 대비(같은 길이 윈도우를 하루 앞당겨 재계산), 월간은 **전월 대비**(이전 달 전체 평균). 그래서 월간 조회는 이전 달까지 2개월치(약 744행)를 받는다. 캡션 문구는 `trendBaselineLabel()`이 만든다.
+  - **지난 달은 `pastMonthCache`에 캐시한다**(행이 더 늘지 않으므로). 이번 달은 매일 늘어나서 제외 — `isPastMonth()` 판정이 그 경계다.
+  - 매달 1일 크론(KST 05:59) 전에는 이번 달 row가 0개다 — `RankingCard`가 "데이터가 아직 없어요"로, `ChartCard`는 기존 7일 미만 플레이스홀더로 받는다.
+  - `useAvailableHoroscopeMonths(enabled)`는 **시트를 열기 전에는 조회하지 않는다**(`enabled=false`). 항상 마운트된 채 120행을 긁는 `HoroscopeDateSheet`의 문제를 반복하지 않기 위함. 날짜 목록은 `zodiac_sign='aries'` 한 별자리만 세고(12배를 받을 이유가 없다) `PAGE=500`으로 페이지네이션한다.
 - **등수 표시**: 기본은 `roundedRank`(반올림값이 같으면 공동 등수 부여 후 다음 번호 스킵 — 3.4·6.1·6.8 → 1/2/2/4위), 자세히 모드는 `exactRank` + 소수점 1자리. `detailMode`는 저장하지 않아 재진입 시 리셋되고, 공유 카드는 토글과 무관하게 항상 정수.
 - **화살표 트렌드 기준**: 그날의 원본 운세 순위(1~12)가 아니라 **기간 평균 공동 등수(`roundedRank`)의 어제 대비 변화** — 같은 길이의 윈도우를 하루 앞당겨 재계산한다.
 

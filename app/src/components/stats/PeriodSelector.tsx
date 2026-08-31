@@ -11,7 +11,6 @@ interface PeriodSelectorProps {
 const OPTIONS: { value: TrendsPeriod; label: string }[] = [
   { value: '7d', label: '7일' },
   { value: '30d', label: '30일' },
-  { value: '1m', label: '이번 달' },
 ];
 
 export function PeriodSelector({ value, onChange }: PeriodSelectorProps) {

@@ -3,7 +3,12 @@ import { StyleSheet, Text, View } from "react-native";
 import { AverageRankRow } from "@/src/components/final/AverageRankRow";
 import { colors } from "@/src/constants/design";
 import type { ZodiacSign } from "@/src/constants/zodiac";
-import { periodLabel, type SignAverage, type TrendsPeriod } from "@/src/hooks/useHoroscopeTrends";
+import {
+  periodLabel,
+  trendBaselineLabel,
+  type SignAverage,
+  type TrendsPeriod,
+} from "@/src/hooks/useHoroscopeTrends";
 
 interface RankingCardProps {
   period: TrendsPeriod;
@@ -20,9 +25,9 @@ export function RankingCard({ period, signAverages, detailMode, zodiacSign, comp
         <Text style={styles.sectionTitle}>별자리별 평균 순위</Text>
         <Text style={styles.rankingPeriodLabel}>{periodLabel(period)}</Text>
       </View>
-      <Text style={styles.rankingCaption}>화살표는 전날 대비 등수 변화예요</Text>
+      <Text style={styles.rankingCaption}>화살표는 {trendBaselineLabel(period)} 대비 등수 변화예요</Text>
       {signAverages.length === 0 ? (
-        // '이번 달'은 매달 1일 크론(KST 05:59) 전이면 기간 안에 row가 하나도 없다
+        // 이번 달은 매달 1일 크론(KST 05:59) 전이면 기간 안에 row가 하나도 없다
         <Text style={styles.rankingEmptyText}>{periodLabel(period)} 데이터가 아직 없어요</Text>
       ) : (
         <View style={styles.rankingList}>
