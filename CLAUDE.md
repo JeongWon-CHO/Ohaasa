@@ -192,6 +192,8 @@ CREATE POLICY "user_devices_anon_select" ON public.user_devices FOR SELECT  TO a
 
 - **역할 분리**: `stats.tsx`는 orchestration(훅 호출 · state · 카드 조합)만 담당하고, UI 섹션은 `src/components/stats/`의 독립 컴포넌트로 둔다.
 - **데이터 훅**: `useHoroscopeTrends(zodiacSign, period, compareSign?)` — 기간 내 전체 별자리 rank rows를 한 번에 받아 클라이언트에서 가공. `CUTOFF_BUFFER_DAYS = 3`으로 크론 미실행 날 대응.
+- **기간은 `7d · 30d · 1m`** — `1m`("이번 달")만 개수가 아니라 캘린더 경계다. 쿼리가 `gte(월초)`로 이미 정확히 잘라 오므로 `takeWindow()`가 개수 slice를 건너뛴다 — **31일 달에 `slice(-30)`을 걸면 1일치가 조용히 빠진다.** 버퍼도 두지 않는다(두면 지난달 말일이 평균에 섞인다).
+  - 매달 1일 크론(KST 05:59) 전에는 `1m` 기간에 row가 0개다 — `RankingCard`가 "데이터가 아직 없어요"로, `ChartCard`는 기존 7일 미만 플레이스홀더로 받는다.
 - **등수 표시**: 기본은 `roundedRank`(반올림값이 같으면 공동 등수 부여 후 다음 번호 스킵 — 3.4·6.1·6.8 → 1/2/2/4위), 자세히 모드는 `exactRank` + 소수점 1자리. `detailMode`는 저장하지 않아 재진입 시 리셋되고, 공유 카드는 토글과 무관하게 항상 정수.
 - **화살표 트렌드 기준**: 그날의 원본 운세 순위(1~12)가 아니라 **기간 평균 공동 등수(`roundedRank`)의 어제 대비 변화** — 같은 길이의 윈도우를 하루 앞당겨 재계산한다.
 

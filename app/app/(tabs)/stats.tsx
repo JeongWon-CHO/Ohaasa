@@ -27,6 +27,12 @@ import { useZodiac } from "@/src/hooks/useZodiac";
 
 type StatsTab = "trend" | "history";
 
+const PERIOD_LABELS: Record<TrendsPeriod, string> = {
+  "7d": "7일",
+  "30d": "30일",
+  "1m": "이번 달",
+};
+
 const TAB_OPTIONS: { value: StatsTab; label: string }[] = [
   { value: "trend", label: "흐름" },
   { value: "history", label: "기록" },
@@ -69,10 +75,13 @@ export default function StatsScreen() {
             rightSlot={
               activeTab === "trend" ? (
                 <View style={styles.periodToggle}>
-                  {(["7d", "30d"] as TrendsPeriod[]).map((p) => (
+                  {(["7d", "30d", "1m"] as TrendsPeriod[]).map((p) => (
                     <Pressable key={p} onPress={() => setPeriod(p)} style={styles.periodBtn}>
-                      <Text style={[styles.periodLabel, period === p && styles.periodLabelActive]}>
-                        {p === "7d" ? "7일" : "30일"}
+                      <Text
+                        numberOfLines={1}
+                        style={[styles.periodLabel, period === p && styles.periodLabelActive]}
+                      >
+                        {PERIOD_LABELS[p]}
                       </Text>
                       {period === p && <View style={styles.periodDot} />}
                     </Pressable>

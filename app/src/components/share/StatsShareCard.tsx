@@ -7,7 +7,7 @@ import { ConstellationBadge } from "@/src/components/final/ConstellationBadge";
 import { RankTrendChart } from "@/src/components/stats/RankTrendChart";
 import { colors, gradients } from "@/src/constants/design";
 import type { ZodiacInfo } from "@/src/constants/zodiac";
-import { getSummaryComment, type RankPoint, type TrendsPeriod } from "@/src/hooks/useHoroscopeTrends";
+import { getSummaryComment, periodLabel, type RankPoint, type TrendsPeriod } from "@/src/hooks/useHoroscopeTrends";
 
 export const CARD_WIDTH = 360;
 export const CARD_HEIGHT = 640;
@@ -46,7 +46,8 @@ export const StatsShareCard = forwardRef<View, StatsShareCardProps>(
     const lastPoint = points[points.length - 1];
     const isLatestToday = lastPoint.date === format(new Date(), "yyyy-MM-dd");
     const latestLabel = isLatestToday ? "오늘" : "최근";
-    const periodDays = period === "7d" ? 7 : 30;
+    // '이번 달'은 일수가 고정이 아니라 periodLabel을 그대로 쓴다 ("최근 7일" · "최근 30일" · "이번 달")
+    const periodHeadline = `${periodLabel(period)} 운세 흐름`;
     const comment = getSummaryComment(averageRank);
     const dateRangeLabel = formatShareDateRange(points);
 
@@ -59,7 +60,7 @@ export const StatsShareCard = forwardRef<View, StatsShareCardProps>(
               <Text style={styles.brand} allowFontScaling={false}>
                 ohaasa
               </Text>
-              <HairlineLabel>최근 {periodDays}일 운세 흐름</HairlineLabel>
+              <HairlineLabel>{periodHeadline}</HairlineLabel>
             </View>
 
             {/* 별자리 네임택 */}

@@ -1,10 +1,10 @@
-import { format, subDays } from 'date-fns';
+import { format, startOfMonth, subDays } from 'date-fns';
 import { useEffect, useState } from 'react';
 
 import { supabase } from '@/src/lib/supabase';
 import type { ZodiacSign } from '@/src/constants/zodiac';
 
-export type TrendsPeriod = '7d' | '30d';
+export type TrendsPeriod = '7d' | '30d' | '1m';
 export type Trend = 'up' | 'down' | 'flat';
 
 export interface RankPoint {
@@ -61,6 +61,7 @@ function computeRoundedRankMap(sorted: { sign: ZodiacSign; averageRank: number }
 }
 
 export function periodLabel(period: TrendsPeriod): string {
+  if (period === '1m') return '이번 달';
   return period === '7d' ? '최근 7일' : '최근 30일';
 }
 
@@ -82,7 +83,7 @@ export function getSummaryComment(averageRank: number | null): string {
 
 // 자정이 지나도 그날 크론(KST 05:59)이 아직 안 돌아 오늘 row가 없을 수 있으므로,
 // "오늘부터 N일 전" 캘린더 날짜로 자르지 않고 여유 버퍼만큼 더 넓게 가져온 뒤
-// 실제 존재하는 row 중 최근 N개를 골라 쓴다 (아래 targetCount slice).
+// 실제 존재하는 row 중 최근 N개를 골라 쓴다 (아래 takeWindow).
 const CUTOFF_BUFFER_DAYS = 3;
 
 function getTargetCount(period: TrendsPeriod): number {
@@ -90,8 +91,16 @@ function getTargetCount(period: TrendsPeriod): number {
 }
 
 function getCutoffDate(period: TrendsPeriod): string {
+  // '이번 달'은 개수가 아니라 캘린더 경계라 버퍼를 두지 않는다 — 월초 이전 데이터가 섞이면 안 된다
+  if (period === '1m') return format(startOfMonth(new Date()), 'yyyy-MM-dd');
   const daysBack = getTargetCount(period) - 1 + CUTOFF_BUFFER_DAYS;
   return format(subDays(new Date(), daysBack), 'yyyy-MM-dd');
+}
+
+// '7d'·'30d'는 버퍼만큼 넓게 받아온 뒤 최근 N개만 쓰지만, '1m'은 쿼리(gte 월초)가 이미 정확한 범위다.
+// 31일 달에 slice(-30)을 걸면 1일치가 조용히 빠지므로 개수로 자르지 않는다.
+function takeWindow<T>(rows: T[], period: TrendsPeriod): T[] {
+  return period === '1m' ? rows : rows.slice(-getTargetCount(period));
 }
 
 function getErrorMessage(err: unknown): string {
@@ -136,20 +145,23 @@ export function useHoroscopeTrends(
         if (error) throw error;
 
         const allRows = (rows ?? []) as { date: string; zodiac_sign: ZodiacSign; rank: number }[];
-        const targetCount = getTargetCount(period);
 
         const points: RankPoint[] = zodiacSign
-          ? allRows
-              .filter((row) => row.zodiac_sign === zodiacSign)
-              .map((row) => ({ date: row.date, rank: row.rank }))
-              .slice(-targetCount)
+          ? takeWindow(
+              allRows
+                .filter((row) => row.zodiac_sign === zodiacSign)
+                .map((row) => ({ date: row.date, rank: row.rank })),
+              period,
+            )
           : [];
 
         const comparePoints: RankPoint[] = compareSign
-          ? allRows
-              .filter((row) => row.zodiac_sign === compareSign)
-              .map((row) => ({ date: row.date, rank: row.rank }))
-              .slice(-targetCount)
+          ? takeWindow(
+              allRows
+                .filter((row) => row.zodiac_sign === compareSign)
+                .map((row) => ({ date: row.date, rank: row.rank })),
+              period,
+            )
           : [];
 
         const ranks = points.map((p) => p.rank);
@@ -167,7 +179,7 @@ export function useHoroscopeTrends(
         const sortedAverages = Array.from(ranksBySign.entries())
           .map(([sign, signRanks]) => ({
             sign,
-            averageRank: Math.round(average(signRanks.slice(-targetCount)) * 10) / 10,
+            averageRank: Math.round(average(takeWindow(signRanks, period)) * 10) / 10,
           }))
           .sort((a, b) => a.averageRank - b.averageRank);
 
@@ -177,7 +189,7 @@ export function useHoroscopeTrends(
         // 같은 길이의 기간을 하루 앞당겨 다시 계산해 어제 시점의 등수를 구한다.
         const yesterdayAverages = Array.from(ranksBySign.entries())
           .map(([sign, signRanks]) => {
-            const yesterdayRanks = signRanks.slice(0, -1).slice(-targetCount);
+            const yesterdayRanks = takeWindow(signRanks.slice(0, -1), period);
             return yesterdayRanks.length ? { sign, averageRank: Math.round(average(yesterdayRanks) * 10) / 10 } : null;
           })
           .filter((item): item is { sign: ZodiacSign; averageRank: number } => item !== null)
