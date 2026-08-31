@@ -138,7 +138,7 @@ CREATE POLICY "user_devices_anon_select" ON public.user_devices FOR SELECT  TO a
 
 - **Phase 11** — Expo SDK 56 업그레이드 검증 (위젯 제외)
 - **답글 푸시 알림** — 답글이 달렸는지 알려면 앱을 열어야 한다. 필요한 것은 `question_answer_replies` INSERT 트리거 → Edge Function → 부모 `device_id`의 push token 조회 (→ "오늘의 질문 — 내 답변 고정 카드 · 새 답글 배지").
-- **무료 티어 egress(5GB/월)** — 현재 약 1GB/월(실측 2026-08-18). DAU 약 1,200에서 한도를 넘는다. 주범은 커뮤니티 피드가 아니라 **운세 화면의 중복 조회**다: `useHoroscope.ts`가 `select('*')`로 장문 `advice`까지 12행을 받고, 이걸 홈·순위·별자리상세·데일리리뷰가 **각자 독립 fetch**한다(`HoroscopeDateContext`처럼 Context로 올릴 자리). 더해서 `HoroscopeDateSheet`가 항상 마운트돼 열지 않아도 120행 쿼리가 화면당 1회 돌고, `useHoroscopeTrends`는 `compareSign`이 deps에 있어 클라이언트 필터일 뿐인 비교 토글마다 396행을 재조회한다.
+- **무료 티어 egress(5GB/월)** — 현재 약 1GB/월(실측 2026-08-18). DAU 약 1,200에서 한도를 넘는다. 주범은 커뮤니티 피드가 아니라 **운세 화면의 중복 조회**다: `useHoroscope.ts`가 `select('*')`로 장문 `advice`까지 12행을 받고, 이걸 홈·순위·별자리상세·데일리리뷰가 **각자 독립 fetch**한다(`HoroscopeDateContext`처럼 Context로 올릴 자리). 더해서 `HoroscopeDateSheet`가 항상 마운트돼 열지 않아도 120행 쿼리가 화면당 1회 돌고, `useHoroscopeTrends`는 `compareSign`이 deps에 있어 클라이언트 필터일 뿐인 비교 토글마다 전 기간을 재조회한다(14일 기준 204행).
 - **피드 페이지네이션** — `fetchPublicAnswers`는 `ANSWER_FETCH_LIMIT = 1000`으로 상한만 걸어둔 상태다(도달 시 `console.warn`). 하루 답변이 ~400개를 넘으면 그 전에 `.in()`의 UUID 배열이 URL 길이 한계에 먼저 걸린다. 착수하면 답글이 지연 로딩으로 바뀌고 배지용 `reply_count`가 다시 필요해진다 (→ "오늘의 질문 — 답글").
 - **`horoscopes` · `user_devices` · `notification_log`의 DDL이 마이그레이션에 없다** — 대시보드에서 수동 생성돼 스키마가 코드로 남아 있지 않다. 백업이 데이터만 담으므로 테이블이 통째로 사라지면 복원할 스키마가 없다 (→ "백업").
 - **운영 확인 주기** — `hide_threshold`가 답변 4 · 답글 3으로 높은 편이라 자동 숨김이 잘 안 걸린다. 글의 노출 수명이 24시간이므로 신고 큐를 **매일** 봐야 한다 (→ "Supabase 설정").
@@ -150,7 +150,7 @@ CREATE POLICY "user_devices_anon_select" ON public.user_devices FOR SELECT  TO a
 - 개인정보처리방침 URL: `https://jeongwon-cho.github.io/Ohaasa/privacy-policy.html`
 - 커뮤니티 가이드라인 URL: `https://jeongwon-cho.github.io/Ohaasa/community-guidelines.html`
 - `google-services.json`: 커밋 대상(앱 수신용) · Firebase service account JSON은 커밋 금지
-- 현재 버전: v1.6.0 - 오늘의 질문 답글 + 내 답변 고정 카드 · 새 답글 배지
+- 현재 버전: v1.7.0 - 월별 평균 등수(월 지정) · 통계 기간 7일/14일/월간
 
 ---
 
@@ -192,6 +192,12 @@ CREATE POLICY "user_devices_anon_select" ON public.user_devices FOR SELECT  TO a
 
 - **역할 분리**: `stats.tsx`는 orchestration(훅 호출 · state · 카드 조합)만 담당하고, UI 섹션은 `src/components/stats/`의 독립 컴포넌트로 둔다.
 - **데이터 훅**: `useHoroscopeTrends(zodiacSign, period, compareSign?)` — 기간 내 전체 별자리 rank rows를 한 번에 받아 클라이언트에서 가공. `CUTOFF_BUFFER_DAYS = 3`으로 크론 미실행 날 대응.
+- **기간은 `7d · 14d · 월간`** — 월간은 `"m:2026-08"` 문자열(`MonthPeriod`)이다. 객체가 아니라 문자열로 둔 건 state 비교·`useEffect` deps·Map 키를 그대로 쓰기 위해서다. 헤더의 세 번째 토글은 기간 선택이 아니라 **`MonthSelectSheet`를 여는 버튼**이다("어느 달?"을 먼저 물어야 하므로).
+  - 월간은 개수가 아니라 캘린더 경계라 `takeWindow()`(개수 slice)를 태우지 않는다 — **31일 달에 `slice(-30)`을 걸면 1일치가 조용히 빠진다.** 버퍼도 두지 않는다(두면 지난달 말일이 평균에 섞인다).
+  - **화살표 기준이 기간마다 다르다** — 일수 기간은 전날 대비(같은 길이 윈도우를 하루 앞당겨 재계산), 월간은 **전월 대비**(이전 달 전체 평균). 그래서 월간 조회는 이전 달까지 2개월치(약 744행)를 받는다. 캡션 문구는 `trendBaselineLabel()`이 만든다.
+  - **지난 달은 `pastMonthCache`에 캐시한다**(행이 더 늘지 않으므로). 이번 달은 매일 늘어나서 제외 — `isPastMonth()` 판정이 그 경계다.
+  - 매달 1일 크론(KST 05:59) 전에는 이번 달 row가 0개다 — `RankingCard`가 "데이터가 아직 없어요"로, `ChartCard`는 기존 7일 미만 플레이스홀더로 받는다.
+  - `useAvailableHoroscopeMonths(enabled)`는 **시트를 열기 전에는 조회하지 않는다**(`enabled=false`). 항상 마운트된 채 120행을 긁는 `HoroscopeDateSheet`의 문제를 반복하지 않기 위함. 날짜 목록은 `zodiac_sign='aries'` 한 별자리만 세고(12배를 받을 이유가 없다) `PAGE=500`으로 페이지네이션한다.
 - **등수 표시**: 기본은 `roundedRank`(반올림값이 같으면 공동 등수 부여 후 다음 번호 스킵 — 3.4·6.1·6.8 → 1/2/2/4위), 자세히 모드는 `exactRank` + 소수점 1자리. `detailMode`는 저장하지 않아 재진입 시 리셋되고, 공유 카드는 토글과 무관하게 항상 정수.
 - **화살표 트렌드 기준**: 그날의 원본 운세 순위(1~12)가 아니라 **기간 평균 공동 등수(`roundedRank`)의 어제 대비 변화** — 같은 길이의 윈도우를 하루 앞당겨 재계산한다.
 
@@ -300,7 +306,7 @@ CREATE POLICY "user_devices_anon_select" ON public.user_devices FOR SELECT  TO a
 
 - [ ] `app/app.config.js`의 `version` 필드를 올렸는가?
 - [ ] 이 파일(`CLAUDE.md`) 하단의 "현재 버전"을 같은 값으로 수정했는가?
-- [ ] `app/app/(tabs)/settings.tsx` 푸터의 버전 텍스트(현재 `v1.6.0`)도 같이 고쳤는가? (하드코딩되어 있다)
+- [ ] `app/app/(tabs)/settings.tsx` 푸터의 버전 텍스트(현재 `v1.7.0`)도 같이 고쳤는가? (하드코딩되어 있다)
 - [ ] `docs/` 변경분을 push해 GitHub Pages에 반영했는가? (앱 내 링크가 404가 되면 심사에서 걸린다)
 - [ ] `supabase/migrations/` 신규 SQL을 실행했는가? (`supabase/`는 .gitignore 대상이라 CI가 대신 해주지 않는다)
 - [ ] **GRANT가 실제로 붙었는지 확인했는가?** 새 테이블마다 필수다 — `question_answer_reports`가 이 함정에 걸려 신고가 한 건도 안 들어간 적이 있다. 검증 SQL은 답글 마이그레이션 하단 `-- (f)` 주석 참고.

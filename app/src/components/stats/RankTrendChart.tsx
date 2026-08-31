@@ -57,16 +57,19 @@ function buildSmoothPath(coords: { x: number; y: number }[]): string {
   return d;
 }
 
+// 마지막 점(오늘)에서 고정 간격으로 뒤로 짚는다.
+// Math.round(i * (count-1)/(target-1))로 뽑으면 나눠떨어지지 않는 개수에서 간격이 흔들린다 —
+// 14일은 13을 5로 나눠 2·3·2·3이 번갈아 나오는 최악의 조합이었다.
+// 왼쪽 끝 대신 오늘을 기준으로 잡는 건, 라벨이 비어도 되는 쪽이 과거 끝이기 때문이다.
 function sampleMarkerIndices(count: number, target: number): number[] {
   if (count <= target + 1) return Array.from({ length: count }, (_, i) => i);
 
-  const step = (count - 1) / (target - 1);
-  const indices = new Set<number>();
-  for (let i = 0; i < target; i++) {
-    indices.add(Math.round(i * step));
+  const stride = Math.ceil((count - 1) / (target - 1));
+  const indices: number[] = [];
+  for (let i = count - 1; i >= 0; i -= stride) {
+    indices.push(i);
   }
-  indices.add(count - 1);
-  return Array.from(indices).sort((a, b) => a - b);
+  return indices.reverse();
 }
 
 export function RankTrendChart({ points, comparePoints = [], width, height = 160 }: RankTrendChartProps) {
