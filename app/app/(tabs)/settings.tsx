@@ -426,6 +426,20 @@ export default function SettingsScreen() {
         {__DEV__ && (
           <SettingsSection label="DEV" style={styles.sectionGap}>
             <SettingsRow
+              title="그림일기 프로토타입"
+              description="캔버스 그리기 · 저장/복원 · PNG 용량 비교"
+              showChevron
+              onPress={() => router.push("/sketch-prototype")}
+              style={[styles.aboutRow, styles.rowBorder]}
+            />
+            <SettingsRow
+              title="스케치북"
+              description="월간 그림 격자 · 보관함/달력 전환"
+              showChevron
+              onPress={() => router.push("/sketchbook")}
+              style={[styles.aboutRow, styles.rowBorder]}
+            />
+            <SettingsRow
               title="테스트 알림 보내기"
               description="로컬 알림 즉시 발송"
               showChevron
