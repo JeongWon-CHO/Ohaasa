@@ -440,6 +440,13 @@ export default function SettingsScreen() {
               style={[styles.aboutRow, styles.rowBorder]}
             />
             <SettingsRow
+              title="기분 입력 비교"
+              description="선으로 그린 표정 5단계 vs 숫자 1~10"
+              showChevron
+              onPress={() => router.push("/mood-prototype")}
+              style={[styles.aboutRow, styles.rowBorder]}
+            />
+            <SettingsRow
               title="테스트 알림 보내기"
               description="로컬 알림 즉시 발송"
               showChevron

@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <defs>
+    <filter id="crayon"><feTurbulence type="fractalNoise" baseFrequency="0.09" numOctaves="2" seed="33" result="n"></feTurbulence><feDisplacementMap in="SourceGraphic" in2="n" scale="1.9" xChannelSelector="R" yChannelSelector="G"></feDisplacementMap></filter>
+    <filter id="grain"><feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="4" stitchTiles="stitch"></feTurbulence><feColorMatrix type="saturate" values="0"></feColorMatrix></filter>
+    <clipPath id="blobClip"><path d="M32 4C47 4 60 16 60 32C60 48 47 60 31 60C16 60 4 48 4 31C4 16 17 4 32 4Z"></path></clipPath>
+  </defs>
+  <g filter="url(#crayon)">
+    <path d="M32 4C47 4 60 16 60 32C60 48 47 60 31 60C16 60 4 48 4 31C4 16 17 4 32 4Z" fill="#C3B5DE"></path>
+    <g clip-path="url(#blobClip)"><rect width="64" height="64" filter="url(#grain)" opacity="0.4" style="mix-blend-mode:multiply"></rect></g>
+    <path d="M18 24q5 7 10 0" fill="none" stroke="#5A4636" stroke-width="3" stroke-linecap="round"></path>
+    <path d="M36 24q5 7 10 0" fill="none" stroke="#5A4636" stroke-width="3" stroke-linecap="round"></path>
+    <path d="M25 42q0-9 7-9q7 0 7 9q0 4-7 4q-7 0-7-4z" fill="#5A4636"></path>
+  </g>
+</svg>
