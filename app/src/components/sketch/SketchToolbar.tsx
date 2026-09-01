@@ -2,16 +2,18 @@ import { Feather } from '@expo/vector-icons';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { colors, radius, spacing } from '@/src/constants/design';
-import { SKETCH_COLORS, SKETCH_WIDTHS } from '@/src/lib/sketch';
+import { BRUSHES, SKETCH_COLORS, SKETCH_WIDTHS, type BrushKind } from '@/src/lib/sketch';
 
 export { SKETCH_COLORS, SKETCH_WIDTHS } from '@/src/lib/sketch';
 
 interface SketchToolbarProps {
   color: string;
   strokeWidth: number;
+  brush: BrushKind;
   canUndo: boolean;
   onSelectColor: (color: string) => void;
   onSelectWidth: (width: number) => void;
+  onSelectBrush: (brush: BrushKind) => void;
   onUndo: () => void;
   onClear: () => void;
 }
@@ -19,9 +21,11 @@ interface SketchToolbarProps {
 export function SketchToolbar({
   color,
   strokeWidth,
+  brush,
   canUndo,
   onSelectColor,
   onSelectWidth,
+  onSelectBrush,
   onUndo,
   onClear,
 }: SketchToolbarProps) {
@@ -54,6 +58,20 @@ export function SketchToolbar({
                 backgroundColor: colors.text,
               }}
             />
+          </Pressable>
+        ))}
+      </View>
+
+      <View style={styles.row}>
+        {BRUSHES.map((b) => (
+          <Pressable
+            key={b.kind}
+            onPress={() => onSelectBrush(b.kind)}
+            style={[styles.brush, brush === b.kind && styles.brushActive]}
+          >
+            <Text style={[styles.brushText, brush === b.kind && styles.brushTextActive]}>
+              {b.label}
+            </Text>
           </Pressable>
         ))}
       </View>
@@ -113,6 +131,27 @@ const styles = StyleSheet.create({
   },
   widthBtnActive: {
     backgroundColor: colors.cream3,
+  },
+  brush: {
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderRadius: radius.pill,
+    backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  brushActive: {
+    backgroundColor: colors.cream3,
+    borderColor: colors.textSoft,
+  },
+  brushText: {
+    fontSize: 12,
+    fontFamily: 'NotoSansKR_400Regular',
+    color: colors.textSoft,
+  },
+  brushTextActive: {
+    fontFamily: 'NotoSansKR_500Medium',
+    color: colors.text,
   },
   action: {
     flexDirection: 'row',

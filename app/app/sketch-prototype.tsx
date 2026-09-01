@@ -26,6 +26,7 @@ import {
   countPoints,
   emptySketch,
   serializeSketch,
+  type BrushKind,
   type Sketch,
   type Stroke,
 } from '@/src/lib/sketch';
@@ -53,6 +54,7 @@ export default function SketchPrototypeScreen() {
   const [sketch, setSketch] = useState<Sketch>(emptySketch);
   const [color, setColor] = useState<string>(SKETCH_COLORS[0]);
   const [strokeWidth, setStrokeWidth] = useState<number>(SKETCH_WIDTHS[1]);
+  const [brush, setBrush] = useState<BrushKind>('crayon');
   const [pngBytes, setPngBytes] = useState<number | null>(null);
 
   const canvasSize = Math.min(width - spacing.xl * 2, MAX_CANVAS);
@@ -135,6 +137,7 @@ export default function SketchPrototypeScreen() {
               strokes={sketch.strokes}
               color={color}
               strokeWidth={strokeWidth}
+              brush={brush}
               onStrokeEnd={handleStrokeEnd}
             />
           </View>
@@ -145,6 +148,8 @@ export default function SketchPrototypeScreen() {
             canUndo={sketch.strokes.length > 0}
             onSelectColor={setColor}
             onSelectWidth={setStrokeWidth}
+            brush={brush}
+            onSelectBrush={setBrush}
             onUndo={handleUndo}
             onClear={handleClear}
           />

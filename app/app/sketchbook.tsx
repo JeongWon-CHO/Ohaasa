@@ -15,51 +15,51 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BottomSheet } from '@/src/components/common/BottomSheet';
 import { ResponsiveContainer } from '@/src/components/common/ResponsiveContainer';
 import { ScreenBackground } from '@/src/components/final/ScreenBackground';
+import { GRID_PAD, HandDrawnGrid } from '@/src/components/sketch/HandDrawnGrid';
+import { MoodFace } from '@/src/components/sketch/MoodFace';
 import { SketchThumbnail } from '@/src/components/sketch/SketchThumbnail';
-import { colors, radius, spacing } from '@/src/constants/design';
-import { sampleSketchForDate } from '@/src/constants/sampleDoodles';
-import { countPoints, type Sketch } from '@/src/lib/sketch';
+import { colors, layout, radius, spacing } from '@/src/constants/design';
+import { sampleJournalDraftForDate } from '@/src/constants/sampleDoodles';
+import { daysInMonth, shiftMonth, toDateString, toYearMonth } from '@/src/lib/dateKeys';
 import {
-  clearAllSketches,
-  daysInMonth,
-  loadDaySketch,
-  loadMonthSketches,
-  saveDaySketch,
-  toDateString,
-  toYearMonth,
-} from '@/src/lib/sketchbook';
+  clearAllJournals,
+  loadMonthJournals,
+  saveJournal,
+  type DailyJournal,
+} from '@/src/lib/journal';
 
-/**
- * 4열은 "보관함", 7열은 "달력". 같은 데이터를 두 배치로 놓고 비교하려고 토글로 뒀다.
- * 7열에서는 칸이 절반 크기가 되므로 획이 많은 그림이 뭉개지는지가 여기서 갈린다.
- */
-const COLUMN_OPTIONS = [4, 7] as const;
-const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토'];
+const WEEKDAYS = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
+const MONTH_NAMES = [
+  'JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN',
+  'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC',
+];
 
-function shiftMonth(yearMonth: string, delta: number): string {
+/** 날짜 숫자가 차지하는 줄 높이. 칸 높이 = 이 값 + 정사각 그림. */
+const DAY_ROW = 13;
+const HEADER_ROW = 15;
+
+function monthTitle(yearMonth: string): string {
   const [y, m] = yearMonth.split('-').map(Number);
-  return toYearMonth(new Date(y, m - 1 + delta, 1));
+  return `${y}. ${MONTH_NAMES[m - 1]}`;
 }
 
-function monthLabel(yearMonth: string): string {
+function monthLabelKo(yearMonth: string): string {
   const [y, m] = yearMonth.split('-').map(Number);
   return `${y}년 ${m}월`;
 }
 
-/** 달력 배치에서 1일 앞에 넣을 빈 칸 수 */
-function leadingBlanks(yearMonth: string): number {
-  const [y, m] = yearMonth.split('-').map(Number);
-  return new Date(y, m - 1, 1).getDay();
-}
-
+/**
+ * 종이 다이어리처럼 격자를 그어 한 달을 통째로 보여준다.
+ * 칸을 따로 떨어진 카드로 두면 "보관함"이 되고, 선을 이어 붙이면 "달력"이 된다 —
+ * 빠진 날이 표 안의 빈칸으로 읽히는 게 이 화면의 요점이다.
+ */
 export default function SketchbookScreen() {
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
 
   const [yearMonth, setYearMonth] = useState(() => toYearMonth(new Date()));
-  const [sketches, setSketches] = useState<Map<string, Sketch>>(new Map());
+  const [journals, setJournals] = useState<Map<string, DailyJournal>>(new Map());
   const [focused, setFocused] = useState<string | null>(null);
-  const [columns, setColumns] = useState<number>(COLUMN_OPTIONS[0]);
 
   const [reloadTick, setReloadTick] = useState(0);
   const reload = useCallback(() => setReloadTick((t) => t + 1), []);
@@ -68,8 +68,8 @@ export default function SketchbookScreen() {
     // cancelled 플래그가 없으면 월을 빠르게 넘길 때 먼저 띄운 조회가 나중에 도착해
     // 지금 보고 있는 달을 덮어쓸 수 있다.
     let cancelled = false;
-    loadMonthSketches(yearMonth).then((loaded) => {
-      if (!cancelled) setSketches(loaded);
+    loadMonthJournals(yearMonth).then((loaded) => {
+      if (!cancelled) setJournals(loaded);
     });
     return () => {
       cancelled = true;
@@ -77,50 +77,62 @@ export default function SketchbookScreen() {
   }, [yearMonth, reloadTick]);
 
   const days = daysInMonth(yearMonth);
-
-  // 이번 달이면 오늘까지만 — 미래 날짜에 그림이 있으면 "쌓임"이 거짓말이 된다.
   const today = toDateString(new Date());
   const pastDays = days.filter((d) => d <= today);
   const fillTarget = pastDays.length > 0 ? pastDays : days;
 
   const fillDummy = useCallback(async () => {
-    // 며칠은 비워둔다. 매일 빠짐없이 쓴 스케치북은 현실이 아니라서
+    // 며칠은 비워둔다. 매일 빠짐없이 쓴 달력은 현실이 아니라서
     // 빈칸이 섞인 모습으로 판단해야 한다.
     for (const date of fillTarget) {
       if (Math.random() < 0.22) continue;
-      await saveDaySketch(date, sampleSketchForDate(date));
+      await saveJournal(date, sampleJournalDraftForDate(date));
     }
     reload();
   }, [fillTarget, reload]);
 
-  /**
-   * 샘플 도안은 획이 1~4개뿐이라 작은 칸에서 유리하게 보인다.
-   * 실제로 그린 그림(획 수십~수백 개)이 같은 크기에서 어떻게 보이는지가 진짜 질문이라
-   * 오늘 저장한 내 그림을 그대로 복제해 채워본다.
-   */
   const fillWithMine = useCallback(async () => {
-    const mine = await loadDaySketch(today);
+    const mine = journals.get(today);
     if (!mine) {
-      Alert.alert(
-        '오늘 그림이 없어요',
-        '그림일기 프로토타입에서 [오늘 날짜로 저장]을 먼저 눌러주세요.',
-      );
+      Alert.alert('오늘 일기가 없어요', '[오늘 일기 쓰기]로 먼저 한 장 남겨주세요.');
       return;
     }
-    for (const date of fillTarget) await saveDaySketch(date, mine);
+    for (const date of fillTarget) {
+      await saveJournal(date, {
+        mood: mine.mood,
+        sketch: mine.sketch,
+        summary: mine.summary,
+      });
+    }
     reload();
-  }, [today, fillTarget, reload]);
+  }, [journals, today, fillTarget, reload]);
 
   const clearAll = useCallback(async () => {
-    await clearAllSketches();
+    await clearAllJournals();
     reload();
   }, [reload]);
 
-  const innerWidth = Math.min(width, 600) - spacing.xl * 2;
-  const gap = columns === 7 ? spacing.xs : spacing.sm;
-  const cell = (innerWidth - gap * (columns - 1)) / columns;
-  const focusedSketch = focused ? sketches.get(focused) : null;
-  const blanks = columns === 7 ? leadingBlanks(yearMonth) : 0;
+  // 격자는 시트 안쪽(패딩 제외)에 들어가야 한다. 바깥 폭으로 잡으면 오른쪽이 잘린다.
+  const outerWidth = Math.min(width, layout.maxContentWidth) - spacing.lg * 2;
+  const sheetPadding = spacing.md;
+  const cell = Math.floor((outerWidth - sheetPadding * 2) / 7);
+  const gridWidth = cell * 7;
+  const sketchSize = cell - 1;
+  const cellHeight = DAY_ROW + sketchSize;
+
+  // 1일을 요일 자리에 맞추고, 마지막 주의 남는 칸까지 채워 표를 직사각형으로 만든다.
+  const [y, m] = yearMonth.split('-').map(Number);
+  const leading = new Date(y, m - 1, 1).getDay();
+  const slots: (string | null)[] = [
+    ...Array.from({ length: leading }, () => null),
+    ...days,
+  ];
+  while (slots.length % 7 !== 0) slots.push(null);
+  const weeks = Array.from({ length: slots.length / 7 }, (_, i) =>
+    slots.slice(i * 7, i * 7 + 7),
+  );
+
+  const focusedJournal = focused ? journals.get(focused) : null;
 
   return (
     <ScreenBackground>
@@ -129,28 +141,7 @@ export default function SketchbookScreen() {
           <Pressable onPress={() => router.back()} hitSlop={12} style={styles.iconBtn}>
             <Feather name="chevron-left" size={22} color={colors.text} />
           </Pressable>
-          <Text style={styles.title}>스케치북</Text>
-
           <View style={styles.spacer} />
-
-          <View style={styles.segment}>
-            {COLUMN_OPTIONS.map((n) => (
-              <Pressable
-                key={n}
-                onPress={() => setColumns(n)}
-                style={[styles.segmentBtn, columns === n && styles.segmentBtnActive]}
-              >
-                <Text
-                  style={[styles.segmentText, columns === n && styles.segmentTextActive]}
-                >
-                  {n === 7 ? '달력' : '보관함'}
-                </Text>
-              </Pressable>
-            ))}
-          </View>
-        </View>
-
-        <View style={styles.monthRow}>
           <Pressable
             onPress={() => setYearMonth((v) => shiftMonth(v, -1))}
             hitSlop={12}
@@ -158,7 +149,6 @@ export default function SketchbookScreen() {
           >
             <Feather name="chevron-left" size={18} color={colors.textMid} />
           </Pressable>
-          <Text style={styles.month}>{monthLabel(yearMonth)}</Text>
           <Pressable
             onPress={() => setYearMonth((v) => shiftMonth(v, 1))}
             hitSlop={12}
@@ -168,47 +158,72 @@ export default function SketchbookScreen() {
           </Pressable>
         </View>
 
-        <Text style={styles.count}>{sketches.size}개의 그림</Text>
-
         <ScrollView
           contentContainerStyle={[
             styles.content,
             { paddingBottom: insets.bottom + spacing.xxl },
           ]}
         >
-          {columns === 7 && (
-            <View style={[styles.grid, { gap }]}>
-              {WEEKDAYS.map((w) => (
-                <Text key={w} style={[styles.weekday, { width: cell }]}>
-                  {w}
-                </Text>
+          <View style={[styles.sheet, { width: gridWidth + sheetPadding * 2 }]}>
+            <View style={styles.titleRow}>
+              <Text style={styles.title}>{monthTitle(yearMonth)}</Text>
+              <Text style={styles.count}>{journals.size}일</Text>
+            </View>
+
+            <View style={styles.grid}>
+              {/* 격자선은 View 테두리가 아니라 손으로 그은 듯한 SVG 선으로 덮는다. */}
+              <View style={styles.gridLines} pointerEvents="none">
+                <HandDrawnGrid
+                  columns={7}
+                  cellWidth={cell}
+                  headerHeight={HEADER_ROW}
+                  rowHeight={cellHeight}
+                  rows={weeks.length}
+                  color={RULE}
+                  seed={yearMonth}
+                />
+              </View>
+
+              <View style={styles.weekRow}>
+                {WEEKDAYS.map((w) => (
+                  <View key={w} style={[styles.headCell, { width: cell }]}>
+                    <Text style={styles.headText}>{w}</Text>
+                  </View>
+                ))}
+              </View>
+
+              {weeks.map((week, wi) => (
+                <View key={wi} style={styles.weekRow}>
+                  {week.map((date, di) => {
+                    if (!date) {
+                      return (
+                        <View
+                          key={`e${di}`}
+                          style={[styles.cell, { width: cell, height: cellHeight }]}
+                        />
+                      );
+                    }
+                    const journal = journals.get(date);
+                    const day = Number(date.slice(8));
+                    const isToday = date === today;
+                    return (
+                      <Pressable
+                        key={date}
+                        onPress={() => journal && setFocused(date)}
+                        style={[styles.cell, { width: cell, height: cellHeight }]}
+                      >
+                        <Text style={[styles.dayNum, isToday && styles.dayNumToday]}>
+                          {day}
+                        </Text>
+                        {journal && (
+                          <SketchThumbnail sketch={journal.sketch} size={sketchSize} bare />
+                        )}
+                      </Pressable>
+                    );
+                  })}
+                </View>
               ))}
             </View>
-          )}
-
-          <View style={[styles.grid, { gap }]}>
-            {Array.from({ length: blanks }, (_, i) => (
-              <View key={`blank-${i}`} style={{ width: cell }} />
-            ))}
-
-            {days.map((date) => {
-              const sketch = sketches.get(date);
-              const day = Number(date.slice(8));
-              return (
-                <Pressable
-                  key={date}
-                  onPress={() => sketch && setFocused(date)}
-                  style={{ width: cell }}
-                >
-                  {sketch ? (
-                    <SketchThumbnail sketch={sketch} size={cell} />
-                  ) : (
-                    <View style={[styles.empty, { width: cell, height: cell }]} />
-                  )}
-                  <Text style={[styles.day, !sketch && styles.dayEmpty]}>{day}</Text>
-                </Pressable>
-              );
-            })}
           </View>
 
           <View style={styles.actions}>
@@ -226,15 +241,27 @@ export default function SketchbookScreen() {
       </ResponsiveContainer>
 
       <BottomSheet visible={focused !== null} onClose={() => setFocused(null)}>
-        {focusedSketch && focused && (
-          <View style={styles.sheet}>
-            <Text style={styles.sheetDate}>
-              {monthLabel(yearMonth)} {Number(focused.slice(8))}일
+        {focusedJournal && focused && (
+          <View style={styles.detail}>
+            <Text style={styles.detailDate}>
+              {monthLabelKo(yearMonth)} {Number(focused.slice(8))}일
             </Text>
-            <SketchThumbnail sketch={focusedSketch} size={innerWidth} />
-            <Text style={styles.sheetMeta}>
-              획 {focusedSketch.strokes.length} · 점 {countPoints(focusedSketch)}
-            </Text>
+            <SketchThumbnail sketch={focusedJournal.sketch} size={outerWidth - spacing.xl} />
+            <View style={styles.detailRow}>
+              <MoodFace mood={focusedJournal.mood} size={30} />
+              {focusedJournal.summary.length > 0 && (
+                <Text style={styles.detailSummary}>{focusedJournal.summary}</Text>
+              )}
+            </View>
+            <Pressable
+              onPress={() => {
+                setFocused(null);
+                router.push({ pathname: '/journal-write', params: { date: focused } });
+              }}
+              style={styles.editBtn}
+            >
+              <Text style={styles.editText}>수정하기</Text>
+            </Pressable>
           </View>
         )}
       </BottomSheet>
@@ -242,106 +269,94 @@ export default function SketchbookScreen() {
   );
 }
 
+const RULE = '#7A6854';
+
 const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.sm,
-    paddingHorizontal: spacing.lg,
+    paddingHorizontal: spacing.sm,
     paddingBottom: spacing.sm,
   },
-  spacer: {
-    flex: 1,
-  },
+  spacer: { flex: 1 },
   iconBtn: {
     width: 32,
     height: 32,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  title: {
-    fontSize: 16,
-    fontFamily: 'NotoSansKR_500Medium',
-    color: colors.text,
-  },
-  segment: {
-    flexDirection: 'row',
-    borderRadius: radius.pill,
-    backgroundColor: colors.segmentTrack,
-    padding: 2,
-  },
-  segmentBtn: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
-    borderRadius: radius.pill,
-  },
-  segmentBtnActive: {
-    backgroundColor: colors.cardSolid,
-  },
-  segmentText: {
-    fontSize: 11,
-    fontFamily: 'NotoSansKR_400Regular',
-    color: colors.textSoft,
-  },
-  segmentTextActive: {
-    fontFamily: 'NotoSansKR_500Medium',
-    color: colors.text,
-  },
-  monthRow: {
-    flexDirection: 'row',
+  content: {
+    paddingHorizontal: spacing.lg,
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.lg,
   },
-  month: {
-    fontSize: 18,
-    fontFamily: 'NotoSansKR_400Regular',
-    color: colors.text,
+  sheet: {
+    backgroundColor: colors.cardSolid,
+    borderRadius: radius.sm,
+    paddingHorizontal: spacing.sm,
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.md,
+  },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    justifyContent: 'space-between',
+    paddingBottom: spacing.sm,
+  },
+  title: {
+    fontSize: 15,
+    fontFamily: 'NotoSansKR_500Medium',
+    color: colors.textMid,
+    letterSpacing: 1.5,
   },
   count: {
-    textAlign: 'center',
-    fontSize: 12,
+    fontSize: 10,
     fontFamily: 'NotoSansKR_400Regular',
     color: colors.textSoft,
-    marginTop: spacing.xs,
-    marginBottom: spacing.lg,
-  },
-  content: {
-    paddingHorizontal: spacing.xl,
   },
   grid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+    position: 'relative',
   },
-  weekday: {
-    textAlign: 'center',
-    fontSize: 10,
+  // 선이 칸 내용 위에 오도록 겹쳐 놓는다. 아래에 두면 그림이 선을 가린다.
+  gridLines: {
+    position: 'absolute',
+    top: -GRID_PAD,
+    left: -GRID_PAD,
+    zIndex: 1,
+  },
+  weekRow: {
+    flexDirection: 'row',
+  },
+  headCell: {
+    height: HEADER_ROW,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  headText: {
+    fontSize: 8,
     fontFamily: 'NotoSansKR_400Regular',
     color: colors.textSoft,
-    marginBottom: spacing.xs,
+    letterSpacing: 0.5,
   },
-  empty: {
-    borderRadius: radius.sm,
-    borderWidth: 1,
-    borderStyle: 'dashed',
-    borderColor: 'rgba(156,139,120,0.25)',
+  cell: {
+    overflow: 'hidden',
   },
-  day: {
-    textAlign: 'center',
-    fontSize: 10,
+  dayNum: {
+    fontSize: 9,
+    lineHeight: DAY_ROW,
     fontFamily: 'NotoSansKR_400Regular',
-    color: colors.textMid,
-    marginTop: spacing.xs,
-    marginBottom: spacing.sm,
+    color: colors.textSoft,
+    paddingLeft: 3,
   },
-  dayEmpty: {
-    color: 'rgba(156,139,120,0.45)',
+  dayNumToday: {
+    fontFamily: 'NotoSansKR_500Medium',
+    color: colors.apricotDark,
   },
   actions: {
     flexDirection: 'row',
     gap: spacing.sm,
-    marginTop: spacing.lg,
+    marginTop: spacing.xl,
     marginBottom: spacing.sm,
+    alignSelf: 'stretch',
   },
   btn: {
     flex: 1,
@@ -351,6 +366,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.apricot,
   },
   btnGhost: {
+    alignSelf: 'stretch',
     backgroundColor: colors.card,
     borderWidth: 1,
     borderColor: colors.border,
@@ -363,19 +379,37 @@ const styles = StyleSheet.create({
   btnGhostText: {
     color: colors.textMid,
   },
-  sheet: {
+  detail: {
     alignItems: 'center',
     gap: spacing.md,
     paddingBottom: spacing.lg,
   },
-  sheetDate: {
+  detailDate: {
     fontSize: 15,
     fontFamily: 'NotoSansKR_500Medium',
     color: colors.text,
   },
-  sheetMeta: {
-    fontSize: 11,
+  detailRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  detailSummary: {
+    fontSize: 14,
     fontFamily: 'NotoSansKR_400Regular',
-    color: colors.textSoft,
+    color: colors.textMid,
+  },
+  editBtn: {
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.xxl,
+    borderRadius: radius.pill,
+    backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  editText: {
+    fontSize: 13,
+    fontFamily: 'NotoSansKR_500Medium',
+    color: colors.textMid,
   },
 });

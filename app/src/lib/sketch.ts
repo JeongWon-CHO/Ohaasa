@@ -25,11 +25,26 @@ export const SKETCH_WIDTHS = [0.006, 0.014, 0.03] as const;
 
 export type Point = [number, number];
 
+/**
+ * 브러시 재질. **획마다 저장한다** — 나중에 다시 열었을 때 그릴 당시의 질감이
+ * 그대로 나와야 하고, 한 그림 안에서 재질을 섞어 쓸 수도 있어야 하기 때문이다.
+ * 기존 데이터에는 이 필드가 없으므로 optional로 두고 없으면 'pen'으로 읽는다.
+ */
+export type BrushKind = 'pen' | 'crayon' | 'pencil';
+
+export const BRUSHES: { kind: BrushKind; label: string }[] = [
+  { kind: 'pen', label: '펜' },
+  { kind: 'crayon', label: '크레파스' },
+  { kind: 'pencil', label: '연필' },
+];
+
 export interface Stroke {
   points: Point[];
   color: string;
   /** 캔버스 폭 대비 비율. 좌표와 같은 단위여야 확대해도 선 굵기가 함께 간다. */
   width: number;
+  /** 없으면 'pen' — 이 필드가 생기기 전에 저장된 그림 때문에 optional이다. */
+  brush?: BrushKind;
 }
 
 export interface Sketch {
@@ -98,6 +113,37 @@ export function strokeToPath(stroke: Stroke, size: number): string {
   }
   d += `L${x(pts.length - 1)} ${y(pts.length - 1)}`;
   return d;
+}
+
+/**
+ * 같은 곡선을 겹쳐 그려 재질을 만든다. 겹마다 굵기·투명도·끊김만 다르고
+ * 경로는 하나를 공유한다 — 따로 흔들면 선이 갈라져 지저분해진다(→ HandDrawnGrid).
+ *
+ * shift는 캔버스 크기에 비례하지 않는 px 값이다. 작게 그릴수록 겹이 붙어
+ * 저절로 단순해지므로 썸네일에서 따로 손댈 필요가 없다.
+ */
+export interface BrushPass {
+  widthScale: number;
+  opacity: number;
+  dash?: string;
+}
+
+export function brushPasses(brush: BrushKind | undefined): BrushPass[] {
+  switch (brush) {
+    case 'crayon':
+      return [
+        { widthScale: 1.35, opacity: 0.62 },
+        { widthScale: 0.85, opacity: 0.5, dash: '3 2.2' },
+        { widthScale: 1.9, opacity: 0.16, dash: '1.5 5' },
+      ];
+    case 'pencil':
+      return [
+        { widthScale: 0.85, opacity: 0.55 },
+        { widthScale: 0.5, opacity: 0.4, dash: '2 1.6' },
+      ];
+    default:
+      return [{ widthScale: 1, opacity: 1 }];
+  }
 }
 
 export function countPoints(sketch: Sketch): number {

@@ -189,3 +189,23 @@ export function sampleSketchForDate(date: string): Sketch {
 
   return { version: 1, aspect: 1, strokes };
 }
+
+const SAMPLE_MOODS = [20, 40, 60, 60, 80, 80, 80, 100] as const;
+const SAMPLE_SUMMARIES = [
+  '생각보다 괜찮았던 하루',
+  '조용히 지나간 하루',
+  '커피가 유난히 맛있던 날',
+  '조금 지쳤던 하루',
+  '오랜만에 웃었다',
+  '',
+];
+
+/** 스케치북을 채워볼 때 쓰는 하루치 샘플 (그림 + 기분 + 한마디). */
+export function sampleJournalDraftForDate(date: string) {
+  const rand = seededRandom(`${date}:meta`);
+  return {
+    sketch: sampleSketchForDate(date),
+    mood: SAMPLE_MOODS[Math.floor(rand() * SAMPLE_MOODS.length)],
+    summary: SAMPLE_SUMMARIES[Math.floor(rand() * SAMPLE_SUMMARIES.length)],
+  };
+}

@@ -52,19 +52,5 @@ export async function clearAllSketches(): Promise<number> {
   return mine.length;
 }
 
-export function toYearMonth(date: Date): string {
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-}
-
-export function toDateString(date: Date): string {
-  return `${toYearMonth(date)}-${String(date.getDate()).padStart(2, '0')}`;
-}
-
-export function daysInMonth(yearMonth: string): string[] {
-  const [y, m] = yearMonth.split('-').map(Number);
-  const last = new Date(y, m, 0).getDate();
-  return Array.from(
-    { length: last },
-    (_, i) => `${yearMonth}-${String(i + 1).padStart(2, '0')}`,
-  );
-}
+// 날짜 헬퍼는 journal.ts도 쓰므로 dateKeys.ts로 옮겼다. 기존 import를 살려두기 위한 재export.
+export { daysInMonth, toDateString, toYearMonth } from './dateKeys';

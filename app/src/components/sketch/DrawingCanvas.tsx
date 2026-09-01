@@ -1,9 +1,10 @@
 import { memo, useMemo, useRef, useState } from 'react';
 import { PanResponder, StyleSheet, View } from 'react-native';
-import Svg, { Path } from 'react-native-svg';
+import Svg from 'react-native-svg';
 
 import { colors, radius } from '@/src/constants/design';
-import { CANVAS_ASPECT, type Point, type Stroke, strokeToPath } from '@/src/lib/sketch';
+import { renderStroke } from '@/src/components/sketch/StrokePath';
+import { CANVAS_ASPECT, type BrushKind, type Point, type Stroke } from '@/src/lib/sketch';
 
 /**
  * 터치 이벤트는 1px만 움직여도 들어온다. 전부 담으면 점이 수천 개가 되어
@@ -18,6 +19,7 @@ interface DrawingCanvasProps {
   color: string;
   /** 정규화 단위(캔버스 폭 대비 비율) */
   strokeWidth: number;
+  brush: BrushKind;
   onStrokeEnd: (stroke: Stroke) => void;
 }
 
@@ -36,21 +38,7 @@ const CommittedStrokes = memo(function CommittedStrokes({
   strokes: Stroke[];
   size: number;
 }) {
-  return (
-    <>
-      {strokes.map((stroke, i) => (
-        <Path
-          key={i}
-          d={strokeToPath(stroke, size)}
-          stroke={stroke.color}
-          strokeWidth={stroke.width * size}
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          fill="none"
-        />
-      ))}
-    </>
-  );
+  return <>{strokes.map((stroke, i) => renderStroke(stroke, size, i))}</>;
 });
 
 export function DrawingCanvas({
@@ -58,6 +46,7 @@ export function DrawingCanvas({
   strokes,
   color,
   strokeWidth,
+  brush,
   onStrokeEnd,
 }: DrawingCanvasProps) {
   const pointsRef = useRef<Point[]>([]);
@@ -66,7 +55,7 @@ export function DrawingCanvas({
   const [livePoints, setLivePoints] = useState<Point[]>([]);
 
   // PanResponder가 제스처 도중에 새로 만들어지면 그 획이 끊긴다.
-  // 아래 네 값은 모두 손가락이 닿아 있는 동안에는 바뀔 수 없어서(색·굵기는 툴바 탭,
+  // 아래 값은 모두 손가락이 닿아 있는 동안에는 바뀔 수 없어서(색·굵기·재질은 툴바 탭,
   // size는 회전, onStrokeEnd는 화면에서 useCallback으로 고정) 의존성으로 두어도 안전하다.
   // 여기에 매 렌더 바뀌는 값을 추가하면 그리기가 조용히 깨진다.
   const panResponder = useMemo(
@@ -120,6 +109,7 @@ export function DrawingCanvas({
               points: pointsRef.current,
               color,
               width: strokeWidth,
+              brush,
             });
           }
           pointsRef.current = [];
@@ -130,11 +120,11 @@ export function DrawingCanvas({
           setLivePoints([]);
         },
       }),
-    [size, color, strokeWidth, onStrokeEnd],
+    [size, color, strokeWidth, brush, onStrokeEnd],
   );
 
   const height = size * CANVAS_ASPECT;
-  const liveStroke: Stroke = { points: livePoints, color, width: strokeWidth };
+  const liveStroke: Stroke = { points: livePoints, color, width: strokeWidth, brush };
 
   return (
     <View
@@ -144,16 +134,7 @@ export function DrawingCanvas({
       {/* 터치는 부모 View가 받아야 grant의 locationX/Y가 캔버스 기준이 된다. */}
       <Svg width={size} height={height} pointerEvents="none">
         <CommittedStrokes strokes={strokes} size={size} />
-        {livePoints.length > 0 && (
-          <Path
-            d={strokeToPath(liveStroke, size)}
-            stroke={color}
-            strokeWidth={strokeWidth * size}
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            fill="none"
-          />
-        )}
+        {livePoints.length > 0 && renderStroke(liveStroke, size, 'live')}
       </Svg>
     </View>
   );

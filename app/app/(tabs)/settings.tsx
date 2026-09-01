@@ -426,6 +426,13 @@ export default function SettingsScreen() {
         {__DEV__ && (
           <SettingsSection label="DEV" style={styles.sectionGap}>
             <SettingsRow
+              title="오늘 일기 쓰기"
+              description="기분 → 그림 → 한마디 3단계 퍼널"
+              showChevron
+              onPress={() => router.push("/journal-write")}
+              style={[styles.aboutRow, styles.rowBorder]}
+            />
+            <SettingsRow
               title="그림일기 프로토타입"
               description="캔버스 그리기 · 저장/복원 · PNG 용량 비교"
               showChevron
