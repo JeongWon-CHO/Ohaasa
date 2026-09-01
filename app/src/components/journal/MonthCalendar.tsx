@@ -22,8 +22,6 @@ const MONTH_NAMES = [
   'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC',
 ];
 
-/** 날짜 숫자가 차지하는 줄 높이. 칸 높이 = 이 값 + 정사각 그림. */
-const DAY_ROW = 13;
 const HEADER_ROW = 15;
 const RULE = '#7A6854';
 
@@ -61,8 +59,10 @@ export function MonthCalendar({
   const sheetPadding = spacing.md;
   const cell = Math.floor((width - sheetPadding * 2) / 7);
   const gridWidth = cell * 7;
+  // 칸을 정사각으로 두고 그림이 칸을 꽉 채운다. 날짜는 그림 위 좌상단에 얹는다 —
+  // 숫자 줄을 따로 두면 칸이 세로로 길어져 그림(1:1)과 칸 비율이 어긋나 보인다.
   const sketchSize = cell - 1;
-  const cellHeight = DAY_ROW + sketchSize;
+  const cellHeight = cell;
 
   // 1일을 요일 자리에 맞추고, 마지막 주의 남는 칸까지 채워 표를 직사각형으로 만든다.
   const [y, m] = yearMonth.split('-').map(Number);
@@ -144,12 +144,13 @@ export function MonthCalendar({
                   onPress={() => onPressDay?.(date, journal)}
                   style={[styles.cell, { width: cell, height: cellHeight }]}
                 >
-                  <Text style={[styles.dayNum, date === today && styles.dayNumToday]}>
-                    {Number(date.slice(8))}
-                  </Text>
                   {journal && (
                     <SketchThumbnail sketch={journal.sketch} size={sketchSize} bare />
                   )}
+                  {/* 숫자가 그림 위에 온다. 획이 어떤 색이든 읽히도록 종이색 후광을 준다. */}
+                  <Text style={[styles.dayNum, date === today && styles.dayNumToday]}>
+                    {Number(date.slice(8))}
+                  </Text>
                 </Pressable>
               );
             })}
@@ -226,11 +227,16 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   dayNum: {
+    position: 'absolute',
+    top: 1,
+    left: 3,
     fontSize: 9,
-    lineHeight: DAY_ROW,
+    lineHeight: 12,
     fontFamily: 'NotoSansKR_400Regular',
-    color: colors.textSoft,
-    paddingLeft: 3,
+    color: colors.textMid,
+    textShadowColor: colors.paper,
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 2.5,
   },
   dayNumToday: {
     fontFamily: 'NotoSansKR_500Medium',

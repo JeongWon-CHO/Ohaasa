@@ -2,6 +2,7 @@ import { Canvas } from '@shopify/react-native-skia';
 import { memo, useMemo, useRef, useState } from 'react';
 import { PanResponder, StyleSheet, View } from 'react-native';
 
+import { GraphPaper } from '@/src/components/sketch/GraphPaper';
 import { SkiaStroke, SkiaStrokes } from '@/src/components/sketch/SkiaStroke';
 import { colors, radius } from '@/src/constants/design';
 import { CANVAS_ASPECT, type BrushKind, type Point, type Stroke } from '@/src/lib/sketch';
@@ -131,6 +132,11 @@ export function DrawingCanvas({
       style={[styles.canvas, { width: size, height }]}
       {...panResponder.panHandlers}
     >
+      {/* 모눈은 그림 아래에 깔린다 */}
+      <View style={StyleSheet.absoluteFill} pointerEvents="none">
+        <GraphPaper size={size} aspect={CANVAS_ASPECT} />
+      </View>
+
       {/* 터치는 부모 View가 받아야 grant의 locationX/Y가 캔버스 기준이 된다. */}
       <Canvas style={{ width: size, height }} pointerEvents="none">
         <CommittedStrokes strokes={strokes} size={size} />

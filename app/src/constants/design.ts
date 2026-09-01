@@ -9,6 +9,13 @@ export const colors = {
   yellow: '#F5D98B',
   apricot: '#F0B89A',
   apricotDark: '#D98A68',
+  // 주 버튼. 기존 앱이 쓰던 주황(apricotDark)을 그대로 쓴다.
+  // 흰 글자와의 대비는 2.65:1로 WCAG 본문 기준(4.5:1)에 못 미친다 —
+  // 브랜드 일관성을 택한 결과이므로, 접근성 지적이 들어오면 여기부터 본다.
+  action: '#D98A68',
+  actionText: '#FFFDF9',
+  /** 진한 갈색. MoodFace의 이목구비와 같은 값이라 라벨·손글씨가 표정과 한 세트로 읽힌다. */
+  ink: '#5A4636',
   lavender: '#D4C5E8',
   text: '#2C2416',
   textMid: '#6B5C48',

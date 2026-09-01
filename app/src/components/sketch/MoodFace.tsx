@@ -1,6 +1,8 @@
 import { memo } from 'react';
 import Svg, { Path } from 'react-native-svg';
 
+import { colors } from '@/src/constants/design';
+
 /**
  * assets/images/feeling-rn/mood-0*.svg 를 옮긴 것.
  *
@@ -14,7 +16,7 @@ import Svg, { Path } from 'react-native-svg';
  * viewBox가 64×64 고정이라 size만 바꾸면 선 굵기까지 함께 스케일된다.
  */
 
-const INK = '#5A4636';
+const INK = colors.ink;
 
 interface MoodLevel {
   /** 저장되는 값 (0~100) */

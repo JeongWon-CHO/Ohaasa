@@ -123,7 +123,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     height: TRACK_HEIGHT,
     borderRadius: TRACK_HEIGHT / 2,
-    backgroundColor: colors.apricot,
+    backgroundColor: colors.apricotDark,
   },
   thumb: {
     position: 'absolute',

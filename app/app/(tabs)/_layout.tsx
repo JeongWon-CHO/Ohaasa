@@ -1,4 +1,4 @@
-import FontAwesome from "@expo/vector-icons/FontAwesome";
+import Feather from "@expo/vector-icons/Feather";
 import { Tabs } from "expo-router";
 import { useEffect } from "react";
 import { ColorValue, Platform } from "react-native";
@@ -14,11 +14,28 @@ import {
 } from "@/src/lib/storage";
 import { upsertDevice } from "@/src/lib/supabase";
 
-function TabBarIcon(props: {
-  name: React.ComponentProps<typeof FontAwesome>["name"];
+/**
+ * 앱의 나머지가 전부 Feather를 쓰는데 탭바만 FontAwesome이라 획 두께가 튀었다.
+ * 선택 상태는 색뿐 아니라 획 두께로도 구분한다 — 색만으로는 작은 아이콘에서 잘 안 읽힌다.
+ */
+function TabBarIcon({
+  name,
+  color,
+  focused,
+}: {
+  name: React.ComponentProps<typeof Feather>["name"];
   color: ColorValue;
+  focused: boolean;
 }) {
-  return <FontAwesome size={22} style={{ marginBottom: -2 }} {...props} />;
+  return (
+    <Feather
+      name={name}
+      size={21}
+      color={color as string}
+      style={{ marginBottom: -2 }}
+      strokeWidth={focused ? 2.4 : 1.8}
+    />
+  );
 }
 
 export default function TabLayout() {
@@ -76,14 +93,18 @@ export default function TabLayout() {
         name="index"
         options={{
           title: "홈",
-          tabBarIcon: ({ color }) => <TabBarIcon name="calendar-o" color={color} />,
+          tabBarIcon: ({ color, focused }) => (
+            <TabBarIcon name="calendar" color={color} focused={focused} />
+          ),
         }}
       />
       <Tabs.Screen
         name="settings"
         options={{
           title: "My",
-          tabBarIcon: ({ color }) => <TabBarIcon name="user-o" color={color} />,
+          tabBarIcon: ({ color, focused }) => (
+            <TabBarIcon name="user" color={color} focused={focused} />
+          ),
         }}
       />
     </Tabs>
