@@ -1,305 +1,179 @@
-import { useCallback, useRef, useState } from "react";
-import { router } from "expo-router";
+import { router, useFocusEffect } from 'expo-router';
+import { useBottomTabBarHeight } from 'expo-router/js-tabs';
+import { useCallback, useState } from 'react';
 import {
-  ActivityIndicator,
-  Linking,
+  Pressable,
   ScrollView,
   StyleSheet,
   Text,
+  useWindowDimensions,
   View,
-} from "react-native";
-import { TodayQuestionSection } from "@/src/components/daily-question/TodayQuestionSection";
-import { DailyReviewEntryCard } from "@/src/components/daily-review/DailyReviewEntryCard";
-import { useDailyQuestion } from "@/src/hooks/useDailyQuestion";
-import { useFocusEffect } from "expo-router";
-import { LinearGradient } from "expo-linear-gradient";
+} from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { CircleDeco, MoonDeco, StarDeco } from "@/src/components/final/ScreenDeco";
-import { DatePill } from "@/src/components/final/DatePill";
-import { FinalHeader } from "@/src/components/final/FinalHeader";
-import { GogoInfoGrid } from "@/src/components/final/GogoInfoGrid";
-import { ZodiacHeroCircle } from "@/src/components/final/ZodiacHeroCircle";
-import { HoroscopeCard } from "@/src/components/HoroscopeCard";
-import { HoroscopeDateSheet } from "@/src/components/HoroscopeDateSheet";
-import { MediaDeniedSheet } from "@/src/components/MediaDeniedSheet";
-import { PushPermissionSheet } from "@/src/components/PushPermissionSheet";
-import { ShareCard } from "@/src/components/share/ShareCard";
-import { Toast } from "@/src/components/common/Toast";
-import { useHoroscopeDateContext } from "@/src/context/HoroscopeDateContext";
-import { colors, gradients, layout } from "@/src/constants/design";
-import { ZODIAC_MAP } from "@/src/constants/zodiac";
-import { useAllHoroscopes } from "@/src/hooks/useHoroscope";
-import { getDailyReview, type DailyReview } from "@/src/lib/dailyReviews";
-import { usePushPermissionPrompt } from "@/src/hooks/usePushPermissionPrompt";
-import { useShareHoroscope } from "@/src/hooks/useShareHoroscope";
-import { useToast } from "@/src/hooks/useToast";
-import { useZodiac } from "@/src/hooks/useZodiac";
+import { BottomSheet } from '@/src/components/common/BottomSheet';
+import { ResponsiveContainer } from '@/src/components/common/ResponsiveContainer';
+import { ScreenBackground } from '@/src/components/final/ScreenBackground';
+import { HoroscopeStrip } from '@/src/components/journal/HoroscopeStrip';
+import { JournalHeader, formatTodayKo } from '@/src/components/journal/JournalHeader';
+import { MonthCalendar, monthLabelKo } from '@/src/components/journal/MonthCalendar';
+import { MoodFace } from '@/src/components/sketch/MoodFace';
+import { SketchThumbnail } from '@/src/components/sketch/SketchThumbnail';
+import { colors, layout, radius, spacing } from '@/src/constants/design';
+import { useMonthJournals } from '@/src/hooks/useMonthJournals';
+import { toDateString, toYearMonth } from '@/src/lib/dateKeys';
 
-const COPY = {
-  headerToday: "오늘도 좋은 하루 되세요 ☀️",
-  headerPast: "그날의 운세를 다시 보고 있어요 ✨",
-  noZodiac: "별자리를 선택해주세요.",
-  noData: "방송 데이터가 없습니다.",
-  noDateData: "해당 날짜에 저장된 운세가 없어요.\n다른 날짜를 선택해 주세요.",
-};
+/**
+ * 홈 = 이번 달 달력.
+ *
+ * 앱을 열었을 때 제일 먼저 보이는 것이 "내가 남긴 하루들"이어야 한다.
+ * 운세는 지우지 않되 맨 위 한 줄로만 남긴다 — 날씨처럼, 눌러야 열리는 부가 정보다.
+ */
+export default function HomeScreen() {
+  const insets = useSafeAreaInsets();
+  const tabBarHeight = useBottomTabBarHeight();
+  const { width } = useWindowDimensions();
 
-export default function TodayScreen() {
-  const { showToast, toastProps } = useToast();
-  const { cardRef, share, sharing, saveImage, saving, mediaDeniedSheetVisible, closeMediaDeniedSheet } = useShareHoroscope({
-    showToast,
-  });
+  const today = toDateString(new Date());
+  const [yearMonth, setYearMonth] = useState(() => toYearMonth(new Date()));
+  const [focused, setFocused] = useState<string | null>(null);
+  const { journals, refresh } = useMonthJournals(yearMonth);
 
-  const { selectedDate, isLatest, setSelectedDate } = useHoroscopeDateContext();
+  // 일기를 쓰고 돌아오면 달력에 바로 반영돼야 한다. 홈 탭은 언마운트되지 않으므로
+  // 마운트 시점의 조회만으로는 갱신되지 않는다.
+  useFocusEffect(
+    useCallback(() => {
+      refresh();
+    }, [refresh]),
+  );
 
-  const {
-    zodiacSign,
-    loading: zodiacLoading,
-    error: zodiacError,
-  } = useZodiac();
-  const {
-    horoscopes,
-    broadcastDate,
-    loading: horoscopeLoading,
-    error: horoscopeError,
-  } = useAllHoroscopes({ date: selectedDate });
-
-  const loading = zodiacLoading || horoscopeLoading;
-  const error = zodiacError ?? horoscopeError;
-  const zodiac = zodiacSign ? ZODIAC_MAP[zodiacSign] : null;
-  const horoscope = zodiacSign
-    ? (horoscopes.find((h) => h.zodiac_sign === zodiacSign) ?? null)
-    : null;
-
-  // 빈 상태 문구: 별자리 없음 / 특정 날짜에 데이터 없음 / 최신 데이터 없음
-  const emptyText =
-    zodiacSign === null
-      ? COPY.noZodiac
-      : selectedDate !== null && horoscopes.length === 0
-        ? COPY.noDateData
-        : COPY.noData;
-
-  const scrollRef = useRef<ScrollView>(null);
-  const [dateSheetVisible, setDateSheetVisible] = useState(false);
-  const [currentReview, setCurrentReview] = useState<DailyReview | null>(null);
-
-  useFocusEffect(useCallback(() => {
-    scrollRef.current?.scrollTo({ y: 0, animated: false });
-  }, []));
-
-  useFocusEffect(useCallback(() => {
-    if (!horoscope?.date || !zodiacSign) {
-      setCurrentReview(null);
-      return;
-    }
-    getDailyReview(horoscope.date, zodiacSign).then(setCurrentReview);
-  }, [horoscope?.date, zodiacSign]));
-
-  const { pushSheetVisible, handlePushAccept, handlePushDecline } =
-    usePushPermissionPrompt({ loading, zodiacSign });
-
-  const { hasAnswered } = useDailyQuestion(horoscope?.date ?? null);
-
-  const rankPillText = isLatest
-    ? `오늘의 운세 ${horoscope?.rank}위`
-    : `그날의 운세 ${horoscope?.rank}위`;
+  const outerWidth = Math.min(width, layout.maxContentWidth) - spacing.lg * 2;
+  const focusedJournal = focused ? journals.get(focused) : null;
+  const wroteToday = journals.has(today);
 
   return (
-    <LinearGradient colors={gradients.screen} style={styles.fill}>
-      {/* Background decorations */}
-      <CircleDeco x={-50} y={50} size={170} color={colors.sky} opacity={0.11} />
-      <CircleDeco
-        x={230}
-        y={-30}
-        size={160}
-        color={colors.yellow}
-        opacity={0.1}
-      />
-      <CircleDeco
-        x={200}
-        y={590}
-        size={160}
-        color={colors.apricot}
-        opacity={0.1}
-      />
-      <StarDeco x={46} y={128} size={5} color={colors.yellow} opacity={0.26} />
-      <StarDeco
-        x={294}
-        y={108}
-        size={4}
-        color={colors.apricot}
-        opacity={0.22}
-      />
-      <StarDeco x={28} y={440} size={3} color={colors.yellow} opacity={0.18} />
-      <MoonDeco
-        x={286}
-        y={174}
-        size={22}
-        color={colors.apricot}
-        opacity={0.18}
-      />
+    <ScreenBackground>
+      <ResponsiveContainer>
+        <ScrollView
+          contentContainerStyle={[
+            styles.content,
+            { paddingTop: insets.top + spacing.md, paddingBottom: tabBarHeight + spacing.xl },
+          ]}
+        >
+          <JournalHeader subtitle={formatTodayKo()} />
 
-      <ScrollView
-        ref={scrollRef}
-        contentContainerStyle={[styles.content, { paddingBottom: 24 }]}
-        showsVerticalScrollIndicator={false}
-        bounces={false}
-        style={styles.scroll}
-      >
-        {/* Header */}
-        <FinalHeader
-          subtitle={isLatest ? COPY.headerToday : COPY.headerPast}
-          onSharePress={horoscope ? share : undefined}
-          sharing={sharing}
-          onSavePress={horoscope ? saveImage : undefined}
-          saving={saving}
-        />
+          <HoroscopeStrip />
 
-        {/* DatePill */}
-        <View style={styles.pillWrap}>
-          <DatePill
-            dateText={broadcastDate ?? ""}
-            onPress={() => setDateSheetVisible(true)}
-          />
-        </View>
-
-        {loading ? (
-          <View style={styles.loadingBox}>
-            <ActivityIndicator color={colors.apricotDark} size="large" />
-          </View>
-        ) : error ? (
-          <View style={styles.emptyWrap}>
-            <Text style={styles.errorText}>{error}</Text>
-          </View>
-        ) : zodiac && horoscope ? (
-          <>
-            <ZodiacHeroCircle zodiac={zodiac} rankPillText={rankPillText} />
-
-            {/* Fortune card */}
-            <HoroscopeCard
-              advice={horoscope.advice_ko ?? horoscope.advice}
-              style={styles.fortuneCard}
-            />
-
-            <GogoInfoGrid horoscope={horoscope} style={styles.infoGrid} />
-
-            <TodayQuestionSection
-              hasAnswered={hasAnswered}
-              onPress={() =>
-                horoscope?.date &&
-                router.push({ pathname: "/daily-question", params: { date: horoscope.date } })
+          <MonthCalendar
+            yearMonth={yearMonth}
+            journals={journals}
+            width={outerWidth}
+            today={today}
+            onChangeMonth={setYearMonth}
+            onPressDay={(date, journal) => {
+              // 기록이 있으면 펼쳐 보고, 없으면 그 날짜로 바로 쓰러 간다.
+              // 단 미래 날짜는 쓸 수 없다 — 달력이 거짓말을 하게 된다.
+              if (journal) setFocused(date);
+              else if (date <= today) {
+                router.push({ pathname: '/journal-write', params: { date } });
               }
-              style={styles.cardSection}
-            />
+            }}
+          />
 
-            <DailyReviewEntryCard
-              hasReview={currentReview !== null}
-              rating={currentReview?.rating}
-              onPress={() => router.push("/daily-review")}
-              style={styles.reviewEntryCard}
+          <Pressable
+            onPress={() => router.push('/journal-write')}
+            style={styles.writeBtn}
+          >
+            <Text style={styles.writeText}>
+              {wroteToday ? '오늘 일기 다시 보기' : '오늘 일기 쓰기'}
+            </Text>
+          </Pressable>
+        </ScrollView>
+      </ResponsiveContainer>
+
+      <BottomSheet visible={focused !== null} onClose={() => setFocused(null)}>
+        {focusedJournal && focused && (
+          <View style={styles.detail}>
+            <Text style={styles.detailDate}>
+              {monthLabelKo(yearMonth)} {Number(focused.slice(8))}일
+            </Text>
+            <SketchThumbnail
+              sketch={focusedJournal.sketch}
+              size={outerWidth - spacing.xl}
             />
-          </>
-        ) : (
-          <View style={styles.emptyWrap}>
-            <Text style={styles.emptyText}>{emptyText}</Text>
+            <View style={styles.detailRow}>
+              <MoodFace mood={focusedJournal.mood} size={30} />
+              {focusedJournal.summary.length > 0 && (
+                <Text style={styles.detailSummary}>{focusedJournal.summary}</Text>
+              )}
+            </View>
+            <Pressable
+              onPress={() => {
+                const date = focused;
+                setFocused(null);
+                router.push({ pathname: '/journal-write', params: { date } });
+              }}
+              style={styles.editBtn}
+            >
+              <Text style={styles.editText}>수정하기</Text>
+            </Pressable>
           </View>
         )}
-
-      </ScrollView>
-
-      {/* 오프스크린 캡처용 ShareCard */}
-      {zodiac && horoscope && (
-        <View style={styles.offscreen} pointerEvents="none" collapsable={false}>
-          <ShareCard ref={cardRef} horoscope={horoscope} zodiac={zodiac} />
-        </View>
-      )}
-
-      <Toast {...toastProps} />
-
-      <PushPermissionSheet
-        visible={pushSheetVisible}
-        onAccept={handlePushAccept}
-        onDecline={handlePushDecline}
-      />
-
-      <MediaDeniedSheet
-        visible={mediaDeniedSheetVisible}
-        onClose={closeMediaDeniedSheet}
-        onOpenSettings={() => { Linking.openSettings(); closeMediaDeniedSheet(); }}
-      />
-
-      <HoroscopeDateSheet
-        visible={dateSheetVisible}
-        onClose={() => setDateSheetVisible(false)}
-        selectedDate={selectedDate}
-        onSelect={setSelectedDate}
-      />
-    </LinearGradient>
+      </BottomSheet>
+    </ScreenBackground>
   );
 }
 
-// ─── Styles ───────────────────────────────────────────────────
-
 const styles = StyleSheet.create({
-  fill: {
-    flex: 1,
-    overflow: "hidden",
+  content: {
+    paddingHorizontal: spacing.lg,
+    alignItems: 'center',
+    gap: spacing.lg,
   },
-  scroll: {
-    flex: 1,
-    width: "100%",
-    maxWidth: layout.maxContentWidth,
-    alignSelf: "center",
+  writeBtn: {
+    alignSelf: 'stretch',
+    marginTop: spacing.xs,
+    paddingVertical: spacing.lg,
+    borderRadius: radius.pill,
+    alignItems: 'center',
+    backgroundColor: colors.apricot,
   },
-  content: {},
-
-  pillWrap: {
-    marginTop: 12,
-    marginHorizontal: 28,
+  writeText: {
+    fontSize: 15,
+    fontFamily: 'NotoSansKR_500Medium',
+    color: colors.cardSolid,
   },
-  loadingBox: {
-    alignItems: "center",
-    justifyContent: "center",
-    minHeight: 300,
-    marginTop: 28,
+  detail: {
+    alignItems: 'center',
+    gap: spacing.md,
+    paddingBottom: spacing.lg,
   },
-
-  fortuneCard: {
-    marginHorizontal: 24,
-    marginTop: 24,
+  detailDate: {
+    fontSize: 15,
+    fontFamily: 'NotoSansKR_500Medium',
+    color: colors.text,
   },
-
-  infoGrid: {
-    flexDirection: "row",
-    gap: 10,
-    marginTop: 12,
-    marginHorizontal: 24,
+  detailRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
   },
-  cardSection: {
-    marginBottom: 8,
-  },
-  reviewEntryCard: {
-    marginBottom: 8,
-  },
-
-  emptyWrap: {
-    marginTop: 40,
-    alignItems: "center",
-    paddingHorizontal: 24,
-  },
-  emptyText: {
+  detailSummary: {
     fontSize: 14,
+    fontFamily: 'NotoSansKR_400Regular',
     color: colors.textMid,
-    textAlign: "center",
-    lineHeight: 22,
   },
-  errorText: {
-    color: colors.apricotDark,
+  editBtn: {
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.xxl,
+    borderRadius: radius.pill,
+    backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  editText: {
     fontSize: 13,
-    textAlign: "center",
-  },
-  offscreen: {
-    position: "absolute",
-    left: -9999,
-    top: 0,
+    fontFamily: 'NotoSansKR_500Medium',
+    color: colors.textMid,
   },
 });

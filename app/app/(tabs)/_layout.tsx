@@ -75,33 +75,15 @@ export default function TabLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: "Today",
-          tabBarIcon: ({ color }) => <TabBarIcon name="sun-o" color={color} />,
-        }}
-      />
-      <Tabs.Screen
-        name="rankings"
-        options={{
-          title: "전체",
-          tabBarIcon: ({ color }) => (
-            <TabBarIcon name="list-ol" color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="stats"
-        options={{
-          title: "통계",
-          tabBarIcon: ({ color }) => (
-            <TabBarIcon name="bar-chart" color={color} />
-          ),
+          title: "홈",
+          tabBarIcon: ({ color }) => <TabBarIcon name="calendar-o" color={color} />,
         }}
       />
       <Tabs.Screen
         name="settings"
         options={{
-          title: "설정",
-          tabBarIcon: ({ color }) => <TabBarIcon name="cog" color={color} />,
+          title: "My",
+          tabBarIcon: ({ color }) => <TabBarIcon name="user-o" color={color} />,
         }}
       />
     </Tabs>

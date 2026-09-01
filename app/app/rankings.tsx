@@ -6,7 +6,6 @@ import {
   Text,
   View,
 } from "react-native";
-import { useBottomTabBarHeight } from "expo-router/js-tabs";
 import { useFocusEffect } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
@@ -26,7 +25,8 @@ import { useZodiac } from "@/src/hooks/useZodiac";
 
 export default function RankingsScreen() {
   const router = useRouter();
-  const tabBarHeight = useBottomTabBarHeight();
+  // 탭이 아니라 push된 화면이라 탭바가 없다. useBottomTabBarHeight는 탭 밖에서 throw한다.
+  const tabBarHeight = 0;
   const { zodiacSign } = useZodiac();
   const { selectedDate, isLatest, setSelectedDate } = useHoroscopeDateContext();
   const { horoscopes, broadcastDate, loading, error } = useAllHoroscopes({ date: selectedDate });
@@ -94,7 +94,7 @@ export default function RankingsScreen() {
 
       <ResponsiveContainer>
         {/* Header */}
-        <FinalHeader subtitle="12개 별자리 오하아사 순위" />
+        <FinalHeader onBackPress={() => router.back()} subtitle="12개 별자리 오하아사 순위" />
 
         {/* DatePill */}
         <View style={styles.pillWrap}>

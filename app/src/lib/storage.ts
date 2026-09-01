@@ -10,6 +10,7 @@ export const STORAGE_KEYS = {
   pushToken: 'ohaasa:push_token',
   platform: 'ohaasa:platform',
   hasAskedPushPermission: 'ohaasa:has_asked_push_permission',
+  hasSeenOnboarding: 'ohaasa:has_seen_onboarding',
 } as const;
 
 const ZODIAC_SIGNS = new Set<ZodiacSign>(ZODIAC_LIST.map((zodiac) => zodiac.sign));
@@ -106,4 +107,18 @@ export async function getHasAskedPushPermission(): Promise<boolean> {
 
 export async function setHasAskedPushPermission(): Promise<void> {
   await AsyncStorage.setItem(STORAGE_KEYS.hasAskedPushPermission, 'true');
+}
+
+/**
+ * 온보딩을 지나온 적이 있는가.
+ *
+ * 별자리 유무로 판정하면 안 된다 — 별자리는 건너뛸 수 있는 선택 항목이 되었고,
+ * 그러면 건너뛴 사용자가 앱을 열 때마다 온보딩으로 되돌아온다.
+ */
+export async function getHasSeenOnboarding(): Promise<boolean> {
+  return (await AsyncStorage.getItem(STORAGE_KEYS.hasSeenOnboarding)) === 'true';
+}
+
+export async function setHasSeenOnboarding(): Promise<void> {
+  await AsyncStorage.setItem(STORAGE_KEYS.hasSeenOnboarding, 'true');
 }

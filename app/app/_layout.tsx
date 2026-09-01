@@ -90,6 +90,9 @@ function RootLayoutNav() {
             <Stack.Screen name="sketchbook" options={{ headerShown: false }} />
             <Stack.Screen name="mood-prototype" options={{ headerShown: false }} />
             <Stack.Screen name="journal-write" options={{ headerShown: false }} />
+            <Stack.Screen name="horoscope" options={{ headerShown: false }} />
+            <Stack.Screen name="rankings" options={{ headerShown: false }} />
+            <Stack.Screen name="stats" options={{ headerShown: false }} />
             <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
           </Stack>
         </HoroscopeDateProvider>

@@ -18,6 +18,9 @@ export const colors = {
   trendUp: '#5BA17A',
   trendDown: '#CC8F86',
   cardSolid: '#FFFDF9',
+  // 달력 종이. cardSolid보다 살짝 베이지를 먹였다.
+  // 배경 그라데이션(#F5EBD8 부근)보다는 밝아야 카드로 읽힌다 — 더 어둡게 가면 종이가 배경에 묻는다.
+  paper: '#FBF7EE',
   chartBaseline: 'rgba(156,139,120,0.5)',
   segmentTrack: 'rgba(240,184,154,0.22)',
 } as const;
