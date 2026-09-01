@@ -1,9 +1,9 @@
+import { Canvas } from '@shopify/react-native-skia';
 import { memo, useMemo, useRef, useState } from 'react';
 import { PanResponder, StyleSheet, View } from 'react-native';
-import Svg from 'react-native-svg';
 
+import { SkiaStroke, SkiaStrokes } from '@/src/components/sketch/SkiaStroke';
 import { colors, radius } from '@/src/constants/design';
-import { renderStroke } from '@/src/components/sketch/StrokePath';
 import { CANVAS_ASPECT, type BrushKind, type Point, type Stroke } from '@/src/lib/sketch';
 
 /**
@@ -38,7 +38,7 @@ const CommittedStrokes = memo(function CommittedStrokes({
   strokes: Stroke[];
   size: number;
 }) {
-  return <>{strokes.map((stroke, i) => renderStroke(stroke, size, i))}</>;
+  return <SkiaStrokes strokes={strokes} size={size} />;
 });
 
 export function DrawingCanvas({
@@ -132,10 +132,10 @@ export function DrawingCanvas({
       {...panResponder.panHandlers}
     >
       {/* 터치는 부모 View가 받아야 grant의 locationX/Y가 캔버스 기준이 된다. */}
-      <Svg width={size} height={height} pointerEvents="none">
+      <Canvas style={{ width: size, height }} pointerEvents="none">
         <CommittedStrokes strokes={strokes} size={size} />
-        {livePoints.length > 0 && renderStroke(liveStroke, size, 'live')}
-      </Svg>
+        {livePoints.length > 0 && <SkiaStroke stroke={liveStroke} size={size} />}
+      </Canvas>
     </View>
   );
 }

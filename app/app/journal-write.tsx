@@ -24,12 +24,11 @@ import { MoodFace } from '@/src/components/sketch/MoodFace';
 import { SketchThumbnail } from '@/src/components/sketch/SketchThumbnail';
 import {
   SKETCH_COLORS,
-  SKETCH_WIDTHS,
   SketchToolbar,
 } from '@/src/components/sketch/SketchToolbar';
 import { colors, layout, radius, spacing } from '@/src/constants/design';
 import { useJournal } from '@/src/hooks/useJournal';
-import type { BrushKind, Stroke } from '@/src/lib/sketch';
+import { BRUSH_WIDTH_DEFAULT, type BrushKind, type Stroke } from '@/src/lib/sketch';
 import { toDateString } from '@/src/lib/sketchbook';
 
 const STEPS = ['mood', 'sketch', 'summary', 'done'] as const;
@@ -55,7 +54,7 @@ export default function JournalWriteScreen() {
   const [androidKeyboardHeight, setAndroidKeyboardHeight] = useState(0);
   const [step, setStep] = useState<Step>('mood');
   const [color, setColor] = useState<string>(SKETCH_COLORS[0]);
-  const [strokeWidth, setStrokeWidth] = useState<number>(SKETCH_WIDTHS[1]);
+  const [strokeWidth, setStrokeWidth] = useState<number>(BRUSH_WIDTH_DEFAULT);
   const [brush, setBrush] = useState<BrushKind>('crayon');
 
   const { draft, setDraft, isLoaded, isSaving, save } = useJournal(date);
@@ -129,7 +128,9 @@ export default function JournalWriteScreen() {
         { paddingBottom: insets.bottom + spacing.xxxl },
       ]}
       keyboardShouldPersistTaps="handled"
-      scrollEnabled={step !== 'sketch'}
+      // 캔버스가 onStartShouldSetPanResponderCapture로 제스처를 먼저 잡으므로
+      // 그리기가 스크롤에 뺏기지 않는다. 툴바가 길어져 작은 화면에서 잘릴 수 있어 허용한다.
+      keyboardDismissMode="on-drag"
     >
       {!isLoaded ? (
         <View style={styles.loading} />
@@ -154,6 +155,7 @@ export default function JournalWriteScreen() {
             strokeWidth={strokeWidth}
             canUndo={hasDrawing}
             onSelectColor={setColor}
+            canvasSize={canvasSize}
             onSelectWidth={setStrokeWidth}
             brush={brush}
             onSelectBrush={setBrush}

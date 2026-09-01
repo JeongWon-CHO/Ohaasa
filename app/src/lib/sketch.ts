@@ -15,13 +15,32 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 export const CANVAS_ASPECT = 1;
 
 /**
- * 색과 굵기를 일부러 적게 뒀다. 넓은 팔레트는 "잘 그려야 한다"는 부담을 만들어
- * 매일 쓰는 앱에서는 오히려 이탈 요인이 된다.
+ * 크레파스 한 통 느낌으로 12색. 처음엔 부담을 줄이려고 5색만 뒀는데,
+ * 그림일기에서는 색을 고르는 것 자체가 재미라 늘렸다.
+ * 앱 배경이 크림색이라 너무 연한 색은 안 보여서 전반적으로 채도를 올렸다.
  */
-export const SKETCH_COLORS = ['#2C2416', '#D98A68', '#7BAEC7', '#C9A227', '#9B85C4'] as const;
+export const SKETCH_COLORS = [
+  '#2C2416', // 먹
+  '#A0714A', // 갈색
+  '#E4572E', // 빨강
+  '#F2913D', // 주황
+  '#E0B33C', // 노랑
+  '#8CBF4B', // 연두
+  '#4A9D5F', // 초록
+  '#6FB3D9', // 하늘
+  '#3F6FA8', // 파랑
+  '#8B6FBF', // 보라
+  '#C64B7B', // 자주
+  '#E48BB0', // 분홍
+] as const;
 
-/** 캔버스 폭 대비 비율 — 폭 340px 기준 약 2px · 5px · 10px */
-export const SKETCH_WIDTHS = [0.006, 0.014, 0.03] as const;
+/**
+ * 굵기는 캔버스 폭 대비 비율이다(좌표와 같은 단위라 확대해도 함께 간다).
+ * 폭 350px 기준 약 1.4px ~ 16px.
+ */
+export const BRUSH_WIDTH_MIN = 0.004;
+export const BRUSH_WIDTH_MAX = 0.045;
+export const BRUSH_WIDTH_DEFAULT = 0.014;
 
 export type Point = [number, number];
 
@@ -113,37 +132,6 @@ export function strokeToPath(stroke: Stroke, size: number): string {
   }
   d += `L${x(pts.length - 1)} ${y(pts.length - 1)}`;
   return d;
-}
-
-/**
- * 같은 곡선을 겹쳐 그려 재질을 만든다. 겹마다 굵기·투명도·끊김만 다르고
- * 경로는 하나를 공유한다 — 따로 흔들면 선이 갈라져 지저분해진다(→ HandDrawnGrid).
- *
- * shift는 캔버스 크기에 비례하지 않는 px 값이다. 작게 그릴수록 겹이 붙어
- * 저절로 단순해지므로 썸네일에서 따로 손댈 필요가 없다.
- */
-export interface BrushPass {
-  widthScale: number;
-  opacity: number;
-  dash?: string;
-}
-
-export function brushPasses(brush: BrushKind | undefined): BrushPass[] {
-  switch (brush) {
-    case 'crayon':
-      return [
-        { widthScale: 1.35, opacity: 0.62 },
-        { widthScale: 0.85, opacity: 0.5, dash: '3 2.2' },
-        { widthScale: 1.9, opacity: 0.16, dash: '1.5 5' },
-      ];
-    case 'pencil':
-      return [
-        { widthScale: 0.85, opacity: 0.55 },
-        { widthScale: 0.5, opacity: 0.4, dash: '2 1.6' },
-      ];
-    default:
-      return [{ widthScale: 1, opacity: 1 }];
-  }
 }
 
 export function countPoints(sketch: Sketch): number {

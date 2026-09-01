@@ -13,6 +13,7 @@
     "@expo-google-fonts/noto-sans-kr": "^0.4.3",
     "@expo/vector-icons": "^15.0.3",
     "@react-native-async-storage/async-storage": "2.2.0",
+    "@shopify/react-native-skia": "2.6.2",
     "@supabase/supabase-js": "^2.105.1",
     "date-fns": "^4.1.0",
     "expo": "~56.0.19",
@@ -44,6 +45,8 @@
   },
   "devDependencies": {
     "@types/react": "~19.2.14",
+    "eslint": "^9.39.5",
+    "eslint-config-expo": "^57.0.2",
     "react-test-renderer": "19.2.3",
     "typescript": "~6.0.3"
   },

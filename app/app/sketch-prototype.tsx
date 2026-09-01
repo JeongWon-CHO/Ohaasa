@@ -18,11 +18,11 @@ import { ScreenBackground } from '@/src/components/final/ScreenBackground';
 import { DrawingCanvas } from '@/src/components/sketch/DrawingCanvas';
 import {
   SKETCH_COLORS,
-  SKETCH_WIDTHS,
   SketchToolbar,
 } from '@/src/components/sketch/SketchToolbar';
 import { colors, radius, spacing } from '@/src/constants/design';
 import {
+  BRUSH_WIDTH_DEFAULT,
   countPoints,
   emptySketch,
   serializeSketch,
@@ -53,7 +53,7 @@ export default function SketchPrototypeScreen() {
 
   const [sketch, setSketch] = useState<Sketch>(emptySketch);
   const [color, setColor] = useState<string>(SKETCH_COLORS[0]);
-  const [strokeWidth, setStrokeWidth] = useState<number>(SKETCH_WIDTHS[1]);
+  const [strokeWidth, setStrokeWidth] = useState<number>(BRUSH_WIDTH_DEFAULT);
   const [brush, setBrush] = useState<BrushKind>('crayon');
   const [pngBytes, setPngBytes] = useState<number | null>(null);
 
@@ -147,6 +147,7 @@ export default function SketchPrototypeScreen() {
             strokeWidth={strokeWidth}
             canUndo={sketch.strokes.length > 0}
             onSelectColor={setColor}
+            canvasSize={canvasSize}
             onSelectWidth={setStrokeWidth}
             brush={brush}
             onSelectBrush={setBrush}

@@ -1,4 +1,4 @@
-import { SKETCH_COLORS, SKETCH_WIDTHS, type Point, type Sketch, type Stroke } from '@/src/lib/sketch';
+import { SKETCH_COLORS, type Point, type Sketch, type Stroke } from '@/src/lib/sketch';
 
 /**
  * 스케치북이 "채워졌을 때" 어떤 느낌인지 보려고 만든 샘플 데이터.
@@ -168,8 +168,8 @@ export function sampleSketchForDate(date: string): Sketch {
   const rand = seededRandom(date);
   const doodle = DOODLES[Math.floor(rand() * DOODLES.length)];
   const ink = SKETCH_COLORS[Math.floor(rand() * SKETCH_COLORS.length)];
-  const thin = SKETCH_WIDTHS[0];
-  const thick = SKETCH_WIDTHS[1];
+  const thin = 0.006;
+  const thick = 0.014;
 
   const scale = 0.82 + rand() * 0.3;
   const dx = (rand() - 0.5) * 0.1;

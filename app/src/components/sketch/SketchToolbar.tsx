@@ -1,16 +1,19 @@
 import { Feather } from '@expo/vector-icons';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { BrushSizeSlider } from '@/src/components/sketch/BrushSizeSlider';
 import { colors, radius, spacing } from '@/src/constants/design';
-import { BRUSHES, SKETCH_COLORS, SKETCH_WIDTHS, type BrushKind } from '@/src/lib/sketch';
+import { BRUSHES, SKETCH_COLORS, type BrushKind } from '@/src/lib/sketch';
 
-export { SKETCH_COLORS, SKETCH_WIDTHS } from '@/src/lib/sketch';
+export { SKETCH_COLORS } from '@/src/lib/sketch';
 
 interface SketchToolbarProps {
   color: string;
   strokeWidth: number;
   brush: BrushKind;
   canUndo: boolean;
+  /** 굵기 미리보기를 실제 획 크기로 그리기 위한 캔버스 폭 */
+  canvasSize: number;
   onSelectColor: (color: string) => void;
   onSelectWidth: (width: number) => void;
   onSelectBrush: (brush: BrushKind) => void;
@@ -23,6 +26,7 @@ export function SketchToolbar({
   strokeWidth,
   brush,
   canUndo,
+  canvasSize,
   onSelectColor,
   onSelectWidth,
   onSelectBrush,
@@ -31,36 +35,30 @@ export function SketchToolbar({
 }: SketchToolbarProps) {
   return (
     <View style={styles.container}>
-      <View style={styles.row}>
-        {SKETCH_COLORS.map((c) => (
-          <Pressable
-            key={c}
-            onPress={() => onSelectColor(c)}
-            hitSlop={8}
-            style={[styles.swatch, { backgroundColor: c }, color === c && styles.swatchActive]}
-          />
-        ))}
-
-        <View style={styles.divider} />
-
-        {SKETCH_WIDTHS.map((w) => (
-          <Pressable
-            key={w}
-            onPress={() => onSelectWidth(w)}
-            hitSlop={8}
-            style={[styles.widthBtn, strokeWidth === w && styles.widthBtnActive]}
-          >
-            <View
-              style={{
-                width: w * 340,
-                height: w * 340,
-                borderRadius: (w * 340) / 2,
-                backgroundColor: colors.text,
-              }}
+      {/*
+        12색을 한 줄에 넣으면 스와치가 손가락보다 작아진다.
+        flexWrap에 맡기면 폭에 따라 11개가 한 줄에 들어가 1개만 다음 줄로 떨어지므로
+        6개씩 잘라 두 줄로 명시한다.
+      */}
+      {PALETTE_ROWS.map((row, i) => (
+        <View key={i} style={styles.palette}>
+          {row.map((c) => (
+            <Pressable
+              key={c}
+              onPress={() => onSelectColor(c)}
+              hitSlop={8}
+              style={[styles.swatch, { backgroundColor: c }, color === c && styles.swatchActive]}
             />
-          </Pressable>
-        ))}
-      </View>
+          ))}
+        </View>
+      ))}
+
+      <BrushSizeSlider
+        value={strokeWidth}
+        onChange={onSelectWidth}
+        previewBase={canvasSize}
+        color={color}
+      />
 
       <View style={styles.row}>
         {BRUSHES.map((b) => (
@@ -74,64 +72,57 @@ export function SketchToolbar({
             </Text>
           </Pressable>
         ))}
-      </View>
 
-      <View style={styles.row}>
-        <Pressable
-          onPress={onUndo}
-          disabled={!canUndo}
-          style={[styles.action, !canUndo && styles.actionDisabled]}
-        >
-          <Feather name="rotate-ccw" size={14} color={colors.textMid} />
-          <Text style={styles.actionText}>되돌리기</Text>
+        <View style={styles.spacer} />
+
+        <Pressable onPress={onUndo} disabled={!canUndo} style={[styles.icon, !canUndo && styles.disabled]}>
+          <Feather name="rotate-ccw" size={15} color={colors.textMid} />
         </Pressable>
-
-        <Pressable onPress={onClear} style={styles.action}>
-          <Feather name="trash-2" size={14} color={colors.textMid} />
-          <Text style={styles.actionText}>전체 지우기</Text>
+        <Pressable onPress={onClear} style={styles.icon}>
+          <Feather name="trash-2" size={15} color={colors.textMid} />
         </Pressable>
       </View>
     </View>
   );
 }
 
+const PER_ROW = 6;
+const PALETTE_ROWS = Array.from({ length: Math.ceil(SKETCH_COLORS.length / PER_ROW) }, (_, i) =>
+  SKETCH_COLORS.slice(i * PER_ROW, i * PER_ROW + PER_ROW),
+);
+
+const SWATCH = 30;
+
 const styles = StyleSheet.create({
   container: {
-    gap: spacing.md,
+    alignSelf: 'stretch',
+    gap: spacing.sm,
+  },
+
+  // space-between으로 폭을 꽉 채우면 색끼리 너무 벌어진다. 한 덩어리로 모아 가운데 둔다.
+  // 24는 spacing 토큰에 없는 값이라 그대로 적는다(xl 20은 좁고 xxl 28은 넓었다).
+  palette: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 24,
+  },
+  swatch: {
+    width: SWATCH,
+    height: SWATCH,
+    borderRadius: SWATCH / 2,
+    borderWidth: 2,
+    borderColor: 'transparent',
+  },
+  swatchActive: {
+    borderColor: colors.text,
+    transform: [{ scale: 1.12 }],
   },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
   },
-  swatch: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    borderWidth: 2,
-    borderColor: 'transparent',
-  },
-  swatchActive: {
-    borderColor: colors.textSoft,
-    transform: [{ scale: 1.15 }],
-  },
-  divider: {
-    width: 1,
-    height: 20,
-    marginHorizontal: spacing.xs,
-    backgroundColor: colors.border,
-  },
-  widthBtn: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.card,
-  },
-  widthBtnActive: {
-    backgroundColor: colors.cream3,
-  },
+  spacer: { flex: 1 },
   brush: {
     paddingVertical: spacing.sm,
     paddingHorizontal: spacing.md,
@@ -153,23 +144,15 @@ const styles = StyleSheet.create({
     fontFamily: 'NotoSansKR_500Medium',
     color: colors.text,
   },
-  action: {
-    flexDirection: 'row',
+  icon: {
+    width: 34,
+    height: 34,
     alignItems: 'center',
-    gap: spacing.xs,
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
+    justifyContent: 'center',
     borderRadius: radius.pill,
     backgroundColor: colors.card,
     borderWidth: 1,
     borderColor: colors.border,
   },
-  actionDisabled: {
-    opacity: 0.4,
-  },
-  actionText: {
-    fontSize: 12,
-    fontFamily: 'NotoSansKR_400Regular',
-    color: colors.textMid,
-  },
+  disabled: { opacity: 0.4 },
 });
