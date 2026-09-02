@@ -370,6 +370,13 @@ export function DailyQuestionView({
 
   const canSave = form.body.trim().length > 0;
 
+  // 커뮤니티 단계에는 제목을 두지 않는다 — 바로 아래 질문 요약 카드가 같은 말을 하고,
+  // 탭에서는 탭 라벨이 이미 어디인지 알려준다.
+  const headerTitle = step === "answer" ? "오늘의 질문" : null;
+  const showBack = !isTab || returnToCommunity;
+  // 뒤로가기도 제목도 없으면 빈 줄만 남는다(높이 36 + 여백 24). 그럴 땐 줄째로 걷어낸다.
+  const showHeader = showBack || headerTitle !== null;
+
   async function handleSave() {
     const saved = await save();
     if (!saved) return;
@@ -429,7 +436,7 @@ export function DailyQuestionView({
             ref={scrollRef}
             style={styles.scroll}
             contentContainerStyle={{
-              paddingTop: insets.top + 16,
+              paddingTop: insets.top + (showHeader ? 16 : 28),
               // 키보드가 올라오면 탭바는 그 뒤에 가려지므로 그때는 더하지 않는다 — 더하면 이중 여백이다.
               paddingBottom:
                 (keyboardVisible ? 40 : 32) + (keyboardVisible ? 0 : tabBarHeight),
@@ -454,29 +461,29 @@ export function DailyQuestionView({
             }
           >
             <View>
-              <View style={styles.header}>
-                {/* 탭에는 나갈 곳이 없어 평소엔 감춘다. 단 수정 중에는 피드로 돌아갈
-                    유일한 수단이라 그때만 띄운다 — 없으면 저장 말고는 빠져나올 길이 없다. */}
-                {!isTab || returnToCommunity ? (
-                  <Pressable
-                    onPress={handleBack}
-                    style={({ pressed }) => [styles.headerBtn, pressed && { opacity: 0.6 }]}
-                    hitSlop={12}
-                  >
-                    <Feather name="chevron-left" size={24} color={colors.text} />
-                  </Pressable>
-                ) : (
+              {showHeader && (
+                <View style={styles.header}>
+                  {/* 탭에는 나갈 곳이 없어 평소엔 감춘다. 단 수정 중에는 피드로 돌아갈
+                      유일한 수단이라 그때만 띄운다 — 없으면 저장 말고는 빠져나올 길이 없다. */}
+                  {showBack ? (
+                    <Pressable
+                      onPress={handleBack}
+                      style={({ pressed }) => [styles.headerBtn, pressed && { opacity: 0.6 }]}
+                      hitSlop={12}
+                    >
+                      <Feather name="chevron-left" size={24} color={colors.text} />
+                    </Pressable>
+                  ) : (
+                    <View style={styles.headerBtn} />
+                  )}
+
+                  <View style={styles.headerCenter}>
+                    {headerTitle && <Text style={styles.headerTitle}>{headerTitle}</Text>}
+                  </View>
+
                   <View style={styles.headerBtn} />
-                )}
-
-                <View style={styles.headerCenter}>
-                  <Text style={styles.headerTitle}>
-                    {step === "answer" ? "오늘의 질문" : "다른 사람들의 생각"}
-                  </Text>
                 </View>
-
-                <View style={styles.headerBtn} />
-              </View>
+              )}
 
               <View style={styles.body}>
                 {step === "answer" ? (
