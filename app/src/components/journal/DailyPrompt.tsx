@@ -16,7 +16,11 @@ import { getPromptForDate } from '@/src/constants/drawingPrompts';
 interface DailyPromptProps {
   date: string;
   offset: number;
-  onShuffle: () => void;
+  /**
+   * 없으면 새로고침을 감춘다. 이미 오늘 기록을 남긴 뒤에 질문이 바뀌면
+   * 그림이 어떤 질문에 대한 것이었는지 어긋난다.
+   */
+  onShuffle?: () => void;
 }
 
 export function DailyPrompt({ date, offset, onShuffle }: DailyPromptProps) {
@@ -27,10 +31,12 @@ export function DailyPrompt({ date, offset, onShuffle }: DailyPromptProps) {
     <View style={styles.block}>
       <View style={styles.labelRow}>
         <Text style={styles.label}>오늘은 이런 걸 그려볼까요</Text>
-        <Pressable onPress={onShuffle} hitSlop={12} style={styles.shuffle}>
-          <Feather name="refresh-cw" size={11} color={colors.textSoft} />
-          <Text style={styles.shuffleText}>다른 질문</Text>
-        </Pressable>
+        {onShuffle && (
+          <Pressable onPress={onShuffle} hitSlop={12} style={styles.shuffle}>
+            <Feather name="refresh-cw" size={11} color={colors.textSoft} />
+            <Text style={styles.shuffleText}>다른 질문</Text>
+          </Pressable>
+        )}
       </View>
       <Text style={styles.prompt}>{prompt}</Text>
     </View>
