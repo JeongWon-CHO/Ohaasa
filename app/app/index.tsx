@@ -2,8 +2,7 @@ import { useEffect } from 'react';
 import { Image, StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
 
-import type { ZodiacSign } from '@/src/constants/zodiac';
-import { getZodiacSign } from '@/src/lib/storage';
+import { getHasSeenOnboarding, getZodiacSign } from '@/src/lib/storage';
 
 export default function IndexScreen() {
   const router = useRouter();
@@ -12,19 +11,21 @@ export default function IndexScreen() {
     let isMounted = true;
 
     async function routeByOnboardingState() {
-      let zodiacSign: ZodiacSign | null = null;
+      let seen = false;
 
       try {
-        zodiacSign = await getZodiacSign();
+        // 별자리가 이미 있으면 예전 버전에서 온보딩을 마친 사용자다.
+        // 플래그가 없다고 다시 보여주면 기존 사용자가 온보딩을 또 겪는다.
+        seen = (await getHasSeenOnboarding()) || (await getZodiacSign()) !== null;
       } catch {
-        zodiacSign = null;
+        seen = false;
       }
 
       if (!isMounted) {
         return;
       }
 
-      router.replace(zodiacSign ? '/(tabs)' : '/onboarding');
+      router.replace(seen ? '/(tabs)' : '/onboarding');
     }
 
     routeByOnboardingState();

@@ -12,6 +12,8 @@ import { Feather } from "@expo/vector-icons";
 import { colors } from "@/src/constants/design";
 
 interface FinalHeaderProps {
+  /** push된 화면에서 뒤로가기를 붙인다. 탭 화면에서는 넘기지 않는다. */
+  onBackPress?: () => void;
   subtitle?: string;
   onSharePress?: () => void;
   sharing?: boolean;
@@ -21,6 +23,7 @@ interface FinalHeaderProps {
 }
 
 export function FinalHeader({
+  onBackPress,
   subtitle = "오늘도 좋은 하루 되세요 ☀️",
   onSharePress,
   sharing = false,
@@ -31,6 +34,11 @@ export function FinalHeader({
   const insets = useSafeAreaInsets();
   return (
     <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
+      {onBackPress && (
+        <TouchableOpacity onPress={onBackPress} hitSlop={12} style={styles.backButton}>
+          <Feather name="chevron-left" size={22} color={colors.text} />
+        </TouchableOpacity>
+      )}
       <View style={styles.copy}>
         <Text style={styles.title}>ohaasa</Text>
         {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
@@ -73,6 +81,13 @@ export function FinalHeader({
 }
 
 const styles = StyleSheet.create({
+  backButton: {
+    width: 30,
+    height: 30,
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 4,
+  },
   header: {
     flexDirection: "row",
     alignItems: "center",

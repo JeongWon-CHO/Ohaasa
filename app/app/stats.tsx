@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from "react";
 import { Linking, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
-import { useBottomTabBarHeight } from "expo-router/js-tabs";
 import { useFocusEffect } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
 
@@ -33,7 +32,8 @@ const TAB_OPTIONS: { value: StatsTab; label: string }[] = [
 ];
 
 export default function StatsScreen() {
-  const tabBarHeight = useBottomTabBarHeight();
+  // 탭이 아니라 push된 화면이라 탭바가 없다. useBottomTabBarHeight는 탭 밖에서 throw한다.
+  const tabBarHeight = 0;
   const { zodiacSign } = useZodiac();
   const [activeTab, setActiveTab] = useState<StatsTab>("trend");
   const [period, setPeriod] = useState<TrendsPeriod>("7d");

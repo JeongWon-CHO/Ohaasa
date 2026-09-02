@@ -54,7 +54,7 @@ export default function SketchPrototypeScreen() {
   const [sketch, setSketch] = useState<Sketch>(emptySketch);
   const [color, setColor] = useState<string>(SKETCH_COLORS[0]);
   const [strokeWidth, setStrokeWidth] = useState<number>(BRUSH_WIDTH_DEFAULT);
-  const [brush, setBrush] = useState<BrushKind>('crayon');
+  const [brush, setBrush] = useState<BrushKind>('pen');
   const [pngBytes, setPngBytes] = useState<number | null>(null);
 
   const canvasSize = Math.min(width - spacing.xl * 2, MAX_CANVAS);

@@ -61,7 +61,7 @@ const styles = StyleSheet.create({
   selectedLabel: {
     fontSize: 15,
     fontFamily: 'NotoSansKR_500Medium',
-    color: colors.text,
+    color: colors.ink,
     minHeight: 22,
   },
 });

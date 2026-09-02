@@ -41,7 +41,8 @@ import {
   getPushToken,
   getPlatform,
   getNotificationsEnabled,
-} from "@/src/lib/storage";
+  setHasSeenOnboarding,
+} from '@/src/lib/storage';
 import { upsertDevice } from "@/src/lib/supabase";
 
 type OnboardingStep = "intro" | "selection";
@@ -129,6 +130,7 @@ export default function OnboardingScreen() {
       if (from === 'settings') {
         router.back();
       } else {
+        await setHasSeenOnboarding();
         router.replace("/(tabs)");
       }
     } catch (startError) {
@@ -139,6 +141,18 @@ export default function OnboardingScreen() {
           : "온보딩 정보를 저장하지 못했습니다.",
       );
     }
+  }
+
+  /**
+   * 별자리는 이제 선택 항목이다 — 운세는 홈 맨 위 한 줄에만 쓰이는 부가 기능이라
+   * 이걸 고르지 않아도 일기 앱으로서는 완전히 동작한다.
+   * 나중에 My에서 언제든 설정할 수 있다.
+   */
+  async function handleSkip() {
+    if (navigatingRef.current) return;
+    navigatingRef.current = true;
+    await setHasSeenOnboarding();
+    router.replace("/(tabs)");
   }
 
   const selectedZodiac = selectedZodiacSign
@@ -305,6 +319,7 @@ export default function OnboardingScreen() {
             disabled={!selectedZodiacSign || disabled}
             error={deviceError ?? error}
             onPress={handleStart}
+            onSkip={from === 'settings' ? undefined : handleSkip}
             saving={saving}
             selectedZodiac={selectedZodiac}
           />
@@ -479,6 +494,8 @@ interface SelectedZodiacBarProps {
   disabled: boolean;
   error?: string | null;
   onPress: () => void;
+  /** 설정에서 별자리를 바꾸러 들어온 경우에는 넘기지 않는다 */
+  onSkip?: () => void;
   saving: boolean;
   selectedZodiac: ZodiacInfo | null;
 }
@@ -487,6 +504,7 @@ function SelectedZodiacBar({
   disabled,
   error,
   onPress,
+  onSkip,
   saving,
   selectedZodiac,
 }: SelectedZodiacBarProps) {
@@ -533,6 +551,11 @@ function SelectedZodiacBar({
           {saving ? "저장 중..." : "시작하기 ✦"}
         </Text>
       </Pressable>
+      {onSkip ? (
+        <Pressable accessibilityRole="button" onPress={onSkip} style={styles.skipButton}>
+          <Text style={styles.skipText}>나중에 할게요</Text>
+        </Pressable>
+      ) : null}
       {error ? (
         <Text accessibilityRole="alert" style={styles.errorText}>
           {error}
@@ -694,6 +717,17 @@ const styles = StyleSheet.create({
     fontFamily: "NotoSansKR_400Regular",
     includeFontPadding: false,
     color: colors.textSoft,
+  },
+  skipButton: {
+    alignSelf: "center",
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+  },
+  skipText: {
+    fontSize: 13,
+    fontFamily: "NotoSansKR_400Regular",
+    color: colors.textSoft,
+    textDecorationLine: "underline",
   },
   ctaButton: {
     width: "100%",

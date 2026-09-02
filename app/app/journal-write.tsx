@@ -46,7 +46,7 @@ function formatKoreanDate(date: string): string {
 
 export default function JournalWriteScreen() {
   const insets = useSafeAreaInsets();
-  const { width } = useWindowDimensions();
+  const { width, height } = useWindowDimensions();
   const { date: dateParam } = useLocalSearchParams<{ date?: string }>();
   const date = dateParam ?? toDateString(new Date());
 
@@ -55,7 +55,7 @@ export default function JournalWriteScreen() {
   const [step, setStep] = useState<Step>('mood');
   const [color, setColor] = useState<string>(SKETCH_COLORS[0]);
   const [strokeWidth, setStrokeWidth] = useState<number>(BRUSH_WIDTH_DEFAULT);
-  const [brush, setBrush] = useState<BrushKind>('crayon');
+  const [brush, setBrush] = useState<BrushKind>('pen');
 
   const { draft, setDraft, isLoaded, isSaving, save } = useJournal(date);
 
@@ -73,9 +73,16 @@ export default function JournalWriteScreen() {
     };
   }, []);
 
-  const canvasSize = Math.min(
-    Math.min(width, layout.maxContentWidth) - spacing.xl * 2,
-    MAX_CANVAS,
+  // 그리기 단계는 스크롤이 없으므로 툴바·버튼까지 한 화면에 들어가야 한다.
+  // 헤더·질문·툴바(팔레트 2줄 + 슬라이더 + 브러시)·하단 버튼이 쓰는 높이를 빼고 남은 만큼만 준다.
+  const CHROME_HEIGHT = 430;
+  const canvasSize = Math.max(
+    220,
+    Math.min(
+      Math.min(width, layout.maxContentWidth) - spacing.xl * 2,
+      height - insets.top - insets.bottom - CHROME_HEIGHT,
+      MAX_CANVAS,
+    ),
   );
 
   const handleStrokeEnd = useCallback(
@@ -128,9 +135,10 @@ export default function JournalWriteScreen() {
         { paddingBottom: insets.bottom + spacing.xxxl },
       ]}
       keyboardShouldPersistTaps="handled"
-      // 캔버스가 onStartShouldSetPanResponderCapture로 제스처를 먼저 잡으므로
-      // 그리기가 스크롤에 뺏기지 않는다. 툴바가 길어져 작은 화면에서 잘릴 수 있어 허용한다.
-      keyboardDismissMode="on-drag"
+      // 그리기 단계에서는 스크롤을 끈다. iOS ScrollView의 네이티브 pan은
+      // PanResponder의 capture 핸들러로 막히지 않아서, 켜두면 선을 그으려 할 때
+      // 스크롤이 이기고 점만 찍힌다. 대신 캔버스 크기를 남은 높이에 맞춰 줄인다.
+      scrollEnabled={step !== 'sketch'}
     >
       {!isLoaded ? (
         <View style={styles.loading} />
@@ -219,10 +227,12 @@ export default function JournalWriteScreen() {
           <View style={[styles.footer, { paddingBottom: insets.bottom + spacing.lg }]}>
             {step === 'done' ? (
               <Pressable
-                onPress={() => router.replace('/sketchbook')}
+                onPress={() =>
+                  router.replace({ pathname: '/journal-view', params: { date } })
+                }
                 style={styles.primaryBtn}
               >
-                <Text style={styles.primaryText}>스케치북에서 보기</Text>
+                <Text style={styles.primaryText}>다 남겼어요</Text>
               </Pressable>
             ) : (
               <Pressable
@@ -320,12 +330,12 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.lg,
     borderRadius: radius.pill,
     alignItems: 'center',
-    backgroundColor: colors.apricot,
+    backgroundColor: colors.action,
   },
   disabled: { opacity: 0.4 },
   primaryText: {
     fontSize: 15,
     fontFamily: 'NotoSansKR_500Medium',
-    color: colors.cardSolid,
+    color: colors.actionText,
   },
 });

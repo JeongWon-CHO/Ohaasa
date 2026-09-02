@@ -3,6 +3,7 @@ import { memo } from 'react';
 import { StyleSheet, View } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 
+import { GraphPaper } from '@/src/components/sketch/GraphPaper';
 import { SkiaStrokes } from '@/src/components/sketch/SkiaStroke';
 import { colors, radius } from '@/src/constants/design';
 import { CANVAS_ASPECT, strokeToPath, type Sketch } from '@/src/lib/sketch';
@@ -37,6 +38,12 @@ export const SketchThumbnail = memo(function SketchThumbnail({
 
   return (
     <View style={[!bare && styles.frame, { width: size, height }]}>
+      {/* 모눈도 질감과 같은 기준으로 접는다 — 작은 칸에서는 선이 그림을 덮는다. */}
+      {size >= TEXTURE_ABOVE && (
+        <View style={StyleSheet.absoluteFill} pointerEvents="none">
+          <GraphPaper size={size} aspect={CANVAS_ASPECT} />
+        </View>
+      )}
       {size >= TEXTURE_ABOVE ? (
         <Canvas style={{ width: size, height }}>
           <SkiaStrokes strokes={sketch.strokes} size={size} minWidth={MIN_STROKE_PX} />

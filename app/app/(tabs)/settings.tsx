@@ -344,6 +344,17 @@ export default function SettingsScreen() {
           </View>
         </SettingsSection>
 
+        {/* 운세는 앱의 핵심 경험에서 분리해 여기서만 들어간다 (스펙 §20) */}
+        <SettingsSection label="OHAASA" style={styles.sectionGap}>
+          <SettingsRow
+            title="오늘의 오하아사 보기"
+            description="별자리 운세 · 전체 순위 · 통계"
+            showChevron
+            onPress={() => router.push("/horoscope")}
+            style={styles.aboutRow}
+          />
+        </SettingsSection>
+
         {/* NOTIFICATIONS */}
         <SettingsSection label="NOTIFICATIONS" style={styles.sectionGap}>
           <SettingsRow
