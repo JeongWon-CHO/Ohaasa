@@ -99,6 +99,15 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
+        name="archive"
+        options={{
+          title: "보관함",
+          tabBarIcon: ({ color, focused }) => (
+            <TabBarIcon name="grid" color={color} focused={focused} />
+          ),
+        }}
+      />
+      <Tabs.Screen
         name="settings"
         options={{
           title: "My",

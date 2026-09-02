@@ -41,7 +41,7 @@ app/src/constants/              질문 목록 · 외부 URL 등 정적 데이터
 app/src/lib/                    플랫폼·서버 경계 — supabase · AsyncStorage CRUD · notifications
 app/src/hooks/                  화면 간 재사용 로직 (use<도메인>)
 app/src/components/common/      화면 무관 공통 (BottomSheet 등)
-app/src/components/<화면명>/     화면 전용 컴포넌트 (daily-question · daily-review · stats)
+app/src/components/<화면명>/     화면 전용 컴포넌트 (archive · daily-question · daily-review · journal · sketch · stats)
 backend/src/                    crawler(fetcher · parser, 31 tests) · translator · main.ts
 supabase/                       Edge Function + migrations — .gitignore 대상이라 git에 없다
 ```
@@ -187,6 +187,19 @@ CREATE POLICY "user_devices_anon_select" ON public.user_devices FOR SELECT  TO a
   - `canAskAgain = true` → 네이티브 권한 다이얼로그
   - `canAskAgain = false` → `NotificationDeniedSheet` → `Linking.openSettings()` → 복귀 시 `pendingActivationRef`로 자동 활성화
   - 시스템 권한 철회 시 토글 강제 `false` 동기화
+
+### 보관함 탭 (archive)
+
+홈 달력과 역할이 겹치지 않게 나눴다 — 달력은 "이번 달을 채우는" 자리고, 보관함은 "지금까지 그린 걸 훑는" 자리다. 그래서 빈칸을 그리지 않고 기록이 있는 날만 최신순으로 붙인다.
+
+- **칸 폭이 90px을 넘으면 안 된다.** `SketchThumbnail`은 `TEXTURE_ABOVE = 90` 위에서 모눈·질감을 살리려고 Skia `<Canvas>`로 그리는데, Canvas 하나하나가 네이티브 뷰라 스크롤로 칸이 계속 쌓이는 격자에서는 그 비용이 그대로 붙는다. 그래서 **넓은 화면에서 칸을 키우지 않고 열을 늘린다**(`columnsFor()`) — iPhone 4~5열, iPad(`maxContentWidth` 600 상한) 6열, 칸은 항상 88px 이하다. 상한이 90이 아니라 88인 건 반올림으로 경계에 걸치지 않게 하는 여유. **3열로 바꾸면 iPhone에서 칸이 114px이라 이 함정에 곧장 걸린다.**
+- **달 목록과 본문을 분리해서 읽는다**(`useJournalArchive`). `loadJournalDates()`는 AsyncStorage 키만 훑어 파싱이 없고, 본문은 화면에 닿은 달만 `loadMonthJournals()`로 2달씩 붙인다. 한 번에 다 읽으면 1년치 1.9MB를 첫 진입에 역직렬화하게 된다(→ `journal.ts`의 PREFIX 주석).
+- **`refresh()`는 이미 읽은 달도 다시 읽는다.** 일기를 고치고 돌아왔을 때 내용이 바뀌었는지는 키 목록만으로 알 수 없기 때문이다. 달이 쌓일수록 이 재조회가 무거워지므로 expo-file-system으로 옮길 때 같이 손봐야 한다.
+- **아직 본문을 안 읽은 달은 섹션으로 내보내지 않는다.** 넘기면 "0장" 헤더가 먼저 떴다가 그림이 뒤늦게 채워지는 게 보인다.
+- **월 헤더는 sticky + 알약이다.** 배경이 그라데이션(`#FAF6F0`→`#EAD5CE`)이라 불투명 띠를 깔면 스크롤할수록 헤더 색만 제자리에 남아 경계가 드러난다. `stickySectionHeadersEnabled`는 **안드로이드 기본값이 `false`**라 명시해야 한다.
+- **안전영역(`insets.top`)은 `contentContainerStyle`이 아니라 리스트 바깥에 준다.** sticky 헤더는 콘텐츠 패딩을 무시하고 스크롤 뷰포트 맨 위에 붙으므로, 다른 화면들처럼 `paddingTop: insets.top + spacing.md`를 콘텐츠에 주면 **달 알약이 상태바와 겹친다.** 이 화면만 `ResponsiveContainer`가 위쪽 인셋을 갖는 이유다.
+- 칸을 누르면 `/journal-view`로 간다. 상세 시트를 따로 두지 않는다 — 정식 읽기 화면이 이미 있다.
+- **`sketchbook.tsx`는 조회 화면이 아니라 샘플 데이터 도구다**(설정 > DEV > "샘플 데이터"). 달력을 여기서까지 그리면 홈·보관함과 세 벌이 되므로 걷어냈다. 달 스테퍼로 **지난 달을 채울 수 있어야 한다** — 월초에는 "이번 달 채우기"가 며칠치밖에 안 만들어 보관함의 스크롤·달 페이지네이션을 확인할 수 없다.
 
 ### 통계 화면 (stats.tsx)
 

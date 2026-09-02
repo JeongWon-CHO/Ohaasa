@@ -451,8 +451,8 @@ export default function SettingsScreen() {
               style={[styles.aboutRow, styles.rowBorder]}
             />
             <SettingsRow
-              title="스케치북"
-              description="월간 그림 격자 · 보관함/달력 전환"
+              title="샘플 데이터"
+              description="달 단위로 샘플 일기 채우기 · 전부 지우기"
               showChevron
               onPress={() => router.push("/sketchbook")}
               style={[styles.aboutRow, styles.rowBorder]}
