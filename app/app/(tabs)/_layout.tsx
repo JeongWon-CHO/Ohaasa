@@ -108,6 +108,15 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
+        name="community"
+        options={{
+          title: "커뮤니티",
+          tabBarIcon: ({ color, focused }) => (
+            <TabBarIcon name="message-circle" color={color} focused={focused} />
+          ),
+        }}
+      />
+      <Tabs.Screen
         name="settings"
         options={{
           title: "My",

@@ -187,10 +187,13 @@ export default function TodayScreen() {
 
             <TodayQuestionSection
               hasAnswered={hasAnswered}
-              onPress={() =>
-                horoscope?.date &&
-                router.push({ pathname: "/daily-question", params: { date: horoscope.date } })
-              }
+              onPress={() => {
+                if (!horoscope?.date) return;
+                // 최신 방송일이면 커뮤니티 탭으로 보낸다. 과거 날짜를 골라 본 상태에서는
+                // 그 날짜의 질문을 열어야 하므로 파라미터 진입(스택 라우트)을 유지한다.
+                if (isLatest) router.push("/(tabs)/community");
+                else router.push({ pathname: "/daily-question", params: { date: horoscope.date } });
+              }}
               style={styles.cardSection}
             />
 

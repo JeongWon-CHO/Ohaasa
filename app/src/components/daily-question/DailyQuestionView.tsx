@@ -70,6 +70,14 @@ interface DailyQuestionViewProps {
   date?: string;
   /** 과거 글 수정 진입(기록 탭 "수정하기"). 저장하면 피드로 넘어가지 않고 화면을 닫는다. */
   editMode?: boolean;
+  /**
+   * 화면 껍데기. 탭에서는 뒤로 갈 곳이 없고 바닥을 탭바만큼 띄워야 한다.
+   *
+   * `tabBarHeight`를 따로 받는 이유: `useBottomTabBarHeight()`는 탭 네비게이터
+   * 바깥에서 부르면 throw한다. 이 컴포넌트는 스택 라우트도 쓰므로 여기서 부를 수 없어
+   * 탭 래퍼가 읽어 넘긴다. 값이 'tab'일 때만 존재하도록 묶어 타입이 강제하게 했다.
+   */
+  chrome?: { kind: "stack" } | { kind: "tab"; tabBarHeight: number };
 }
 
 /**
@@ -85,7 +93,13 @@ interface DailyQuestionViewProps {
  * 홈의 그림 질문(`drawingPrompts.ts`)과는 풀도 회전 로직도 별개이며 절대 섞지 않는다 —
  * 순서가 밀리면 안드로이드 v1 사용자가 보던 질문이 전부 달라진다.
  */
-export function DailyQuestionView({ date, editMode = false }: DailyQuestionViewProps) {
+export function DailyQuestionView({
+  date,
+  editMode = false,
+  chrome = { kind: "stack" },
+}: DailyQuestionViewProps) {
+  const isTab = chrome.kind === "tab";
+  const tabBarHeight = chrome.kind === "tab" ? chrome.tabBarHeight : 0;
   const insets = useSafeAreaInsets();
   const { height: windowHeight } = useWindowDimensions();
   const scrollRef = useRef<ScrollView>(null);
@@ -136,6 +150,17 @@ export function DailyQuestionView({ date, editMode = false }: DailyQuestionViewP
   const [step, setStep] = useState<Step>("answer");
   const [stepInitialized, setStepInitialized] = useState(false);
   const [returnToCommunity, setReturnToCommunity] = useState(false);
+
+  // 탭은 언마운트되지 않아 방송일 경계(KST 05:59)를 넘겨도 상태가 그대로 남는다 —
+  // 어제 답을 썼다는 이유로 오늘 질문에서 피드가 먼저 열린다. 날짜가 바뀌면 처음부터 다시 판정한다.
+  // effect가 아니라 렌더 중 조정인 이유: effect로 하면 낡은 단계가 한 프레임 보였다가 바뀐다.
+  const [lastDate, setLastDate] = useState(date);
+  if (lastDate !== date) {
+    setLastDate(date);
+    setStepInitialized(false);
+    setStep("answer");
+    setReturnToCommunity(false);
+  }
 
   useEffect(() => {
     if (stepInitialized || !isLoaded) return;
@@ -362,6 +387,12 @@ export function DailyQuestionView({ date, editMode = false }: DailyQuestionViewP
   async function handleDeleteMine() {
     await remove();
     showToast("삭제했어요");
+    // 탭에는 나갈 곳이 없다. 글을 지웠으니 다시 쓰는 자리로 되돌린다.
+    if (isTab) {
+      setStep("answer");
+      setReturnToCommunity(false);
+      return;
+    }
     router.back();
   }
 
@@ -383,6 +414,7 @@ export function DailyQuestionView({ date, editMode = false }: DailyQuestionViewP
       return;
     }
 
+    if (isTab) return;
     router.back();
   }
 
@@ -398,7 +430,9 @@ export function DailyQuestionView({ date, editMode = false }: DailyQuestionViewP
             style={styles.scroll}
             contentContainerStyle={{
               paddingTop: insets.top + 16,
-              paddingBottom: keyboardVisible ? 40 : 32,
+              // 키보드가 올라오면 탭바는 그 뒤에 가려지므로 그때는 더하지 않는다 — 더하면 이중 여백이다.
+              paddingBottom:
+                (keyboardVisible ? 40 : 32) + (keyboardVisible ? 0 : tabBarHeight),
             }}
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
@@ -421,13 +455,19 @@ export function DailyQuestionView({ date, editMode = false }: DailyQuestionViewP
           >
             <View>
               <View style={styles.header}>
-                <Pressable
-                  onPress={handleBack}
-                  style={({ pressed }) => [styles.headerBtn, pressed && { opacity: 0.6 }]}
-                  hitSlop={12}
-                >
-                  <Feather name="chevron-left" size={24} color={colors.text} />
-                </Pressable>
+                {/* 탭에는 나갈 곳이 없어 평소엔 감춘다. 단 수정 중에는 피드로 돌아갈
+                    유일한 수단이라 그때만 띄운다 — 없으면 저장 말고는 빠져나올 길이 없다. */}
+                {!isTab || returnToCommunity ? (
+                  <Pressable
+                    onPress={handleBack}
+                    style={({ pressed }) => [styles.headerBtn, pressed && { opacity: 0.6 }]}
+                    hitSlop={12}
+                  >
+                    <Feather name="chevron-left" size={24} color={colors.text} />
+                  </Pressable>
+                ) : (
+                  <View style={styles.headerBtn} />
+                )}
 
                 <View style={styles.headerCenter}>
                   <Text style={styles.headerTitle}>
@@ -586,7 +626,12 @@ export function DailyQuestionView({ date, editMode = false }: DailyQuestionViewP
           </ScrollView>
 
           {step === "answer" && (
-            <View style={[styles.saveArea, { paddingBottom: insets.bottom + 16 }]}>
+            <View
+              style={[
+                styles.saveArea,
+                { paddingBottom: (isTab ? tabBarHeight : insets.bottom) + 16 },
+              ]}
+            >
               {!canSave && <Text style={styles.saveHint}>생각을 적으면 저장할 수 있어요</Text>}
               <Pressable
                 onPress={handleSave}
