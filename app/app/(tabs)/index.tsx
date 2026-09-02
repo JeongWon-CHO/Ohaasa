@@ -77,14 +77,15 @@ export default function HomeScreen() {
             }}
           />
 
-          {/* 질문과 버튼은 한 덩어리다 — 질문을 읽고 바로 누르는 흐름 */}
-          {!wroteToday && (
-            <DailyPrompt
-              date={today}
-              offset={promptOffset}
-              onShuffle={() => setPromptOffset((n) => n + 1)}
-            />
-          )}
+          {/* 질문과 버튼은 한 덩어리다 — 질문을 읽고 바로 누르는 흐름.
+              이미 오늘을 남겼으면 질문은 그대로 두되 새로고침만 없앤다. */}
+          <DailyPrompt
+            date={today}
+            offset={promptOffset}
+            onShuffle={
+              wroteToday ? undefined : () => setPromptOffset((n) => n + 1)
+            }
+          />
 
           <Pressable
             onPress={() =>
