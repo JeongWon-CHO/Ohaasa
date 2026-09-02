@@ -78,29 +78,28 @@ export function MonthCalendar({
 
   return (
     <View style={[styles.sheet, { width: gridWidth + sheetPadding * 2 }]}>
+      {/* 화살표가 월을 좌우로 감싼다 — 한쪽에 몰아두면 어느 방향으로 가는지 안 읽힌다. */}
       <View style={styles.titleRow}>
+        {onChangeMonth && (
+          <Pressable
+            onPress={() => onChangeMonth(shiftMonth(yearMonth, -1))}
+            hitSlop={12}
+            style={styles.navBtn}
+          >
+            <Feather name="chevron-left" size={16} color={colors.textMid} />
+          </Pressable>
+        )}
+
         <Text style={styles.title}>{monthTitle(yearMonth)}</Text>
 
-        {onChangeMonth ? (
-          <View style={styles.nav}>
-            <Pressable
-              onPress={() => onChangeMonth(shiftMonth(yearMonth, -1))}
-              hitSlop={12}
-              style={styles.navBtn}
-            >
-              <Feather name="chevron-left" size={16} color={colors.textMid} />
-            </Pressable>
-            <Text style={styles.count}>{journals.size}일</Text>
-            <Pressable
-              onPress={() => onChangeMonth(shiftMonth(yearMonth, 1))}
-              hitSlop={12}
-              style={styles.navBtn}
-            >
-              <Feather name="chevron-right" size={16} color={colors.textMid} />
-            </Pressable>
-          </View>
-        ) : (
-          <Text style={styles.count}>{journals.size}일</Text>
+        {onChangeMonth && (
+          <Pressable
+            onPress={() => onChangeMonth(shiftMonth(yearMonth, 1))}
+            hitSlop={12}
+            style={styles.navBtn}
+          >
+            <Feather name="chevron-right" size={16} color={colors.textMid} />
+          </Pressable>
         )}
       </View>
 
@@ -172,7 +171,7 @@ const styles = StyleSheet.create({
   titleRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    justifyContent: 'center',
     paddingBottom: spacing.sm,
   },
   title: {
@@ -180,24 +179,14 @@ const styles = StyleSheet.create({
     fontFamily: 'NotoSansKR_500Medium',
     color: colors.textMid,
     letterSpacing: 1.5,
-  },
-  nav: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
+    // 좌우 화살표 사이에서 흔들리지 않게 — 월 이름 길이가 3~4자로 달라진다.
+    marginHorizontal: spacing.xs,
   },
   navBtn: {
     width: 26,
     height: 26,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  count: {
-    fontSize: 10,
-    fontFamily: 'NotoSansKR_400Regular',
-    color: colors.textSoft,
-    minWidth: 24,
-    textAlign: 'center',
   },
   grid: {
     position: 'relative',

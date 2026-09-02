@@ -1,3 +1,4 @@
+export { DRAWING_QUESTIONS } from './drawing';
 export { LIGHT_QUESTIONS } from './light';
 export { EMOTION_QUESTIONS } from './emotion';
 export { RELATIONSHIP_QUESTIONS } from './relationship';

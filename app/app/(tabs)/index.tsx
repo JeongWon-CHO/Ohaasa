@@ -12,6 +12,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ResponsiveContainer } from '@/src/components/common/ResponsiveContainer';
 import { ScreenBackground } from '@/src/components/final/ScreenBackground';
+import { DailyPrompt } from '@/src/components/journal/DailyPrompt';
 import { HoroscopeStrip } from '@/src/components/journal/HoroscopeStrip';
 import { JournalHeader, formatTodayKo } from '@/src/components/journal/JournalHeader';
 import { MonthCalendar } from '@/src/components/journal/MonthCalendar';
@@ -33,6 +34,8 @@ export default function HomeScreen() {
   const today = toDateString(new Date());
   const [yearMonth, setYearMonth] = useState(() => toYearMonth(new Date()));
   const { journals, refresh } = useMonthJournals(yearMonth);
+  // 새로고침 횟수. 탭이 살아 있는 동안만 유지되면 충분해서 저장하지 않는다.
+  const [promptOffset, setPromptOffset] = useState(0);
 
   // 일기를 쓰고 돌아오면 달력에 바로 반영돼야 한다. 홈 탭은 언마운트되지 않으므로
   // 마운트 시점의 조회만으로는 갱신되지 않는다.
@@ -74,6 +77,15 @@ export default function HomeScreen() {
             }}
           />
 
+          {/* 질문과 버튼은 한 덩어리다 — 질문을 읽고 바로 누르는 흐름 */}
+          {!wroteToday && (
+            <DailyPrompt
+              date={today}
+              offset={promptOffset}
+              onShuffle={() => setPromptOffset((n) => n + 1)}
+            />
+          )}
+
           <Pressable
             onPress={() =>
               router.push(
@@ -101,10 +113,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.lg,
   },
+  // 화면 폭을 꽉 채우면 '섹션-섹션-바' 리듬이 되어 답답하다.
+  // 글자 길이에 맞춰 줄이고 가운데에 띄운다.
   writeBtn: {
-    alignSelf: 'stretch',
-    marginTop: spacing.xs,
-    paddingVertical: spacing.lg,
+    alignSelf: 'center',
+    // 컨테이너 gap(16) 위에 더 얹는 값이다 — 질문을 읽고 잠깐 생각할 틈을 준다.
+    marginTop: spacing.xxl,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.xxxl,
     borderRadius: radius.pill,
     alignItems: 'center',
     backgroundColor: colors.action,
