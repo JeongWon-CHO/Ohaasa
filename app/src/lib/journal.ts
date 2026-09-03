@@ -108,6 +108,21 @@ export async function loadMonthJournals(
   return result;
 }
 
+/**
+ * 기록이 있는 날짜만 최신순으로. **키 목록만 훑고 본문은 파싱하지 않는다.**
+ *
+ * 보관함은 "어느 달에 기록이 있나"를 먼저 알아야 섹션을 만들 수 있는데,
+ * 그걸 위해 `loadMonthJournals`를 달마다 부르면 화면에 보이지도 않는 달의
+ * 그림까지 전부 역직렬화하게 된다. 용량 얘기는 위 PREFIX 주석 참고.
+ */
+export async function loadJournalDates(): Promise<string[]> {
+  const keys = await AsyncStorage.getAllKeys();
+  return keys
+    .filter((k) => k.startsWith(PREFIX))
+    .map((k) => k.slice(PREFIX.length))
+    .sort((a, b) => b.localeCompare(a));
+}
+
 export async function clearAllJournals(): Promise<number> {
   const keys = await AsyncStorage.getAllKeys();
   const mine = keys.filter((k) => k.startsWith(PREFIX));

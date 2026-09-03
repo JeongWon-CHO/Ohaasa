@@ -122,3 +122,11 @@ export async function getHasSeenOnboarding(): Promise<boolean> {
 export async function setHasSeenOnboarding(): Promise<void> {
   await AsyncStorage.setItem(STORAGE_KEYS.hasSeenOnboarding, 'true');
 }
+
+/**
+ * 개발용 온보딩 재실행. **별자리 초기화만으로는 안 된다** —
+ * 진입 라우트(`app/index.tsx`)가 플래그와 별자리 중 하나만 있어도 온보딩을 건너뛴다.
+ */
+export async function clearHasSeenOnboarding(): Promise<void> {
+  await AsyncStorage.removeItem(STORAGE_KEYS.hasSeenOnboarding);
+}

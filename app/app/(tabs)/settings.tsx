@@ -38,6 +38,7 @@ import {
   getPlatform,
   setPushToken,
   setPlatform,
+  clearHasSeenOnboarding,
   clearZodiacSign,
 } from "@/src/lib/storage";
 import { ConfirmDialog } from "@/src/components/common/ConfirmDialog";
@@ -320,9 +321,7 @@ export default function SettingsScreen() {
                   <ConstellationBadge size={36} />
                 </View>
                 <View style={styles.zodiacCopy}>
-                  <Text style={styles.zodiacName}>
-                    선택된 별자리가 없습니다
-                  </Text>
+                  <Text style={styles.zodiacEmpty}>선택된 별자리가 없습니다</Text>
                 </View>
               </>
             )}
@@ -451,8 +450,8 @@ export default function SettingsScreen() {
               style={[styles.aboutRow, styles.rowBorder]}
             />
             <SettingsRow
-              title="스케치북"
-              description="월간 그림 격자 · 보관함/달력 전환"
+              title="샘플 데이터"
+              description="달 단위로 샘플 일기 채우기 · 전부 지우기"
               showChevron
               onPress={() => router.push("/sketchbook")}
               style={[styles.aboutRow, styles.rowBorder]}
@@ -503,10 +502,12 @@ export default function SettingsScreen() {
             />
             <SettingsRow
               title="온보딩으로 돌아가기"
-              description="별자리 초기화 → 맨처음 화면으로 이동"
+              description="별자리·온보딩 기록 초기화 → 맨처음 화면으로 이동"
               showChevron
               onPress={async () => {
-                await clearZodiacSign();
+                // 둘 다 지워야 한다 — 진입 라우트가 (플래그 || 별자리)로 판정해서
+                // 하나만 지우면 그대로 홈으로 간다.
+                await Promise.all([clearZodiacSign(), clearHasSeenOnboarding()]);
                 router.replace("/");
               }}
               style={styles.aboutRow}
@@ -534,7 +535,7 @@ export default function SettingsScreen() {
             <Text style={styles.footerLogo}>ohaasa ✦</Text>
           </View>
           <Text style={styles.footerJa}>おはあさ</Text>
-          <Text style={styles.footerCaption}>v1.6.0</Text>
+          <Text style={styles.footerCaption}>v1.7.0</Text>
         </View>
 
         <View style={styles.spacer} />
@@ -614,6 +615,18 @@ const styles = StyleSheet.create({
     fontSize: 15,
     lineHeight: 20,
     fontFamily: "NotoSansKR_400Regular",
+    includeFontPadding: false,
+    color: colors.text,
+  },
+  /**
+   * 값이 없다는 안내라 선택된 별자리 이름(`zodiacName`)보다 한 단계 낮춘다.
+   * 저기는 아래에 `zodiacSub`가 한 줄 더 붙지만 여기는 한 줄뿐이라,
+   * 같은 크기·굵기를 쓰면 실제 값이 있는 것처럼 무겁게 읽힌다.
+   */
+  zodiacEmpty: {
+    fontSize: 13,
+    lineHeight: 18,
+    fontFamily: "NotoSansKR_300Light",
     includeFontPadding: false,
     color: colors.text,
   },

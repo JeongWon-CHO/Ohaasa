@@ -94,7 +94,11 @@ export default function RankingsScreen() {
 
       <ResponsiveContainer>
         {/* Header */}
-        <FinalHeader onBackPress={() => router.back()} subtitle="12개 별자리 오하아사 순위" />
+        <FinalHeader
+          onBackPress={() => router.back()}
+          title="Ranking"
+          subtitle="12개 별자리 오하아사 순위"
+        />
 
         {/* DatePill */}
         <View style={styles.pillWrap}>
@@ -187,11 +191,6 @@ const styles = StyleSheet.create({
     marginHorizontal: 28,
     zIndex: 1,
   },
-  titleWrap: {
-    marginTop: 10,
-    marginHorizontal: 28,
-    zIndex: 1,
-  },
   sectionTitle: {
     fontSize: 18,
     lineHeight: 24,
@@ -200,6 +199,11 @@ const styles = StyleSheet.create({
     color: colors.text,
     paddingTop: 6,
     paddingBottom: 6,
+  },
+  titleWrap: {
+    marginTop: 10,
+    marginHorizontal: 28,
+    zIndex: 1,
   },
   loadingBox: {
     flex: 1,

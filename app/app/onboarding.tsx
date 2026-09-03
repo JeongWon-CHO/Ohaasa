@@ -28,7 +28,11 @@ import {
   ZODIAC_SIGN_COLORS,
 } from "@/src/components/ZodiacPicker";
 import { ConstellationBadge } from "@/src/components/final/ConstellationBadge";
-import { CircleDeco, MoonDeco, StarDeco } from "@/src/components/final/ScreenDeco";
+import {
+  CircleDeco,
+  MoonDeco,
+  StarDeco,
+} from "@/src/components/final/ScreenDeco";
 import {
   ZODIAC_MAP,
   type ZodiacInfo,
@@ -42,7 +46,8 @@ import {
   getPlatform,
   getNotificationsEnabled,
   setHasSeenOnboarding,
-} from '@/src/lib/storage';
+} from "@/src/lib/storage";
+import { APP_TITLE } from "@/src/constants/app";
 import { upsertDevice } from "@/src/lib/supabase";
 
 type OnboardingStep = "intro" | "selection";
@@ -50,7 +55,7 @@ type OnboardingStep = "intro" | "selection";
 // const COPY = {
 //   selectionKicker: "STEP 1 / 1",
 //   selectionTitle: "내 별자리를 선택해 주세요",
-//   selectionBody: "생년월일에 맞는 별자리를 골라보세요",
+//   selectionBody: "생년월일에 맞는 별자리를 골라주세요. 아침 운세를 보여드릴 때 써요.",
 //   saving: "저장 중...",
 //   finalCta: "시작하기 ✦",
 //   errorFallback: "온보딩 정보를 저장하지 못했습니다.",
@@ -78,7 +83,7 @@ export default function OnboardingScreen() {
   const { from } = useLocalSearchParams<{ from?: string }>();
   const { zodiacSign, loading, saving, error, saveZodiacSign } = useZodiac();
   const [step, setStep] = useState<OnboardingStep>(
-    from === 'settings' ? 'selection' : 'intro'
+    from === "settings" ? "selection" : "intro",
   );
   const [selectedZodiacSign, setSelectedZodiacSign] =
     useState<ZodiacSign | null>(null);
@@ -86,10 +91,12 @@ export default function OnboardingScreen() {
   const multiTouchRef = useRef(false);
   const navigatingRef = useRef(false);
 
-  useFocusEffect(useCallback(() => {
-    navigatingRef.current = false;
-    multiTouchRef.current = false;
-  }, []));
+  useFocusEffect(
+    useCallback(() => {
+      navigatingRef.current = false;
+      multiTouchRef.current = false;
+    }, []),
+  );
 
   useEffect(() => {
     if (zodiacSign) {
@@ -127,7 +134,7 @@ export default function OnboardingScreen() {
         });
       })();
 
-      if (from === 'settings') {
+      if (from === "settings") {
         router.back();
       } else {
         await setHasSeenOnboarding();
@@ -290,7 +297,9 @@ export default function OnboardingScreen() {
             <Text style={styles.selectionKicker}>STEP 1 / 1</Text>
             <Text style={styles.selectionTitle}>내 별자리를 선택해 주세요</Text>
             <Text style={styles.selectionBody}>
-              생년월일에 맞는 별자리를 골라보세요
+              {
+                "생년월일에 맞는 별자리를 골라주세요.\n아침 운세를 보여드릴 때 써요."
+              }
             </Text>
           </View>
 
@@ -319,7 +328,7 @@ export default function OnboardingScreen() {
             disabled={!selectedZodiacSign || disabled}
             error={deviceError ?? error}
             onPress={handleStart}
-            onSkip={from === 'settings' ? undefined : handleSkip}
+            onSkip={from === "settings" ? undefined : handleSkip}
             saving={saving}
             selectedZodiac={selectedZodiac}
           />
@@ -460,14 +469,15 @@ function OnboardingIntro({ onStart }: { onStart: () => void }) {
       </View>
 
       {/* Logo */}
-      <Text style={styles.introLogo}>ohaasa</Text>
+      <Text style={styles.introLogo}>{APP_TITLE}</Text>
 
-      {/* おはあさ subtitle */}
-      <Text style={styles.introSubtext}>おはあさ</Text>
+      {/* Tagline — App Store 부제와 같은 문장으로 둔다. 스토어에서 보고 들어온
+          사람이 첫 화면에서 같은 말을 만나야 같은 앱으로 읽힌다. */}
+      <Text style={styles.introSubtext}>하루 한 장, 그림일기</Text>
 
       {/* Body */}
       <Text style={styles.introBody}>
-        {"매일 아침, 나의 별자리 운세를\n가장 먼저 확인하세요."}
+        {"오하아사와 함께 오늘 하루를\n그림 한 장으로 남겨보세요."}
       </Text>
 
       {/* CTA — dark bg, borderRadius 28 per HTML spec */}
@@ -483,7 +493,7 @@ function OnboardingIntro({ onStart }: { onStart: () => void }) {
       </Pressable>
 
       {/* Caption */}
-      <Text style={styles.introCaption}>매일 아침 업데이트됩니다</Text>
+      <Text style={styles.introCaption}>매일 새로운 그림 질문이 올라와요</Text>
     </View>
   );
 }
@@ -552,7 +562,11 @@ function SelectedZodiacBar({
         </Text>
       </Pressable>
       {onSkip ? (
-        <Pressable accessibilityRole="button" onPress={onSkip} style={styles.skipButton}>
+        <Pressable
+          accessibilityRole="button"
+          onPress={onSkip}
+          style={styles.skipButton}
+        >
           <Text style={styles.skipText}>나중에 할게요</Text>
         </Pressable>
       ) : null}
@@ -604,7 +618,9 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontFamily: "NotoSansKR_400Regular",
     color: colors.textSoft,
-    letterSpacing: 2.42,
+    // 원래 2.42였다 — 'おはあさ' 네 글자짜리 워드마크에 맞춘 값이라
+    // 문장을 넣으면 글자가 흩어진다.
+    letterSpacing: 0.5,
     marginBottom: 16,
   },
   introBody: {

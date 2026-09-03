@@ -1,5 +1,5 @@
 import { format, subDays } from 'date-fns';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 import { supabase } from '@/src/lib/supabase';
 import type { ZodiacSign } from '@/src/constants/zodiac';
@@ -98,125 +98,140 @@ function getErrorMessage(err: unknown): string {
   return err instanceof Error ? err.message : '운세 추이를 불러오지 못했습니다.';
 }
 
-const EMPTY_STATE: Omit<HoroscopeTrendsState, 'refetch'> = {
+type TrendRow = { date: string; zodiac_sign: ZodiacSign; rank: number };
+
+type TrendsDerived = Pick<
+  HoroscopeTrendsState,
+  'points' | 'comparePoints' | 'averageRank' | 'minRank' | 'maxRank' | 'signAverages'
+>;
+
+const EMPTY_DERIVED: TrendsDerived = {
   points: [],
   comparePoints: [],
   averageRank: null,
   minRank: null,
   maxRank: null,
   signAverages: [],
-  loading: true,
-  error: null,
 };
+
+/**
+ * 서버가 걸러주는 건 기간(`date`)뿐이다 — 쿼리에 `zodiac_sign`이 없고, 별자리 필터는
+ * 전부 여기서 한다. 그래서 `zodiacSign`·`compareSign`이 바뀌어도 **다시 받아올 이유가 없다.**
+ */
+function computeTrends(
+  allRows: TrendRow[],
+  zodiacSign: ZodiacSign | null,
+  compareSign: ZodiacSign | null,
+  period: TrendsPeriod,
+): TrendsDerived {
+  const targetCount = getTargetCount(period);
+
+  const points: RankPoint[] = zodiacSign
+    ? allRows
+        .filter((row) => row.zodiac_sign === zodiacSign)
+        .map((row) => ({ date: row.date, rank: row.rank }))
+        .slice(-targetCount)
+    : [];
+
+  const comparePoints: RankPoint[] = compareSign
+    ? allRows
+        .filter((row) => row.zodiac_sign === compareSign)
+        .map((row) => ({ date: row.date, rank: row.rank }))
+        .slice(-targetCount)
+    : [];
+
+  const ranks = points.map((p) => p.rank);
+  const averageRank = ranks.length ? Math.round(average(ranks) * 10) / 10 : null;
+  const minRank = ranks.length ? Math.min(...ranks) : null;
+  const maxRank = ranks.length ? Math.max(...ranks) : null;
+
+  const ranksBySign = new Map<ZodiacSign, number[]>();
+  for (const row of allRows) {
+    const list = ranksBySign.get(row.zodiac_sign) ?? [];
+    list.push(row.rank);
+    ranksBySign.set(row.zodiac_sign, list);
+  }
+
+  const sortedAverages = Array.from(ranksBySign.entries())
+    .map(([sign, signRanks]) => ({
+      sign,
+      averageRank: Math.round(average(signRanks.slice(-targetCount)) * 10) / 10,
+    }))
+    .sort((a, b) => a.averageRank - b.averageRank);
+
+  const todayRoundedRanks = computeRoundedRankMap(sortedAverages);
+
+  // 화살표는 "평균 등수 배지가 어제 대비 어떻게 바뀌었는지"를 비교해야 하므로,
+  // 같은 길이의 기간을 하루 앞당겨 다시 계산해 어제 시점의 등수를 구한다.
+  const yesterdayAverages = Array.from(ranksBySign.entries())
+    .map(([sign, signRanks]) => {
+      const yesterdayRanks = signRanks.slice(0, -1).slice(-targetCount);
+      return yesterdayRanks.length
+        ? { sign, averageRank: Math.round(average(yesterdayRanks) * 10) / 10 }
+        : null;
+    })
+    .filter((item): item is { sign: ZodiacSign; averageRank: number } => item !== null)
+    .sort((a, b) => a.averageRank - b.averageRank);
+
+  const yesterdayRoundedRanks = computeRoundedRankMap(yesterdayAverages);
+
+  const signAverages: SignAverage[] = sortedAverages.map((item, index) => {
+    const exactRank = index + 1;
+    const roundedRank = todayRoundedRanks.get(item.sign)!;
+    const yesterdayRank = yesterdayRoundedRanks.get(item.sign);
+    const diff = yesterdayRank !== undefined ? yesterdayRank - roundedRank : 0; // 양수면 오늘 등수가 더 작아짐(개선)
+    return {
+      sign: item.sign,
+      averageRank: item.averageRank,
+      roundedRank,
+      exactRank,
+      trend: diffToTrend(diff),
+      rankDiff: Math.abs(diff),
+    };
+  });
+
+  return { points, comparePoints, averageRank, minRank, maxRank, signAverages };
+}
 
 export function useHoroscopeTrends(
   zodiacSign: ZodiacSign | null,
   period: TrendsPeriod,
   compareSign: ZodiacSign | null = null,
 ): HoroscopeTrendsState {
-  const [state, setState] = useState<Omit<HoroscopeTrendsState, 'refetch'>>(EMPTY_STATE);
+  const [rows, setRows] = useState<TrendRow[] | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [reloadToken, setReloadToken] = useState(0);
 
+  /**
+   * 조회는 **기간에만** 의존한다.
+   *
+   * `zodiacSign`·`compareSign`을 deps에 넣으면 클라이언트 필터일 뿐인 비교 토글 한 번에
+   * 30일치 396행(12별자리 × 33일)을 다시 받는다. 무료 티어 egress에서 이게 컸다.
+   */
   useEffect(() => {
     let isMounted = true;
-
-    setState({ ...EMPTY_STATE, loading: true });
+    setLoading(true);
 
     async function load() {
-      // const loadStart = Date.now();
       try {
-        // const fetchStart = Date.now();
-        const { data: rows, error } = await supabase
+        const { data, error: fetchError } = await supabase
           .from('horoscopes')
           .select('date, zodiac_sign, rank')
           .gte('date', getCutoffDate(period))
           .order('date', { ascending: true });
-        // console.log(`[stats] supabase fetch (${period}): ${Date.now() - fetchStart}ms`);
 
-        if (error) throw error;
+        if (fetchError) throw fetchError;
+        if (!isMounted) return;
 
-        const allRows = (rows ?? []) as { date: string; zodiac_sign: ZodiacSign; rank: number }[];
-        const targetCount = getTargetCount(period);
-
-        const points: RankPoint[] = zodiacSign
-          ? allRows
-              .filter((row) => row.zodiac_sign === zodiacSign)
-              .map((row) => ({ date: row.date, rank: row.rank }))
-              .slice(-targetCount)
-          : [];
-
-        const comparePoints: RankPoint[] = compareSign
-          ? allRows
-              .filter((row) => row.zodiac_sign === compareSign)
-              .map((row) => ({ date: row.date, rank: row.rank }))
-              .slice(-targetCount)
-          : [];
-
-        const ranks = points.map((p) => p.rank);
-        const averageRank = ranks.length ? Math.round(average(ranks) * 10) / 10 : null;
-        const minRank = ranks.length ? Math.min(...ranks) : null;
-        const maxRank = ranks.length ? Math.max(...ranks) : null;
-
-        const ranksBySign = new Map<ZodiacSign, number[]>();
-        for (const row of allRows) {
-          const list = ranksBySign.get(row.zodiac_sign) ?? [];
-          list.push(row.rank);
-          ranksBySign.set(row.zodiac_sign, list);
-        }
-
-        const sortedAverages = Array.from(ranksBySign.entries())
-          .map(([sign, signRanks]) => ({
-            sign,
-            averageRank: Math.round(average(signRanks.slice(-targetCount)) * 10) / 10,
-          }))
-          .sort((a, b) => a.averageRank - b.averageRank);
-
-        const todayRoundedRanks = computeRoundedRankMap(sortedAverages);
-
-        // 화살표는 "평균 등수 배지가 어제 대비 어떻게 바뀌었는지"를 비교해야 하므로,
-        // 같은 길이의 기간을 하루 앞당겨 다시 계산해 어제 시점의 등수를 구한다.
-        const yesterdayAverages = Array.from(ranksBySign.entries())
-          .map(([sign, signRanks]) => {
-            const yesterdayRanks = signRanks.slice(0, -1).slice(-targetCount);
-            return yesterdayRanks.length ? { sign, averageRank: Math.round(average(yesterdayRanks) * 10) / 10 } : null;
-          })
-          .filter((item): item is { sign: ZodiacSign; averageRank: number } => item !== null)
-          .sort((a, b) => a.averageRank - b.averageRank);
-
-        const yesterdayRoundedRanks = computeRoundedRankMap(yesterdayAverages);
-
-        const signAverages: SignAverage[] = sortedAverages.map((item, index) => {
-          const exactRank = index + 1;
-          const roundedRank = todayRoundedRanks.get(item.sign)!;
-          const yesterdayRank = yesterdayRoundedRanks.get(item.sign);
-          const diff = yesterdayRank !== undefined ? yesterdayRank - roundedRank : 0; // 양수면 오늘 등수가 더 작아짐(개선)
-          return {
-            sign: item.sign,
-            averageRank: item.averageRank,
-            roundedRank,
-            exactRank,
-            trend: diffToTrend(diff),
-            rankDiff: Math.abs(diff),
-          };
-        });
-
-        if (isMounted) {
-          setState({
-            points,
-            comparePoints,
-            averageRank,
-            minRank,
-            maxRank,
-            signAverages,
-            loading: false,
-            error: null,
-          });
-          // console.log(`[stats] total load (${period}): ${Date.now() - loadStart}ms`);
-        }
+        setRows((data ?? []) as TrendRow[]);
+        setError(null);
+        setLoading(false);
       } catch (err) {
-        if (isMounted) {
-          setState({ ...EMPTY_STATE, loading: false, error: getErrorMessage(err) });
-        }
+        if (!isMounted) return;
+        setRows(null);
+        setError(getErrorMessage(err));
+        setLoading(false);
       }
     }
 
@@ -225,7 +240,12 @@ export function useHoroscopeTrends(
     return () => {
       isMounted = false;
     };
-  }, [zodiacSign, period, compareSign, reloadToken]);
+  }, [period, reloadToken]);
 
-  return { ...state, refetch: () => setReloadToken((t) => t + 1) };
+  const derived = useMemo(
+    () => (rows ? computeTrends(rows, zodiacSign, compareSign, period) : EMPTY_DERIVED),
+    [rows, zodiacSign, compareSign, period],
+  );
+
+  return { ...derived, loading, error, refetch: () => setReloadToken((t) => t + 1) };
 }

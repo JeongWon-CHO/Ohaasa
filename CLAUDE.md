@@ -41,7 +41,7 @@ app/src/constants/              질문 목록 · 외부 URL 등 정적 데이터
 app/src/lib/                    플랫폼·서버 경계 — supabase · AsyncStorage CRUD · notifications
 app/src/hooks/                  화면 간 재사용 로직 (use<도메인>)
 app/src/components/common/      화면 무관 공통 (BottomSheet 등)
-app/src/components/<화면명>/     화면 전용 컴포넌트 (daily-question · daily-review · stats)
+app/src/components/<화면명>/     화면 전용 컴포넌트 (archive · daily-question · daily-review · journal · sketch · stats)
 backend/src/                    crawler(fetcher · parser, 31 tests) · translator · main.ts
 supabase/                       Edge Function + migrations — .gitignore 대상이라 git에 없다
 ```
@@ -138,7 +138,7 @@ CREATE POLICY "user_devices_anon_select" ON public.user_devices FOR SELECT  TO a
 
 - **Phase 11** — Expo SDK 56 업그레이드 검증 (위젯 제외)
 - **답글 푸시 알림** — 답글이 달렸는지 알려면 앱을 열어야 한다. 필요한 것은 `question_answer_replies` INSERT 트리거 → Edge Function → 부모 `device_id`의 push token 조회 (→ "오늘의 질문 — 내 답변 고정 카드 · 새 답글 배지").
-- **무료 티어 egress(5GB/월)** — 현재 약 1GB/월(실측 2026-08-18). DAU 약 1,200에서 한도를 넘는다. 주범은 커뮤니티 피드가 아니라 **운세 화면의 중복 조회**다: `useHoroscope.ts`가 `select('*')`로 장문 `advice`까지 12행을 받고, 이걸 홈·순위·별자리상세·데일리리뷰가 **각자 독립 fetch**한다(`HoroscopeDateContext`처럼 Context로 올릴 자리). 더해서 `HoroscopeDateSheet`가 항상 마운트돼 열지 않아도 120행 쿼리가 화면당 1회 돌고, `useHoroscopeTrends`는 `compareSign`이 deps에 있어 클라이언트 필터일 뿐인 비교 토글마다 396행을 재조회한다.
+- **무료 티어 egress(5GB/월)** — 2026-08-18 실측 약 1GB/월. 지목됐던 운세 화면 중복 조회 세 건은 정리했다(→ "운세 조회 캐시"). **재실측이 남았다** — 커뮤니티가 탭으로 올라와 피드 조회 빈도가 달라졌으므로 다음 병목이 어디인지는 숫자를 다시 봐야 안다.
 - **피드 페이지네이션** — `fetchPublicAnswers`는 `ANSWER_FETCH_LIMIT = 1000`으로 상한만 걸어둔 상태다(도달 시 `console.warn`). 하루 답변이 ~400개를 넘으면 그 전에 `.in()`의 UUID 배열이 URL 길이 한계에 먼저 걸린다. 착수하면 답글이 지연 로딩으로 바뀌고 배지용 `reply_count`가 다시 필요해진다 (→ "오늘의 질문 — 답글").
 - **`horoscopes` · `user_devices` · `notification_log`의 DDL이 마이그레이션에 없다** — 대시보드에서 수동 생성돼 스키마가 코드로 남아 있지 않다. 백업이 데이터만 담으므로 테이블이 통째로 사라지면 복원할 스키마가 없다 (→ "백업").
 - **운영 확인 주기** — `hide_threshold`가 답변 4 · 답글 3으로 높은 편이라 자동 숨김이 잘 안 걸린다. 글의 노출 수명이 24시간이므로 신고 큐를 **매일** 봐야 한다 (→ "Supabase 설정").
@@ -150,7 +150,18 @@ CREATE POLICY "user_devices_anon_select" ON public.user_devices FOR SELECT  TO a
 - 개인정보처리방침 URL: `https://jeongwon-cho.github.io/Ohaasa/privacy-policy.html`
 - 커뮤니티 가이드라인 URL: `https://jeongwon-cho.github.io/Ohaasa/community-guidelines.html`
 - `google-services.json`: 커밋 대상(앱 수신용) · Firebase service account JSON은 커밋 금지
-- 현재 버전: v1.6.0 - 오늘의 질문 답글 + 내 답변 고정 카드 · 새 답글 배지
+- 앱 이름: **하루끄적** (부제 "하루 한 장, 그림일기" — App Store Connect에서 입력, 코드에 없다)
+  - **`slug`·`bundleIdentifier`는 여전히 `ohaasa`다.** slug는 EAS 프로젝트 식별자라 바꾸면 프로젝트가 갈리고, bundleId는 스토어 등록 후 변경 불가다. 이름만 갈린 상태가 정상이다.
+  - 앱 안 표기는 `src/constants/app.ts`의 `APP_TITLE` 하나다(`FinalHeader` · `JournalHeader`가 같이 본다). **`app.config.js`의 `name`과 항상 같이 바꾼다.** 헤더가 둘이라 각자 하드코딩했더니 한쪽만 바뀐 적이 있어 상수로 묶었다.
+  - **운세 계열 push 화면(`horoscope` · `rankings` · `stats`)의 헤더는 영문 워드마크다** — `ohaasa` · `Ranking` · `Trends`/`History`. 오하아사에서 온 화면이라는 결을 유지하되 앱 이름(`하루끄적`)과 섞이지 않게 한다. 한글 설명은 부제가 맡는다.
+    - `FinalHeader`의 `title`을 비우면 `APP_TITLE`이 들어가고, **비우는 건 탭 루트(설정)뿐이다.**
+    - 조판은 하나다(`styles.title`, `NotoSansKR_300Light` + `letterSpacing: 2`). 워드마크용 자간이라 한글 문장을 넣으면 흩어져 보인다 — 그래서 화면 이름은 영문으로 둔다.
+  - **헤더는 `FinalHeader` 하나다.** 홈·보관함·커뮤니티가 각자 헤더를 갖고 있었고, 그래서 글자 크기가 26과 20으로, 좌우 여백이 16과 28로 갈려 **탭을 옮길 때마다 제목만 커졌다 작아지고 좌우로 흔들렸다.** 조판·여백은 `typography.headerTitle` · `typography.headerSubtitle` · `layout.headerPaddingH`(28)에 있다.
+    - **상단 안전영역은 `FinalHeader`가 자기 `paddingTop`으로 먹는다** — 스크롤 컨테이너에서 또 주면 이중 여백이다. 반대로 컨테이너가 이미 인셋을 준 화면(보관함: sticky 월 헤더가 상태바에 붙지 않게 리스트 **바깥**에 인셋을 준다)은 `withTopInset={false}`로 꺼야 한다.
+    - 헤더 여백(28)이 본문(16)보다 크므로, **본문 여백이 걸린 스크롤 컨테이너 안에 들어갈 때는 `bleed`를 켜야** 한다 — 안 켜면 16+28=44가 되어 제목만 안쪽으로 밀린다. 되무는 값을 화면마다 손으로 쓰다가 홈에서 한 번 빠뜨렸기 때문에 헤더가 직접 갖게 했다. 컨테이너에 좌우 여백이 없는 화면(커뮤니티·설정·운세 계열)은 켜지 않는다.
+    - `alignSelf: "stretch"`가 load-bearing이다 — 홈 스크롤 컨테이너가 `alignItems: 'center'`라 없으면 헤더가 글자 폭으로 쪼그라든다.
+  - **`FinalHeader`의 뒤로가기는 `marginLeft: -10`으로 광학 정렬한다.** 헤더 패딩(28)이 본문과 같아도 셰브론은 더 안쪽에서 시작해 보인다 — 30 박스에 22 아이콘이 가운데 정렬돼 +4, Feather `chevron-left`가 24 viewBox에서 x축 9~15만 차지해 +7이라 잉크가 약 39pt에서 시작한다. 터치 영역은 그대로 두고 획만 옮긴다.
+- 현재 버전: v1.7.0 - 보관함 탭 · 오늘의 질문 커뮤니티 탭 승격 · 앱 이름 변경
 
 ---
 
@@ -188,12 +199,47 @@ CREATE POLICY "user_devices_anon_select" ON public.user_devices FOR SELECT  TO a
   - `canAskAgain = false` → `NotificationDeniedSheet` → `Linking.openSettings()` → 복귀 시 `pendingActivationRef`로 자동 활성화
   - 시스템 권한 철회 시 토글 강제 `false` 동기화
 
+### 보관함 탭 (archive)
+
+홈 달력과 역할이 겹치지 않게 나눴다 — 달력은 "이번 달을 채우는" 자리고, 보관함은 "지금까지 그린 걸 훑는" 자리다. 그래서 빈칸을 그리지 않고 기록이 있는 날만 최신순으로 붙인다.
+
+- **칸 폭이 90px을 넘으면 안 된다.** `SketchThumbnail`은 `TEXTURE_ABOVE = 90` 위에서 모눈·질감을 살리려고 Skia `<Canvas>`로 그리는데, Canvas 하나하나가 네이티브 뷰라 스크롤로 칸이 계속 쌓이는 격자에서는 그 비용이 그대로 붙는다. 그래서 **넓은 화면에서 칸을 키우지 않고 열을 늘린다**(`columnsFor()`) — iPhone 4~5열, iPad(`maxContentWidth` 600 상한) 6열, 칸은 항상 88px 이하다. 상한이 90이 아니라 88인 건 반올림으로 경계에 걸치지 않게 하는 여유. **3열로 바꾸면 iPhone에서 칸이 114px이라 이 함정에 곧장 걸린다.**
+- **달 목록과 본문을 분리해서 읽는다**(`useJournalArchive`). `loadJournalDates()`는 AsyncStorage 키만 훑어 파싱이 없고, 본문은 화면에 닿은 달만 `loadMonthJournals()`로 2달씩 붙인다. 한 번에 다 읽으면 1년치 1.9MB를 첫 진입에 역직렬화하게 된다(→ `journal.ts`의 PREFIX 주석).
+- **`refresh()`는 이미 읽은 달도 다시 읽는다.** 일기를 고치고 돌아왔을 때 내용이 바뀌었는지는 키 목록만으로 알 수 없기 때문이다. 달이 쌓일수록 이 재조회가 무거워지므로 expo-file-system으로 옮길 때 같이 손봐야 한다.
+- **아직 본문을 안 읽은 달은 섹션으로 내보내지 않는다.** 넘기면 "0장" 헤더가 먼저 떴다가 그림이 뒤늦게 채워지는 게 보인다.
+- **월 헤더는 sticky + 알약이다.** 배경이 그라데이션(`#FAF6F0`→`#EAD5CE`)이라 불투명 띠를 깔면 스크롤할수록 헤더 색만 제자리에 남아 경계가 드러난다. `stickySectionHeadersEnabled`는 **안드로이드 기본값이 `false`**라 명시해야 한다.
+- **안전영역(`insets.top`)은 `contentContainerStyle`이 아니라 리스트 바깥에 준다.** sticky 헤더는 콘텐츠 패딩을 무시하고 스크롤 뷰포트 맨 위에 붙으므로, 다른 화면들처럼 `paddingTop: insets.top + spacing.md`를 콘텐츠에 주면 **달 알약이 상태바와 겹친다.** 이 화면만 `ResponsiveContainer`가 위쪽 인셋을 갖는 이유다.
+- 칸을 누르면 `/journal-view`로 간다. 상세 시트를 따로 두지 않는다 — 정식 읽기 화면이 이미 있다.
+- **`sketchbook.tsx`는 조회 화면이 아니라 샘플 데이터 도구다**(설정 > DEV > "샘플 데이터"). 달력을 여기서까지 그리면 홈·보관함과 세 벌이 되므로 걷어냈다. 달 스테퍼로 **지난 달을 채울 수 있어야 한다** — 월초에는 "이번 달 채우기"가 며칠치밖에 안 만들어 보관함의 스크롤·달 페이지네이션을 확인할 수 없다.
+
+### 운세 조회 캐시
+
+무료 티어 egress(5GB/월)에서 가장 컸던 낭비가 **같은 하루치를 여러 화면이 각자 받아 가는 것**이었다. 세 곳을 손봤고, 셋 다 "덜 받는" 게 아니라 "같은 걸 두 번 받지 않는" 쪽이다.
+
+- **날짜별 세션 캐시**(`useHoroscope.ts`의 `rowCache`). 같은 날짜의 12행을 홈(`HoroscopeStrip`) · 운세 · 순위 · 별자리상세 · 데일리리뷰가 각자 독립 fetch 했다. **한 번 확정된 하루치는 크롤러가 쓰고 나면 바뀌지 않으므로** 먼저 받은 쪽이 나머지를 먹여준다. 동시 요청은 `inFlight` Map으로 한 번만 나간다.
+  - **빈 결과는 캐시하지 않는다** — 크론이 늦은 날 "그날은 운세가 없다"가 세션 내내 눌러앉는다.
+  - **최신 방송일 조회에는 TTL(5분)을 건다.** 이건 캐시하면 안 되는 값이다 — KST 05:59에 바뀌므로 앱을 켜둔 채 날이 넘어가면 어제 운세에 갇힌다.
+- **`select('*')` → 컬럼 명시**(`HOROSCOPE_COLUMNS`). `id`·`created_at`은 앱이 읽지 않는다(순위 리스트 key도 `zodiac_sign`이다). `types/horoscope.ts`의 인터페이스에서도 뺐으므로 **다시 쓰려면 양쪽을 같이 고쳐야 한다** — 컬럼만 늘리고 타입을 안 고치면 조용히 `undefined`가 온다.
+  - `advice`(장문 일본어 원문)는 못 뺀다. 앱이 `advice_ko ?? advice`로 표시하므로 번역 실패한 행의 유일한 fallback이다.
+- **`HoroscopeDateSheet`는 `visible`을 훅에 넘긴다.** 이 시트는 닫혀 있어도 **항상 마운트**돼 있어서(`BottomSheet`가 `visible`로만 여닫는다) 운세·순위 화면에 들어가기만 해도 열지도 않은 시트 때문에 120행 쿼리가 한 번씩 돌았다. `useAvailableHoroscopeDates(enabled)`의 `enabled`가 그래서 load-bearing이다.
+- **`useHoroscopeTrends`의 조회는 `period`에만 의존한다.** 쿼리에 `zodiac_sign`이 없고 별자리 필터는 전부 클라이언트에서 하는데도 `zodiacSign`·`compareSign`이 deps에 있어서, 비교 별자리를 켜고 끌 때마다 30일치 396행(12별자리 × 33일)을 다시 받았다. 계산은 `computeTrends()`로 빼고 `useMemo`가 파생한다.
+
 ### 통계 화면 (stats.tsx)
 
 - **역할 분리**: `stats.tsx`는 orchestration(훅 호출 · state · 카드 조합)만 담당하고, UI 섹션은 `src/components/stats/`의 독립 컴포넌트로 둔다.
 - **데이터 훅**: `useHoroscopeTrends(zodiacSign, period, compareSign?)` — 기간 내 전체 별자리 rank rows를 한 번에 받아 클라이언트에서 가공. `CUTOFF_BUFFER_DAYS = 3`으로 크론 미실행 날 대응.
 - **등수 표시**: 기본은 `roundedRank`(반올림값이 같으면 공동 등수 부여 후 다음 번호 스킵 — 3.4·6.1·6.8 → 1/2/2/4위), 자세히 모드는 `exactRank` + 소수점 1자리. `detailMode`는 저장하지 않아 재진입 시 리셋되고, 공유 카드는 토글과 무관하게 항상 정수.
 - **화살표 트렌드 기준**: 그날의 원본 운세 순위(1~12)가 아니라 **기간 평균 공동 등수(`roundedRank`)의 어제 대비 변화** — 같은 길이의 윈도우를 하루 앞당겨 재계산한다.
+### 탭바 높이
+
+**`useBottomTabBarHeight()`를 쓰는 곳은 이제 하나도 없다.** 두 가지 이유로 계속 사고를 냈다.
+
+- **더하면 빈 띠가 한 겹 생긴다.** `tabBarStyle`에 `position: 'absolute'`가 없어서 탭바는 레이아웃 공간을 차지하고, 탭 화면은 **이미 탭바 위에서 끝난다.** 여기에 탭바 높이를 또 더하면 그만큼 바닥이 비는데, 스크롤 화면에서는 "끝 여백이 좀 넓네" 정도로 보여 오래 안 잡힌다. 커뮤니티의 [완료] 버튼처럼 **고정 배치된 요소에서야 대놓고 뜬다.** 판단 기준은 `absolute` 여부 하나다.
+- **탭 네비게이터 바깥에서 부르면 throw한다.** 탭이던 화면을 스택으로 옮기면 호출이 남아 터진다(→ "통계 화면").
+
+바닥 여백은 그래서 이렇게 정한다: 탭 화면은 원하는 여백만(탭바 몫을 더하지 않음), push된 스택 화면은 `insets.bottom` + 여백.
+
+- **`stats.tsx`·`rankings.tsx`는 탭이 아니라 push된 스택 화면이다.** `useBottomTabBarHeight()`는 탭 네비게이터 바깥에서 **throw**하므로 화면이 `0`을 정해 하위 컴포넌트에 넘긴다(`ReviewHistoryTab`의 `bottomInset`). 통계가 탭이던 시절의 호출이 하위 컴포넌트에 남아 있어 **기록 세그먼트를 눌러야 터지는** 상태로 한동안 숨어 있었다 — 화면을 탭 밖으로 옮길 땐 하위 컴포넌트까지 훑어야 한다.
 
 ### 오늘의 질문
 
@@ -204,6 +250,24 @@ CREATE POLICY "user_devices_anon_select" ON public.user_devices FOR SELECT  TO a
 - **질문 콘텐츠**: `getQuestionByDate(date)` — 반복 주기를 길게 하려고 날짜의 일(day)이 아닌 day-of-year 기준 순환.
 - **수정 가능 기간**: 비공개 답변은 언제든, 공개 답변은 **올린 날에만** 수정 가능하고 이후에는 삭제만 남긴다(`canEditAnswer()`). 남들이 읽고 공감한 글의 내용이 뒤바뀌는 걸 막기 위함. 판단 기준은 `date`(= 방송일)가 아니라 `createdAt` — 방송일은 실제 오늘과 어긋날 수 있다.
 - **자동 욕설 필터 없음**: 사전 검열은 하지 않는다. 사후 대응(신고 → 임계값 자동 숨김 → 수동 검토)만으로 간다.
+
+#### 진입 경로가 둘이다 (커뮤니티 탭 · 스택 라우트)
+
+화면 몸통은 `DailyQuestionView`가 갖고, 라우트는 둘이 공유한다.
+
+| | 커뮤니티 탭 `(tabs)/community.tsx` | 스택 `daily-question.tsx` |
+|---|---|---|
+| 날짜 | `latestDate`(방송일), 파라미터 없음 | `date` 파라미터 |
+| 용도 | 오늘 질문 | 지난 글 수정(`mode=edit`, 기록 탭) |
+
+- **한 라우트로 합치면 안 된다.** 탭은 언마운트되지 않아 `date`·`mode` 파라미터로 다시 진입시켜도 `stepInitialized` 가드에 막혀 수정 화면이 안 열린다.
+- **탭이 넘기는 날짜는 로컬 "오늘"이 아니라 `latestDate`(오하아사 방송일)다.** `question_answers`가 `unique(question_date, device_id)`라, 크롤러가 늦은 날이나 KST 05:59 이전 시간대에 로컬 날짜로 쓰기 시작하면 안드로이드 v1과 **다른 행**에 저장돼 같은 날 피드가 조용히 둘로 쪼개진다. 대가로 커뮤니티 탭이 `horoscopes` 조회(`HoroscopeDateContext`)를 기다린다 — 그림일기 앱인데 커뮤니티가 운세 테이블에 묶여 있는 셈이다.
+- **탭/스택 차이는 `chrome`(`"stack" | "tab"`) 하나로만 갈린다** — 뒤로가기 노출과 바닥 안전영역(스택은 `insets.bottom`, 탭은 탭바가 대신 먹으므로 0). 탭바 높이는 받지 않는다(→ 아래 "탭바 높이").
+- **탭에서는 `useFocusEffect` 자동 재조회를 붙이지 않는다.** 탭이 되면서 마운트가 1회로 줄어 egress는 오히려 좋아졌는데, 습관적으로 붙이면 **탭 전환마다 1000행 쿼리 두 개**(`fetchPublicAnswers` + `fetchRepliesForAnswers`)가 돈다. 당겨서 새로고침이 이미 있다.
+- **방송일 경계에서 단계를 리셋한다.** 탭이 안 죽으니 05:59를 넘겨도 상태가 그대로라, 어제 답을 썼다는 이유로 오늘 질문에서 작성 화면을 건너뛰고 피드가 먼저 열린다. effect가 아니라 렌더 중 조정으로 처리한다(effect면 낡은 단계가 한 프레임 보인다).
+- **탭의 뒤로가기 버튼은 수정 중(`returnToCommunity`)일 때만 보인다.** 탭엔 나갈 곳이 없어 평소엔 감추는데, 그대로 두면 "수정하기"로 작성 화면에 들어간 뒤 저장 말고는 빠져나올 길이 없다. 삭제 후에도 `router.back()` 대신 작성 단계로 되돌린다.
+- **"작성 먼저" 원칙은 탭에서도 유지한다** — 탭을 눌러도 답을 남기기 전에는 피드가 안 열린다. 데이터 계층에도 걸려 있다(`useAnswerFeed(step === "community" ? questionDate : null, ...)`).
+- 진입 경로 정리: `horoscope.tsx`의 오늘의 질문 카드는 **`isLatest`일 때만** 탭으로 보낸다. 과거 날짜를 골라 본 상태면 그 날짜의 질문을 열어야 하므로 스택 진입을 유지한다.
 
 ### 오늘의 질문 — 신고 · 차단
 

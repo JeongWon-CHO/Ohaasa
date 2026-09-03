@@ -1,5 +1,4 @@
 import { router, useFocusEffect } from 'expo-router';
-import { useBottomTabBarHeight } from 'expo-router/js-tabs';
 import { useCallback, useState } from 'react';
 import {
   Pressable,
@@ -8,17 +7,16 @@ import {
   Text,
   useWindowDimensions,
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ResponsiveContainer } from '@/src/components/common/ResponsiveContainer';
 import { ScreenBackground } from '@/src/components/final/ScreenBackground';
 import { DailyPrompt } from '@/src/components/journal/DailyPrompt';
 import { HoroscopeStrip } from '@/src/components/journal/HoroscopeStrip';
-import { JournalHeader, formatTodayKo } from '@/src/components/journal/JournalHeader';
+import { FinalHeader } from '@/src/components/final/FinalHeader';
 import { MonthCalendar } from '@/src/components/journal/MonthCalendar';
 import { colors, layout, radius, spacing } from '@/src/constants/design';
 import { useMonthJournals } from '@/src/hooks/useMonthJournals';
-import { toDateString, toYearMonth } from '@/src/lib/dateKeys';
+import { formatTodayKo, toDateString, toYearMonth } from '@/src/lib/dateKeys';
 
 /**
  * 홈 = 이번 달 달력.
@@ -27,8 +25,6 @@ import { toDateString, toYearMonth } from '@/src/lib/dateKeys';
  * 운세는 지우지 않되 맨 위 한 줄로만 남긴다 — 날씨처럼, 눌러야 열리는 부가 정보다.
  */
 export default function HomeScreen() {
-  const insets = useSafeAreaInsets();
-  const tabBarHeight = useBottomTabBarHeight();
   const { width } = useWindowDimensions();
 
   const today = toDateString(new Date());
@@ -54,10 +50,11 @@ export default function HomeScreen() {
         <ScrollView
           contentContainerStyle={[
             styles.content,
-            { paddingTop: insets.top + spacing.md, paddingBottom: tabBarHeight + spacing.xl },
+            // 상단 안전영역은 FinalHeader가, 바닥은 탭바가 차지하는 레이아웃 공간이 이미 처리한다.
+            { paddingBottom: spacing.xl },
           ]}
         >
-          <JournalHeader subtitle={formatTodayKo()} />
+          <FinalHeader subtitle={formatTodayKo()} bleed />
 
           <HoroscopeStrip />
 

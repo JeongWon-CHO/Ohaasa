@@ -39,6 +39,13 @@ export const gradients = {
 export const layout = {
   // maxContentWidth: 480,
   maxContentWidth: 600,
+  /**
+   * 헤더(앱 이름 · 화면 이름 줄)의 좌우 여백. 본문보다 조금 더 들여 쓴다.
+   *
+   * 헤더는 `FinalHeader` 하나로 모았지만, 본문 여백(`spacing.lg`)과 다른 값이라
+   * 상수로 남긴다 — 본문 컨테이너 안에 들어가는 헤더는 이 차이만큼 부모 여백을 되물어야 한다.
+   */
+  headerPaddingH: 28,
 } as const;
 
 export const spacing = {
@@ -59,6 +66,27 @@ export const radius = {
 } as const;
 
 export const typography = {
+  /**
+   * 헤더 한 줄(앱 이름 · 워드마크)과 그 아래 설명.
+   *
+   * 헤더 컴포넌트가 여럿이던 시절 각자 크기를 들고 있어 26과 20이 섞여 있었고,
+   * 탭을 옮길 때마다 제목만 커졌다 작아졌다. 지금은 `FinalHeader` 하나가 이 값을 본다.
+   */
+  headerTitle: {
+    fontSize: 20,
+    lineHeight: 26,
+    fontFamily: 'NotoSansKR_300Light',
+    includeFontPadding: false,
+    color: colors.text,
+    letterSpacing: 2,
+  },
+  headerSubtitle: {
+    fontSize: 11,
+    lineHeight: 16,
+    fontFamily: 'NotoSansKR_400Regular',
+    includeFontPadding: false,
+    color: colors.textSoft,
+  },
   appName: {
     fontSize: 28,
     fontFamily: 'NotoSansKR_300Light',

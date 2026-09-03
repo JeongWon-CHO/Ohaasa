@@ -2,8 +2,9 @@ import type { ZodiacSign } from '@/src/constants/zodiac';
 
 export type HoroscopeSource = 'ohaasa' | 'gogo';
 
+// id·created_at은 스키마엔 있지만 앱이 읽지 않아 select에서 뺐다(순위 리스트 key도 zodiac_sign이다).
+// 다시 쓰려면 useHoroscope.ts의 HOROSCOPE_COLUMNS에 먼저 넣어야 한다 — 안 그러면 undefined가 온다.
 export interface Horoscope {
-  id: string;
   date: string;              // "2026-04-29" (Supabase DATE → string)
   zodiac_sign: ZodiacSign;
   zodiac_name: string;       // 일본어 별자리명 (うお座 등)
@@ -11,7 +12,6 @@ export interface Horoscope {
   advice: string;            // \n 정규화된 일본어 원문 조언 텍스트
   advice_ko: string | null;  // GPT 번역된 한국어 조언. null이면 advice(원문)로 fallback
   source: HoroscopeSource;   // 'ohaasa'(평일) | 'gogo'(주말)
-  created_at: string;
   // 기존 오하아사 행운 장소 기록 — 새 데이터에서는 null, 고고에서는 항상 null
   lucky_place:    string | null;
   lucky_place_ko: string | null; // null이면 lucky_place(원문)로 fallback
