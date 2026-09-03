@@ -138,7 +138,7 @@ CREATE POLICY "user_devices_anon_select" ON public.user_devices FOR SELECT  TO a
 
 - **Phase 11** — Expo SDK 56 업그레이드 검증 (위젯 제외)
 - **답글 푸시 알림** — 답글이 달렸는지 알려면 앱을 열어야 한다. 필요한 것은 `question_answer_replies` INSERT 트리거 → Edge Function → 부모 `device_id`의 push token 조회 (→ "오늘의 질문 — 내 답변 고정 카드 · 새 답글 배지").
-- **무료 티어 egress(5GB/월)** — 현재 약 1GB/월(실측 2026-08-18). DAU 약 1,200에서 한도를 넘는다. 주범은 커뮤니티 피드가 아니라 **운세 화면의 중복 조회**다: `useHoroscope.ts`가 `select('*')`로 장문 `advice`까지 12행을 받고, 이걸 홈·순위·별자리상세·데일리리뷰가 **각자 독립 fetch**한다(`HoroscopeDateContext`처럼 Context로 올릴 자리). 더해서 `HoroscopeDateSheet`가 항상 마운트돼 열지 않아도 120행 쿼리가 화면당 1회 돌고, `useHoroscopeTrends`는 `compareSign`이 deps에 있어 클라이언트 필터일 뿐인 비교 토글마다 396행을 재조회한다.
+- **무료 티어 egress(5GB/월)** — 2026-08-18 실측 약 1GB/월. 지목됐던 운세 화면 중복 조회 세 건은 정리했다(→ "운세 조회 캐시"). **재실측이 남았다** — 커뮤니티가 탭으로 올라와 피드 조회 빈도가 달라졌으므로 다음 병목이 어디인지는 숫자를 다시 봐야 안다.
 - **피드 페이지네이션** — `fetchPublicAnswers`는 `ANSWER_FETCH_LIMIT = 1000`으로 상한만 걸어둔 상태다(도달 시 `console.warn`). 하루 답변이 ~400개를 넘으면 그 전에 `.in()`의 UUID 배열이 URL 길이 한계에 먼저 걸린다. 착수하면 답글이 지연 로딩으로 바뀌고 배지용 `reply_count`가 다시 필요해진다 (→ "오늘의 질문 — 답글").
 - **`horoscopes` · `user_devices` · `notification_log`의 DDL이 마이그레이션에 없다** — 대시보드에서 수동 생성돼 스키마가 코드로 남아 있지 않다. 백업이 데이터만 담으므로 테이블이 통째로 사라지면 복원할 스키마가 없다 (→ "백업").
 - **운영 확인 주기** — `hide_threshold`가 답변 4 · 답글 3으로 높은 편이라 자동 숨김이 잘 안 걸린다. 글의 노출 수명이 24시간이므로 신고 큐를 **매일** 봐야 한다 (→ "Supabase 설정").
@@ -203,6 +203,18 @@ CREATE POLICY "user_devices_anon_select" ON public.user_devices FOR SELECT  TO a
 - **안전영역(`insets.top`)은 `contentContainerStyle`이 아니라 리스트 바깥에 준다.** sticky 헤더는 콘텐츠 패딩을 무시하고 스크롤 뷰포트 맨 위에 붙으므로, 다른 화면들처럼 `paddingTop: insets.top + spacing.md`를 콘텐츠에 주면 **달 알약이 상태바와 겹친다.** 이 화면만 `ResponsiveContainer`가 위쪽 인셋을 갖는 이유다.
 - 칸을 누르면 `/journal-view`로 간다. 상세 시트를 따로 두지 않는다 — 정식 읽기 화면이 이미 있다.
 - **`sketchbook.tsx`는 조회 화면이 아니라 샘플 데이터 도구다**(설정 > DEV > "샘플 데이터"). 달력을 여기서까지 그리면 홈·보관함과 세 벌이 되므로 걷어냈다. 달 스테퍼로 **지난 달을 채울 수 있어야 한다** — 월초에는 "이번 달 채우기"가 며칠치밖에 안 만들어 보관함의 스크롤·달 페이지네이션을 확인할 수 없다.
+
+### 운세 조회 캐시
+
+무료 티어 egress(5GB/월)에서 가장 컸던 낭비가 **같은 하루치를 여러 화면이 각자 받아 가는 것**이었다. 세 곳을 손봤고, 셋 다 "덜 받는" 게 아니라 "같은 걸 두 번 받지 않는" 쪽이다.
+
+- **날짜별 세션 캐시**(`useHoroscope.ts`의 `rowCache`). 같은 날짜의 12행을 홈(`HoroscopeStrip`) · 운세 · 순위 · 별자리상세 · 데일리리뷰가 각자 독립 fetch 했다. **한 번 확정된 하루치는 크롤러가 쓰고 나면 바뀌지 않으므로** 먼저 받은 쪽이 나머지를 먹여준다. 동시 요청은 `inFlight` Map으로 한 번만 나간다.
+  - **빈 결과는 캐시하지 않는다** — 크론이 늦은 날 "그날은 운세가 없다"가 세션 내내 눌러앉는다.
+  - **최신 방송일 조회에는 TTL(5분)을 건다.** 이건 캐시하면 안 되는 값이다 — KST 05:59에 바뀌므로 앱을 켜둔 채 날이 넘어가면 어제 운세에 갇힌다.
+- **`select('*')` → 컬럼 명시**(`HOROSCOPE_COLUMNS`). `id`·`created_at`은 앱이 읽지 않는다(순위 리스트 key도 `zodiac_sign`이다). `types/horoscope.ts`의 인터페이스에서도 뺐으므로 **다시 쓰려면 양쪽을 같이 고쳐야 한다** — 컬럼만 늘리고 타입을 안 고치면 조용히 `undefined`가 온다.
+  - `advice`(장문 일본어 원문)는 못 뺀다. 앱이 `advice_ko ?? advice`로 표시하므로 번역 실패한 행의 유일한 fallback이다.
+- **`HoroscopeDateSheet`는 `visible`을 훅에 넘긴다.** 이 시트는 닫혀 있어도 **항상 마운트**돼 있어서(`BottomSheet`가 `visible`로만 여닫는다) 운세·순위 화면에 들어가기만 해도 열지도 않은 시트 때문에 120행 쿼리가 한 번씩 돌았다. `useAvailableHoroscopeDates(enabled)`의 `enabled`가 그래서 load-bearing이다.
+- **`useHoroscopeTrends`의 조회는 `period`에만 의존한다.** 쿼리에 `zodiac_sign`이 없고 별자리 필터는 전부 클라이언트에서 하는데도 `zodiacSign`·`compareSign`이 deps에 있어서, 비교 별자리를 켜고 끌 때마다 30일치 396행(12별자리 × 33일)을 다시 받았다. 계산은 `computeTrends()`로 빼고 `useMemo`가 파생한다.
 
 ### 통계 화면 (stats.tsx)
 
