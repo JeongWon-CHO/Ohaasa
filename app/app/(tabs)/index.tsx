@@ -1,5 +1,4 @@
 import { router, useFocusEffect } from 'expo-router';
-import { useBottomTabBarHeight } from 'expo-router/js-tabs';
 import { useCallback, useState } from 'react';
 import {
   Pressable,
@@ -26,7 +25,6 @@ import { formatTodayKo, toDateString, toYearMonth } from '@/src/lib/dateKeys';
  * 운세는 지우지 않되 맨 위 한 줄로만 남긴다 — 날씨처럼, 눌러야 열리는 부가 정보다.
  */
 export default function HomeScreen() {
-  const tabBarHeight = useBottomTabBarHeight();
   const { width } = useWindowDimensions();
 
   const today = toDateString(new Date());
@@ -52,8 +50,8 @@ export default function HomeScreen() {
         <ScrollView
           contentContainerStyle={[
             styles.content,
-            // 상단 안전영역은 FinalHeader가 자기 paddingTop으로 처리한다.
-            { paddingBottom: tabBarHeight + spacing.xl },
+            // 상단 안전영역은 FinalHeader가, 바닥은 탭바가 차지하는 레이아웃 공간이 이미 처리한다.
+            { paddingBottom: spacing.xl },
           ]}
         >
           <FinalHeader subtitle={formatTodayKo()} bleed />

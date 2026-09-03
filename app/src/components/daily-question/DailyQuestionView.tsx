@@ -71,13 +71,13 @@ interface DailyQuestionViewProps {
   /** 과거 글 수정 진입(기록 탭 "수정하기"). 저장하면 피드로 넘어가지 않고 화면을 닫는다. */
   editMode?: boolean;
   /**
-   * 화면 껍데기. 탭에서는 뒤로 갈 곳이 없고 바닥을 탭바만큼 띄워야 한다.
+   * 화면 껍데기. 탭에서는 뒤로 갈 곳이 없고, 바닥 안전영역은 탭바가 대신 먹는다.
    *
-   * `tabBarHeight`를 따로 받는 이유: `useBottomTabBarHeight()`는 탭 네비게이터
-   * 바깥에서 부르면 throw한다. 이 컴포넌트는 스택 라우트도 쓰므로 여기서 부를 수 없어
-   * 탭 래퍼가 읽어 넘긴다. 값이 'tab'일 때만 존재하도록 묶어 타입이 강제하게 했다.
+   * 탭바 높이를 따로 받지 않는다 — `tabBarStyle`에 `position: 'absolute'`가 없어서
+   * 탭바는 레이아웃 공간을 차지하고 이 화면은 **이미 탭바 위에서 끝난다.**
+   * 더하면 탭바 높이만큼 빈 띠가 한 겹 더 생긴다(→ `(tabs)/settings.tsx`의 같은 주석).
    */
-  chrome?: { kind: "stack" } | { kind: "tab"; tabBarHeight: number };
+  chrome?: "stack" | "tab";
 }
 
 /**
@@ -96,10 +96,9 @@ interface DailyQuestionViewProps {
 export function DailyQuestionView({
   date,
   editMode = false,
-  chrome = { kind: "stack" },
+  chrome = "stack",
 }: DailyQuestionViewProps) {
-  const isTab = chrome.kind === "tab";
-  const tabBarHeight = chrome.kind === "tab" ? chrome.tabBarHeight : 0;
+  const isTab = chrome === "tab";
   const insets = useSafeAreaInsets();
   const { height: windowHeight } = useWindowDimensions();
   const scrollRef = useRef<ScrollView>(null);
@@ -435,9 +434,7 @@ export function DailyQuestionView({
             contentContainerStyle={{
               // 상단 안전영역은 FinalHeader가 자기 paddingTop으로 처리한다 — 여기서 또 주면 이중이다.
               paddingTop: 0,
-              // 키보드가 올라오면 탭바는 그 뒤에 가려지므로 그때는 더하지 않는다 — 더하면 이중 여백이다.
-              paddingBottom:
-                (keyboardVisible ? 40 : 32) + (keyboardVisible ? 0 : tabBarHeight),
+              paddingBottom: keyboardVisible ? 40 : 32,
             }}
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
@@ -617,7 +614,8 @@ export function DailyQuestionView({
             <View
               style={[
                 styles.saveArea,
-                { paddingBottom: (isTab ? tabBarHeight : insets.bottom) + 16 },
+                // 탭에서는 바닥 안전영역을 탭바가 이미 먹었다.
+                { paddingBottom: (isTab ? 0 : insets.bottom) + 16 },
               ]}
             >
               {!canSave && <Text style={styles.saveHint}>생각을 적으면 저장할 수 있어요</Text>}

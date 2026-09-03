@@ -1,5 +1,4 @@
 import { router, useFocusEffect } from 'expo-router';
-import { useBottomTabBarHeight } from 'expo-router/js-tabs';
 import { useCallback, useMemo } from 'react';
 import {
   Pressable,
@@ -35,7 +34,6 @@ import type { DailyJournal } from '@/src/lib/journal';
  */
 export default function ArchiveScreen() {
   const insets = useSafeAreaInsets();
-  const tabBarHeight = useBottomTabBarHeight();
   const { width } = useWindowDimensions();
 
   const { sections, loading, isEmpty, loadMore, refresh } = useJournalArchive();
@@ -91,7 +89,8 @@ export default function ArchiveScreen() {
           showsVerticalScrollIndicator={false}
           contentContainerStyle={[
             styles.content,
-            { paddingBottom: tabBarHeight + spacing.xl },
+            // 탭바가 레이아웃 공간을 차지하므로 여기에 탭바 높이를 더하지 않는다.
+            { paddingBottom: spacing.xl },
           ]}
           ListHeaderComponent={
             /* 상단 인셋은 ResponsiveContainer가 이미 줬다(sticky 월 헤더 때문에). */

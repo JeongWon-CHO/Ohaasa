@@ -230,6 +230,15 @@ CREATE POLICY "user_devices_anon_select" ON public.user_devices FOR SELECT  TO a
 - **데이터 훅**: `useHoroscopeTrends(zodiacSign, period, compareSign?)` — 기간 내 전체 별자리 rank rows를 한 번에 받아 클라이언트에서 가공. `CUTOFF_BUFFER_DAYS = 3`으로 크론 미실행 날 대응.
 - **등수 표시**: 기본은 `roundedRank`(반올림값이 같으면 공동 등수 부여 후 다음 번호 스킵 — 3.4·6.1·6.8 → 1/2/2/4위), 자세히 모드는 `exactRank` + 소수점 1자리. `detailMode`는 저장하지 않아 재진입 시 리셋되고, 공유 카드는 토글과 무관하게 항상 정수.
 - **화살표 트렌드 기준**: 그날의 원본 운세 순위(1~12)가 아니라 **기간 평균 공동 등수(`roundedRank`)의 어제 대비 변화** — 같은 길이의 윈도우를 하루 앞당겨 재계산한다.
+### 탭바 높이
+
+**`useBottomTabBarHeight()`를 쓰는 곳은 이제 하나도 없다.** 두 가지 이유로 계속 사고를 냈다.
+
+- **더하면 빈 띠가 한 겹 생긴다.** `tabBarStyle`에 `position: 'absolute'`가 없어서 탭바는 레이아웃 공간을 차지하고, 탭 화면은 **이미 탭바 위에서 끝난다.** 여기에 탭바 높이를 또 더하면 그만큼 바닥이 비는데, 스크롤 화면에서는 "끝 여백이 좀 넓네" 정도로 보여 오래 안 잡힌다. 커뮤니티의 [완료] 버튼처럼 **고정 배치된 요소에서야 대놓고 뜬다.** 판단 기준은 `absolute` 여부 하나다.
+- **탭 네비게이터 바깥에서 부르면 throw한다.** 탭이던 화면을 스택으로 옮기면 호출이 남아 터진다(→ "통계 화면").
+
+바닥 여백은 그래서 이렇게 정한다: 탭 화면은 원하는 여백만(탭바 몫을 더하지 않음), push된 스택 화면은 `insets.bottom` + 여백.
+
 - **`stats.tsx`·`rankings.tsx`는 탭이 아니라 push된 스택 화면이다.** `useBottomTabBarHeight()`는 탭 네비게이터 바깥에서 **throw**하므로 화면이 `0`을 정해 하위 컴포넌트에 넘긴다(`ReviewHistoryTab`의 `bottomInset`). 통계가 탭이던 시절의 호출이 하위 컴포넌트에 남아 있어 **기록 세그먼트를 눌러야 터지는** 상태로 한동안 숨어 있었다 — 화면을 탭 밖으로 옮길 땐 하위 컴포넌트까지 훑어야 한다.
 
 ### 오늘의 질문
@@ -253,7 +262,7 @@ CREATE POLICY "user_devices_anon_select" ON public.user_devices FOR SELECT  TO a
 
 - **한 라우트로 합치면 안 된다.** 탭은 언마운트되지 않아 `date`·`mode` 파라미터로 다시 진입시켜도 `stepInitialized` 가드에 막혀 수정 화면이 안 열린다.
 - **탭이 넘기는 날짜는 로컬 "오늘"이 아니라 `latestDate`(오하아사 방송일)다.** `question_answers`가 `unique(question_date, device_id)`라, 크롤러가 늦은 날이나 KST 05:59 이전 시간대에 로컬 날짜로 쓰기 시작하면 안드로이드 v1과 **다른 행**에 저장돼 같은 날 피드가 조용히 둘로 쪼개진다. 대가로 커뮤니티 탭이 `horoscopes` 조회(`HoroscopeDateContext`)를 기다린다 — 그림일기 앱인데 커뮤니티가 운세 테이블에 묶여 있는 셈이다.
-- **`useBottomTabBarHeight()`는 탭 네비게이터 바깥에서 부르면 throw한다.** `DailyQuestionView`는 스택 라우트도 쓰므로 안에서 부를 수 없어, 탭 래퍼가 읽어 `chrome={{ kind: 'tab', tabBarHeight }}`로 넘긴다. 값이 'tab'일 때만 존재하도록 묶어 타입이 강제한다.
+- **탭/스택 차이는 `chrome`(`"stack" | "tab"`) 하나로만 갈린다** — 뒤로가기 노출과 바닥 안전영역(스택은 `insets.bottom`, 탭은 탭바가 대신 먹으므로 0). 탭바 높이는 받지 않는다(→ 아래 "탭바 높이").
 - **탭에서는 `useFocusEffect` 자동 재조회를 붙이지 않는다.** 탭이 되면서 마운트가 1회로 줄어 egress는 오히려 좋아졌는데, 습관적으로 붙이면 **탭 전환마다 1000행 쿼리 두 개**(`fetchPublicAnswers` + `fetchRepliesForAnswers`)가 돈다. 당겨서 새로고침이 이미 있다.
 - **방송일 경계에서 단계를 리셋한다.** 탭이 안 죽으니 05:59를 넘겨도 상태가 그대로라, 어제 답을 썼다는 이유로 오늘 질문에서 작성 화면을 건너뛰고 피드가 먼저 열린다. effect가 아니라 렌더 중 조정으로 처리한다(effect면 낡은 단계가 한 프레임 보인다).
 - **탭의 뒤로가기 버튼은 수정 중(`returnToCommunity`)일 때만 보인다.** 탭엔 나갈 곳이 없어 평소엔 감추는데, 그대로 두면 "수정하기"로 작성 화면에 들어간 뒤 저장 말고는 빠져나올 길이 없다. 삭제 후에도 `router.back()` 대신 작성 단계로 되돌린다.

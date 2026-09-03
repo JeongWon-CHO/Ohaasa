@@ -1,5 +1,4 @@
 import { LinearGradient } from "expo-linear-gradient";
-import { useBottomTabBarHeight } from "expo-router/js-tabs";
 import { ActivityIndicator, StyleSheet } from "react-native";
 
 import { DailyQuestionView } from "@/src/components/daily-question/DailyQuestionView";
@@ -17,7 +16,6 @@ import { useHoroscopeDateContext } from "@/src/context/HoroscopeDateContext";
  * 지난 날짜 수정은 이 탭이 아니라 스택 라우트(`daily-question.tsx`)가 맡는다.
  */
 export default function CommunityScreen() {
-  const tabBarHeight = useBottomTabBarHeight();
   const { latestDate, latestDateLoading } = useHoroscopeDateContext();
 
   if (latestDateLoading) {
@@ -30,10 +28,7 @@ export default function CommunityScreen() {
 
   // latestDate가 null이면(조회 실패) DailyQuestionView가 오늘 날짜로 대체한다.
   return (
-    <DailyQuestionView
-      date={latestDate ?? undefined}
-      chrome={{ kind: "tab", tabBarHeight }}
-    />
+    <DailyQuestionView date={latestDate ?? undefined} chrome="tab" />
   );
 }
 
