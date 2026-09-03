@@ -1,6 +1,8 @@
 import { View } from "react-native";
 import Svg, { Path, Polygon } from "react-native-svg";
 
+import { colors } from "@/src/constants/design";
+
 type DecoProps = {
   x: number;
   y: number;
@@ -56,5 +58,25 @@ export function MoonDeco({ x, y, size, color, opacity }: DecoProps) {
         />
       </Svg>
     </View>
+  );
+}
+
+/**
+ * 오하아사 화면(`horoscope.tsx`)의 배경 장식 한 벌.
+ *
+ * 좌표가 하드코딩이라 두 화면이 각자 들고 있으면 한쪽만 손대는 순간
+ * "같은 배경"이 아니게 된다. 홈도 이걸 그대로 쓴다.
+ */
+export function StarfieldDeco() {
+  return (
+    <>
+      <CircleDeco x={-50} y={50} size={170} color={colors.sky} opacity={0.11} />
+      <CircleDeco x={230} y={-30} size={160} color={colors.yellow} opacity={0.1} />
+      <CircleDeco x={200} y={590} size={160} color={colors.apricot} opacity={0.1} />
+      <StarDeco x={46} y={128} size={5} color={colors.yellow} opacity={0.26} />
+      <StarDeco x={294} y={108} size={4} color={colors.apricot} opacity={0.22} />
+      <StarDeco x={28} y={440} size={3} color={colors.yellow} opacity={0.18} />
+      <MoonDeco x={286} y={174} size={22} color={colors.apricot} opacity={0.18} />
+    </>
   );
 }

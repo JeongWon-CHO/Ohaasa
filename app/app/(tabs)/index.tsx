@@ -1,22 +1,22 @@
-import { router, useFocusEffect } from 'expo-router';
-import { useCallback, useState } from 'react';
+import { router, useFocusEffect } from "expo-router";
+import { useCallback, useState } from "react";
 import {
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
   useWindowDimensions,
-} from 'react-native';
+} from "react-native";
 
-import { ResponsiveContainer } from '@/src/components/common/ResponsiveContainer';
-import { ScreenBackground } from '@/src/components/final/ScreenBackground';
-import { DailyPrompt } from '@/src/components/journal/DailyPrompt';
-import { HoroscopeStrip } from '@/src/components/journal/HoroscopeStrip';
-import { FinalHeader } from '@/src/components/final/FinalHeader';
-import { MonthCalendar } from '@/src/components/journal/MonthCalendar';
-import { colors, layout, radius, spacing } from '@/src/constants/design';
-import { useMonthJournals } from '@/src/hooks/useMonthJournals';
-import { formatTodayKo, toDateString, toYearMonth } from '@/src/lib/dateKeys';
+import { ResponsiveContainer } from "@/src/components/common/ResponsiveContainer";
+import { ScreenBackground } from "@/src/components/final/ScreenBackground";
+import { DailyPrompt } from "@/src/components/journal/DailyPrompt";
+import { HoroscopeStrip } from "@/src/components/journal/HoroscopeStrip";
+import { FinalHeader } from "@/src/components/final/FinalHeader";
+import { MonthCalendar } from "@/src/components/journal/MonthCalendar";
+import { colors, layout, radius, spacing } from "@/src/constants/design";
+import { useMonthJournals } from "@/src/hooks/useMonthJournals";
+import { formatTodayKo, toDateString, toYearMonth } from "@/src/lib/dateKeys";
 
 /**
  * 홈 = 이번 달 달력.
@@ -45,7 +45,7 @@ export default function HomeScreen() {
   const wroteToday = journals.has(today);
 
   return (
-    <ScreenBackground>
+    <ScreenBackground deco="starfield">
       <ResponsiveContainer>
         <ScrollView
           contentContainerStyle={[
@@ -67,9 +67,10 @@ export default function HomeScreen() {
             onPressDay={(date, journal) => {
               // 기록이 있으면 읽기 화면으로, 없으면 그 날짜로 바로 쓰러 간다.
               // 단 미래 날짜는 쓸 수 없다 — 달력이 거짓말을 하게 된다.
-              if (journal) router.push({ pathname: '/journal-view', params: { date } });
+              if (journal)
+                router.push({ pathname: "/journal-view", params: { date } });
               else if (date <= today) {
-                router.push({ pathname: '/journal-write', params: { date } });
+                router.push({ pathname: "/journal-write", params: { date } });
               }
             }}
           />
@@ -88,19 +89,18 @@ export default function HomeScreen() {
             onPress={() =>
               router.push(
                 wroteToday
-                  ? { pathname: '/journal-view', params: { date: today } }
-                  : { pathname: '/journal-write', params: { date: today } },
+                  ? { pathname: "/journal-view", params: { date: today } }
+                  : { pathname: "/journal-write", params: { date: today } },
               )
             }
             style={styles.writeBtn}
           >
             <Text style={styles.writeText}>
-              {wroteToday ? '오늘 일기 다시 보기' : '오늘 일기 쓰기'}
+              {wroteToday ? "오늘 일기 다시 보기" : "오늘 일기 쓰기"}
             </Text>
           </Pressable>
         </ScrollView>
       </ResponsiveContainer>
-
     </ScreenBackground>
   );
 }
@@ -108,24 +108,24 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   content: {
     paddingHorizontal: spacing.lg,
-    alignItems: 'center',
+    alignItems: "center",
     gap: spacing.lg,
   },
   // 화면 폭을 꽉 채우면 '섹션-섹션-바' 리듬이 되어 답답하다.
   // 글자 길이에 맞춰 줄이고 가운데에 띄운다.
   writeBtn: {
-    alignSelf: 'center',
+    alignSelf: "center",
     // 컨테이너 gap(16) 위에 더 얹는 값이다 — 질문을 읽고 잠깐 생각할 틈을 준다.
     marginTop: spacing.xxl,
     paddingVertical: spacing.md,
     paddingHorizontal: spacing.xxxl,
     borderRadius: radius.pill,
-    alignItems: 'center',
+    alignItems: "center",
     backgroundColor: colors.action,
   },
   writeText: {
-    fontSize: 15,
-    fontFamily: 'NotoSansKR_500Medium',
+    fontSize: 14,
+    fontFamily: "NotoSansKR_400Regular",
     color: colors.actionText,
   },
 });

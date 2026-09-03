@@ -17,11 +17,7 @@ import { useFocusEffect } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import {
-  CircleDeco,
-  MoonDeco,
-  StarDeco,
-} from "@/src/components/final/ScreenDeco";
+import { StarfieldDeco } from "@/src/components/final/ScreenDeco";
 import { DatePill } from "@/src/components/final/DatePill";
 import { FinalHeader } from "@/src/components/final/FinalHeader";
 import { GogoInfoGrid } from "@/src/components/final/GogoInfoGrid";
@@ -131,38 +127,8 @@ export default function TodayScreen() {
 
   return (
     <LinearGradient colors={gradients.screen} style={styles.fill}>
-      {/* Background decorations */}
-      <CircleDeco x={-50} y={50} size={170} color={colors.sky} opacity={0.11} />
-      <CircleDeco
-        x={230}
-        y={-30}
-        size={160}
-        color={colors.yellow}
-        opacity={0.1}
-      />
-      <CircleDeco
-        x={200}
-        y={590}
-        size={160}
-        color={colors.apricot}
-        opacity={0.1}
-      />
-      <StarDeco x={46} y={128} size={5} color={colors.yellow} opacity={0.26} />
-      <StarDeco
-        x={294}
-        y={108}
-        size={4}
-        color={colors.apricot}
-        opacity={0.22}
-      />
-      <StarDeco x={28} y={440} size={3} color={colors.yellow} opacity={0.18} />
-      <MoonDeco
-        x={286}
-        y={174}
-        size={22}
-        color={colors.apricot}
-        opacity={0.18}
-      />
+      {/* Background decorations — 홈도 같은 세트를 쓴다 */}
+      <StarfieldDeco />
 
       <ScrollView
         ref={scrollRef}
