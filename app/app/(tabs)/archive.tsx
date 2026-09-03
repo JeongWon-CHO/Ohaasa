@@ -96,6 +96,9 @@ export default function ArchiveScreen() {
             /* 상단 인셋은 ResponsiveContainer가 이미 줬다(sticky 월 헤더 때문에). */
             <FinalHeader subtitle="지금까지 남긴 그림" withTopInset={false} bleed />
           }
+          // 헤더 아래 여백. 월 알약이 자기 paddingTop(8)만 갖고 있어서 그대로 두면
+          // 헤더에 붙고, 섹션과 섹션 사이보다 좁아 보인다.
+          ListHeaderComponentStyle={styles.listHeader}
           ListEmptyComponent={
             // 첫 조회 중에는 아무것도 띄우지 않는다 — 기록이 있는데도
             // "없어요"가 한 번 깜빡이면 지운 줄 알게 된다.
@@ -124,6 +127,9 @@ const styles = StyleSheet.create({
   content: {
     paddingHorizontal: spacing.lg,
     flexGrow: 1,
+  },
+  listHeader: {
+    marginBottom: spacing.lg,
   },
   empty: {
     flex: 1,
