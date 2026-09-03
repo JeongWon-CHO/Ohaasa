@@ -100,17 +100,20 @@ export default function JournalViewScreen() {
             <>
               <Text style={styles.date}>{formatFullDate(journal.date)}</Text>
 
-              {journal.summary.length > 0 && (
-                <Text style={styles.summary}>{journal.summary}</Text>
-              )}
-
-              {/* 그림이 본문이다 — 가장 크게, 가운데. */}
+              {/* 그림이 본문이다 — 가장 크게, 가운데. 기분·글은 그 아래에 붙는다. */}
               <SketchThumbnail sketch={journal.sketch} size={innerWidth} />
 
               <View style={styles.moodRow}>
                 <MoodFace mood={journal.mood} size={34} />
                 <Text style={styles.moodLabel}>{moodLevelFor(journal.mood).label}</Text>
               </View>
+
+              {journal.summary.length > 0 && (
+                <>
+                  <View style={styles.divider} />
+                  <Text style={styles.summary}>{journal.summary}</Text>
+                </>
+              )}
             </>
           )}
         </ScrollView>
@@ -160,13 +163,22 @@ const styles = StyleSheet.create({
     fontFamily: 'NotoSansKR_400Regular',
     color: colors.textSoft,
   },
+  /** 기분과 일기 사이. 가로로 꽉 채우면 칸이 나뉘어 보여서 짧게 가운데만 긋는다. */
+  divider: {
+    width: '32%',
+    height: 1,
+    borderRadius: 1,
+    backgroundColor: 'rgba(156,139,120,0.28)',
+    // 컨테이너 gap(16) 위에 얹는다 — 선 양옆이 24씩 벌어진다.
+    marginVertical: spacing.sm,
+  },
   summary: {
-    fontSize: 21,
-    lineHeight: 31,
+    fontSize: 16,
+    lineHeight: 26,
     fontFamily: 'NotoSansKR_400Regular',
-    color: colors.text,
+    color: colors.textMid,
     textAlign: 'center',
-    marginBottom: spacing.xs,
+    marginTop: spacing.xs,
   },
   moodRow: {
     flexDirection: 'row',
