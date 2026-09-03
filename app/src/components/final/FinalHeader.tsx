@@ -9,6 +9,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 
+import { APP_TITLE } from "@/src/constants/app";
 import { colors } from "@/src/constants/design";
 
 interface FinalHeaderProps {
@@ -40,7 +41,7 @@ export function FinalHeader({
         </TouchableOpacity>
       )}
       <View style={styles.copy}>
-        <Text style={styles.title}>ohaasa</Text>
+        <Text style={styles.title}>{APP_TITLE}</Text>
         {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
       </View>
       <View style={styles.actions}>

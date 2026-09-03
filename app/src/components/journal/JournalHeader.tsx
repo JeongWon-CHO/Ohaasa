@@ -1,16 +1,10 @@
 import type { ReactNode } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
+import { APP_TITLE } from '@/src/constants/app';
 import { colors, spacing } from '@/src/constants/design';
 
-/**
- * 홈 상단 헤더.
- *
- * `app.config.js`의 `name`과 항상 같은 값이어야 한다 — 홈 화면 아이콘 라벨과
- * 앱 안 헤더가 다른 이름을 말하면 같은 앱으로 안 읽힌다.
- * slug·bundleId('ohaasa')는 별개다(EAS 프로젝트 식별자 · 스토어 등록 후 변경 불가).
- */
-const APP_TITLE = '하루끄적';
+/** 홈 상단 헤더. 앱 이름은 FinalHeader와 같은 상수를 본다(constants/app.ts). */
 
 const WEEKDAY_KO = ['일', '월', '화', '수', '목', '금', '토'];
 

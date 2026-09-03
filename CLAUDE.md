@@ -152,7 +152,7 @@ CREATE POLICY "user_devices_anon_select" ON public.user_devices FOR SELECT  TO a
 - `google-services.json`: 커밋 대상(앱 수신용) · Firebase service account JSON은 커밋 금지
 - 앱 이름: **하루끄적** (부제 "하루 한 장, 그림일기" — App Store Connect에서 입력, 코드에 없다)
   - **`slug`·`bundleIdentifier`는 여전히 `ohaasa`다.** slug는 EAS 프로젝트 식별자라 바꾸면 프로젝트가 갈리고, bundleId는 스토어 등록 후 변경 불가다. 이름만 갈린 상태가 정상이다.
-  - `app.config.js`의 `name`과 `JournalHeader.tsx`의 `APP_TITLE`은 **항상 같이 바꾼다.**
+  - 앱 안 표기는 `src/constants/app.ts`의 `APP_TITLE` 하나다(`FinalHeader` · `JournalHeader`가 같이 본다). **`app.config.js`의 `name`과 항상 같이 바꾼다.** 헤더가 둘이라 각자 하드코딩했더니 한쪽만 바뀐 적이 있어 상수로 묶었다.
 - 현재 버전: v1.7.0 - 보관함 탭 · 오늘의 질문 커뮤니티 탭 승격 · 앱 이름 변경
 
 ---

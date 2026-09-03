@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Linking, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
-import { useFocusEffect } from "expo-router";
+import { router, useFocusEffect } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
 
 import { FinalHeader } from "@/src/components/final/FinalHeader";
@@ -65,6 +65,7 @@ export default function StatsScreen() {
       <ResponsiveContainer>
         <View style={styles.headerSpacer}>
           <FinalHeader
+            onBackPress={() => router.back()}
             subtitle={activeTab === "trend" ? "운세 흐름" : "운세 기록"}
             rightSlot={
               activeTab === "trend" ? (
