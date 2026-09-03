@@ -151,7 +151,7 @@ export default function StatsScreen() {
             </ScrollView>
           )
         ) : (
-          <ReviewHistoryTab />
+          <ReviewHistoryTab bottomInset={tabBarHeight} />
         )}
       </ResponsiveContainer>
 

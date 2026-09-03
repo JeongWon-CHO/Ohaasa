@@ -222,6 +222,7 @@ CREATE POLICY "user_devices_anon_select" ON public.user_devices FOR SELECT  TO a
 - **데이터 훅**: `useHoroscopeTrends(zodiacSign, period, compareSign?)` — 기간 내 전체 별자리 rank rows를 한 번에 받아 클라이언트에서 가공. `CUTOFF_BUFFER_DAYS = 3`으로 크론 미실행 날 대응.
 - **등수 표시**: 기본은 `roundedRank`(반올림값이 같으면 공동 등수 부여 후 다음 번호 스킵 — 3.4·6.1·6.8 → 1/2/2/4위), 자세히 모드는 `exactRank` + 소수점 1자리. `detailMode`는 저장하지 않아 재진입 시 리셋되고, 공유 카드는 토글과 무관하게 항상 정수.
 - **화살표 트렌드 기준**: 그날의 원본 운세 순위(1~12)가 아니라 **기간 평균 공동 등수(`roundedRank`)의 어제 대비 변화** — 같은 길이의 윈도우를 하루 앞당겨 재계산한다.
+- **`stats.tsx`·`rankings.tsx`는 탭이 아니라 push된 스택 화면이다.** `useBottomTabBarHeight()`는 탭 네비게이터 바깥에서 **throw**하므로 화면이 `0`을 정해 하위 컴포넌트에 넘긴다(`ReviewHistoryTab`의 `bottomInset`). 통계가 탭이던 시절의 호출이 하위 컴포넌트에 남아 있어 **기록 세그먼트를 눌러야 터지는** 상태로 한동안 숨어 있었다 — 화면을 탭 밖으로 옮길 땐 하위 컴포넌트까지 훑어야 한다.
 
 ### 오늘의 질문
 

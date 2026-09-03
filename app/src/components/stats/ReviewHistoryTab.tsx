@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
-import { useBottomTabBarHeight } from 'expo-router/js-tabs';
 
 import { colors, spacing } from '@/src/constants/design';
 import { useReviewHistory } from '@/src/hooks/useReviewHistory';
@@ -17,8 +16,19 @@ function getTodayStr(): string {
   return `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, '0')}-${String(t.getDate()).padStart(2, '0')}`;
 }
 
-export function ReviewHistoryTab() {
-  const tabBarHeight = useBottomTabBarHeight();
+interface ReviewHistoryTabProps {
+  /**
+   * 목록 아래 여백.
+   *
+   * 여기서 `useBottomTabBarHeight()`를 부르면 안 된다 — 이 컴포넌트를 쓰는 `stats.tsx`는
+   * 탭이 아니라 push된 스택 화면이라 탭 네비게이터 바깥이고, 그 훅은 거기서 throw한다.
+   * (통계가 탭이던 시절의 잔재였고, 기록 세그먼트를 눌러야 렌더돼 뒤늦게 드러났다.)
+   * 값은 화면이 정해서 넘긴다.
+   */
+  bottomInset: number;
+}
+
+export function ReviewHistoryTab({ bottomInset }: ReviewHistoryTabProps) {
   const today = new Date();
   const [year, setYear] = useState(today.getFullYear());
   const [month, setMonth] = useState(today.getMonth() + 1);
@@ -68,7 +78,7 @@ export function ReviewHistoryTab() {
   return (
     <>
       <ScrollView
-        contentContainerStyle={[styles.list, { paddingBottom: tabBarHeight + 16 }]}
+        contentContainerStyle={[styles.list, { paddingBottom: bottomInset + 16 }]}
         showsVerticalScrollIndicator={false}
         style={styles.scroll}
       >
