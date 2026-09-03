@@ -158,7 +158,7 @@ CREATE POLICY "user_devices_anon_select" ON public.user_devices FOR SELECT  TO a
     - 조판은 하나다(`styles.title`, `NotoSansKR_300Light` + `letterSpacing: 2`). 워드마크용 자간이라 한글 문장을 넣으면 흩어져 보인다 — 그래서 화면 이름은 영문으로 둔다.
   - **헤더는 `FinalHeader` 하나다.** 홈·보관함·커뮤니티가 각자 헤더를 갖고 있었고, 그래서 글자 크기가 26과 20으로, 좌우 여백이 16과 28로 갈려 **탭을 옮길 때마다 제목만 커졌다 작아지고 좌우로 흔들렸다.** 조판·여백은 `typography.headerTitle` · `typography.headerSubtitle` · `layout.headerPaddingH`(28)에 있다.
     - **상단 안전영역은 `FinalHeader`가 자기 `paddingTop`으로 먹는다** — 스크롤 컨테이너에서 또 주면 이중 여백이다. 반대로 컨테이너가 이미 인셋을 준 화면(보관함: sticky 월 헤더가 상태바에 붙지 않게 리스트 **바깥**에 인셋을 준다)은 `withTopInset={false}`로 꺼야 한다.
-    - 헤더 여백(28)이 본문(16)보다 크므로, **본문 컨테이너 안에 들어가는 헤더는 `marginHorizontal: -spacing.lg`로 부모 여백을 되물어야** 한다.
+    - 헤더 여백(28)이 본문(16)보다 크므로, **본문 여백이 걸린 스크롤 컨테이너 안에 들어갈 때는 `bleed`를 켜야** 한다 — 안 켜면 16+28=44가 되어 제목만 안쪽으로 밀린다. 되무는 값을 화면마다 손으로 쓰다가 홈에서 한 번 빠뜨렸기 때문에 헤더가 직접 갖게 했다. 컨테이너에 좌우 여백이 없는 화면(커뮤니티·설정·운세 계열)은 켜지 않는다.
     - `alignSelf: "stretch"`가 load-bearing이다 — 홈 스크롤 컨테이너가 `alignItems: 'center'`라 없으면 헤더가 글자 폭으로 쪼그라든다.
   - **`FinalHeader`의 뒤로가기는 `marginLeft: -10`으로 광학 정렬한다.** 헤더 패딩(28)이 본문과 같아도 셰브론은 더 안쪽에서 시작해 보인다 — 30 박스에 22 아이콘이 가운데 정렬돼 +4, Feather `chevron-left`가 24 viewBox에서 x축 9~15만 차지해 +7이라 잉크가 약 39pt에서 시작한다. 터치 영역은 그대로 두고 획만 옮긴다.
 - 현재 버전: v1.7.0 - 보관함 탭 · 오늘의 질문 커뮤니티 탭 승격 · 앱 이름 변경

@@ -56,7 +56,7 @@ export default function HomeScreen() {
             { paddingBottom: tabBarHeight + spacing.xl },
           ]}
         >
-          <FinalHeader subtitle={formatTodayKo()} />
+          <FinalHeader subtitle={formatTodayKo()} bleed />
 
           <HoroscopeStrip />
 

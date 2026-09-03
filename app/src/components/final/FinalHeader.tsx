@@ -10,7 +10,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 
 import { APP_TITLE } from "@/src/constants/app";
-import { colors, layout, typography } from "@/src/constants/design";
+import { colors, layout, spacing, typography } from "@/src/constants/design";
 
 interface FinalHeaderProps {
   /** push된 화면에서 뒤로가기를 붙인다. 탭 화면에서는 넘기지 않는다. */
@@ -33,6 +33,14 @@ interface FinalHeaderProps {
    * 상태바에 붙지 않게 리스트 **바깥**에 인셋을 주고 있어서, 여기서 또 주면 이중이 된다.
    */
   withTopInset?: boolean;
+  /**
+   * 본문 여백(`spacing.lg`)이 걸린 스크롤 컨테이너 **안에** 놓일 때 켠다.
+   *
+   * 이 헤더는 자기 좌우 여백(`layout.headerPaddingH` = 28)을 갖는데, 부모가 이미 16을 주고
+   * 있으면 44가 되어 제목만 안쪽으로 밀린다. 그만큼 되물어 다른 화면과 시작점을 맞춘다.
+   * 컨테이너에 좌우 여백이 없는 화면(커뮤니티)은 켜면 안 된다.
+   */
+  bleed?: boolean;
 }
 
 export function FinalHeader({
@@ -45,10 +53,17 @@ export function FinalHeader({
   saving = false,
   rightSlot,
   withTopInset = true,
+  bleed = false,
 }: FinalHeaderProps) {
   const insets = useSafeAreaInsets();
   return (
-    <View style={[styles.header, { paddingTop: (withTopInset ? insets.top : 0) + 12 }]}>
+    <View
+      style={[
+        styles.header,
+        { paddingTop: (withTopInset ? insets.top : 0) + 12 },
+        bleed && styles.bleed,
+      ]}
+    >
       {onBackPress && (
         <TouchableOpacity onPress={onBackPress} hitSlop={12} style={styles.backButton}>
           <Feather name="chevron-left" size={22} color={colors.text} />
@@ -117,6 +132,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: layout.headerPaddingH,
+  },
+  bleed: {
+    marginHorizontal: -spacing.lg,
   },
   copy: {
     flex: 1,

@@ -94,10 +94,8 @@ export default function ArchiveScreen() {
             { paddingBottom: tabBarHeight + spacing.xl },
           ]}
           ListHeaderComponent={
-            <View style={styles.headerWrap}>
-              {/* 상단 인셋은 ResponsiveContainer가 이미 줬다(sticky 월 헤더 때문에). */}
-              <FinalHeader subtitle="지금까지 남긴 그림" withTopInset={false} />
-            </View>
+            /* 상단 인셋은 ResponsiveContainer가 이미 줬다(sticky 월 헤더 때문에). */
+            <FinalHeader subtitle="지금까지 남긴 그림" withTopInset={false} bleed />
           }
           ListEmptyComponent={
             // 첫 조회 중에는 아무것도 띄우지 않는다 — 기록이 있는데도
@@ -127,10 +125,6 @@ const styles = StyleSheet.create({
   content: {
     paddingHorizontal: spacing.lg,
     flexGrow: 1,
-  },
-  // FinalHeader는 자기 좌우 여백(28)을 갖고 있으므로 본문 여백을 되물어 준다.
-  headerWrap: {
-    marginHorizontal: -spacing.lg,
   },
   empty: {
     flex: 1,
