@@ -1,10 +1,38 @@
-import { format, subDays } from 'date-fns';
+import { endOfMonth, format, getDaysInMonth, parseISO, subDays, subMonths } from 'date-fns';
 import { useEffect, useMemo, useState } from 'react';
 
 import { supabase } from '@/src/lib/supabase';
 import type { ZodiacSign } from '@/src/constants/zodiac';
 
-export type TrendsPeriod = '7d' | '30d';
+/**
+ * 최근 N일 두 가지와, 특정 달 하나.
+ *
+ * 달은 `month:2026-08` 꼴의 문자열로 싣는다 — 값 하나로 상태를 관리할 수 있어
+ * "기간 종류"와 "고른 달"을 따로 들고 다니며 어긋날 일이 없다.
+ */
+export type TrendsPeriod = '7d' | '14d' | `month:${MonthKey}`;
+
+/** `yyyy-MM` */
+export type MonthKey = string;
+
+const MONTH_PREFIX = 'month:';
+
+export function monthPeriod(month: MonthKey): TrendsPeriod {
+  return `${MONTH_PREFIX}${month}`;
+}
+
+/** 월간이면 `yyyy-MM`, 아니면 null. */
+export function getPeriodMonth(period: TrendsPeriod): MonthKey | null {
+  return period.startsWith(MONTH_PREFIX) ? period.slice(MONTH_PREFIX.length) : null;
+}
+
+function previousMonth(month: MonthKey): MonthKey {
+  return format(subMonths(parseISO(`${month}-01`), 1), 'yyyy-MM');
+}
+
+function rowsOfMonth(rows: TrendRow[], month: MonthKey): TrendRow[] {
+  return rows.filter((row) => row.date.startsWith(`${month}-`));
+}
 export type Trend = 'up' | 'down' | 'flat';
 
 export interface RankPoint {
@@ -61,7 +89,13 @@ function computeRoundedRankMap(sorted: { sign: ZodiacSign; averageRank: number }
 }
 
 export function periodLabel(period: TrendsPeriod): string {
-  return period === '7d' ? '최근 7일' : '최근 30일';
+  const month = getPeriodMonth(period);
+  if (month) {
+    const [year, monthNum] = month.split('-').map(Number);
+    // 올해면 "8월", 해가 넘어가면 어느 해인지 붙여야 구분된다.
+    return year === new Date().getFullYear() ? `${monthNum}월` : `${year}년 ${monthNum}월`;
+  }
+  return period === '7d' ? '최근 7일' : '최근 14일';
 }
 
 export function getSummaryComment(averageRank: number | null): string {
@@ -86,19 +120,54 @@ export function getSummaryComment(averageRank: number | null): string {
 const CUTOFF_BUFFER_DAYS = 3;
 
 function getTargetCount(period: TrendsPeriod): number {
-  return period === '7d' ? 7 : 30;
+  const month = getPeriodMonth(period);
+  if (month) return getDaysInMonth(parseISO(`${month}-01`));
+  return period === '7d' ? 7 : 14;
 }
 
-function getCutoffDate(period: TrendsPeriod): string {
+/**
+ * 조회할 날짜 구간. 월간은 **위쪽도 막아야** 한다 — `gte`만 걸면 지난 달을 고를 때
+ * 그 달부터 오늘까지가 전부 딸려와 egress가 달 수만큼 늘어난다.
+ */
+function getDateRange(period: TrendsPeriod): { from: string; to: string | null } {
+  const month = getPeriodMonth(period);
+  if (month) {
+    const first = parseISO(`${month}-01`);
+    // 화살표를 "전 달 대비"로 내려면 전 달도 같이 받아야 한다. 두 달치라 행이 두 배지만,
+    // 지난 달의 평균은 더 변하지 않으므로 아래 rangeCache가 한 번만 받게 잡아준다.
+    return {
+      from: format(subMonths(first, 1), 'yyyy-MM-01'),
+      to: format(endOfMonth(first), 'yyyy-MM-dd'),
+    };
+  }
   const daysBack = getTargetCount(period) - 1 + CUTOFF_BUFFER_DAYS;
-  return format(subDays(new Date(), daysBack), 'yyyy-MM-dd');
+  return { from: format(subDays(new Date(), daysBack), 'yyyy-MM-dd'), to: null };
 }
+
+/**
+ * 이미 끝난 구간의 조회 결과. 지난 달의 순위는 더 바뀌지 않으므로 달을 오갈 때마다
+ * 다시 받을 이유가 없다 — 전 달까지 두 달치를 받는 월간에서 특히 크다.
+ *
+ * **끝나지 않은 구간은 담지 않는다**(`to`가 오늘 이후이거나 아예 없는 경우).
+ * 이번 달과 최근 N일은 크론이 돌 때마다 늘어난다.
+ */
+const rangeCache = new Map<string, TrendRow[]>();
 
 function getErrorMessage(err: unknown): string {
   return err instanceof Error ? err.message : '운세 추이를 불러오지 못했습니다.';
 }
 
 type TrendRow = { date: string; zodiac_sign: ZodiacSign; rank: number };
+
+function ranksBySignOf(rows: TrendRow[]): Map<ZodiacSign, number[]> {
+  const map = new Map<ZodiacSign, number[]>();
+  for (const row of rows) {
+    const list = map.get(row.zodiac_sign) ?? [];
+    list.push(row.rank);
+    map.set(row.zodiac_sign, list);
+  }
+  return map;
+}
 
 type TrendsDerived = Pick<
   HoroscopeTrendsState,
@@ -119,12 +188,16 @@ const EMPTY_DERIVED: TrendsDerived = {
  * 전부 여기서 한다. 그래서 `zodiacSign`·`compareSign`이 바뀌어도 **다시 받아올 이유가 없다.**
  */
 function computeTrends(
-  allRows: TrendRow[],
+  fetchedRows: TrendRow[],
   zodiacSign: ZodiacSign | null,
   compareSign: ZodiacSign | null,
   period: TrendsPeriod,
 ): TrendsDerived {
   const targetCount = getTargetCount(period);
+  const month = getPeriodMonth(period);
+
+  // 월간은 전 달까지 받아오므로, 화면에 그릴 행은 고른 달만 추린다.
+  const allRows = month ? rowsOfMonth(fetchedRows, month) : fetchedRows;
 
   const points: RankPoint[] = zodiacSign
     ? allRows
@@ -145,12 +218,7 @@ function computeTrends(
   const minRank = ranks.length ? Math.min(...ranks) : null;
   const maxRank = ranks.length ? Math.max(...ranks) : null;
 
-  const ranksBySign = new Map<ZodiacSign, number[]>();
-  for (const row of allRows) {
-    const list = ranksBySign.get(row.zodiac_sign) ?? [];
-    list.push(row.rank);
-    ranksBySign.set(row.zodiac_sign, list);
-  }
+  const ranksBySign = ranksBySignOf(allRows);
 
   const sortedAverages = Array.from(ranksBySign.entries())
     .map(([sign, signRanks]) => ({
@@ -161,19 +229,27 @@ function computeTrends(
 
   const todayRoundedRanks = computeRoundedRankMap(sortedAverages);
 
-  // 화살표는 "평균 등수 배지가 어제 대비 어떻게 바뀌었는지"를 비교해야 하므로,
-  // 같은 길이의 기간을 하루 앞당겨 다시 계산해 어제 시점의 등수를 구한다.
-  const yesterdayAverages = Array.from(ranksBySign.entries())
-    .map(([sign, signRanks]) => {
-      const yesterdayRanks = signRanks.slice(0, -1).slice(-targetCount);
-      return yesterdayRanks.length
-        ? { sign, averageRank: Math.round(average(yesterdayRanks) * 10) / 10 }
-        : null;
-    })
+  // 화살표의 비교 기준.
+  // - 일간: 같은 길이의 기간을 하루 앞당겨 다시 계산한 "어제 시점의 등수"
+  // - 월간: 전 달 전체의 평균 등수. 한 달짜리 창을 하루 앞당겨 봐야 거의 그대로라
+  //   화살표가 의미를 잃는다.
+  const baselineRanksBySign = month
+    ? ranksBySignOf(rowsOfMonth(fetchedRows, previousMonth(month)))
+    : new Map(
+        Array.from(ranksBySign.entries()).map(([sign, signRanks]) => [
+          sign,
+          signRanks.slice(0, -1).slice(-targetCount),
+        ]),
+      );
+
+  const baselineAverages = Array.from(baselineRanksBySign.entries())
+    .map(([sign, signRanks]) =>
+      signRanks.length ? { sign, averageRank: Math.round(average(signRanks) * 10) / 10 } : null,
+    )
     .filter((item): item is { sign: ZodiacSign; averageRank: number } => item !== null)
     .sort((a, b) => a.averageRank - b.averageRank);
 
-  const yesterdayRoundedRanks = computeRoundedRankMap(yesterdayAverages);
+  const yesterdayRoundedRanks = computeRoundedRankMap(baselineAverages);
 
   const signAverages: SignAverage[] = sortedAverages.map((item, index) => {
     const exactRank = index + 1;
@@ -216,16 +292,37 @@ export function useHoroscopeTrends(
 
     async function load() {
       try {
-        const { data, error: fetchError } = await supabase
+        const range = getDateRange(period);
+        const cacheKey = `${range.from}|${range.to ?? ''}`;
+        const cached = range.to && range.to < format(new Date(), 'yyyy-MM-dd')
+          ? rangeCache.get(cacheKey)
+          : undefined;
+
+        if (cached) {
+          setRows(cached);
+          setError(null);
+          setLoading(false);
+          return;
+        }
+
+        let query = supabase
           .from('horoscopes')
           .select('date, zodiac_sign, rank')
-          .gte('date', getCutoffDate(period))
-          .order('date', { ascending: true });
+          .gte('date', range.from);
+        if (range.to) query = query.lte('date', range.to);
+
+        const { data, error: fetchError } = await query.order('date', { ascending: true });
 
         if (fetchError) throw fetchError;
         if (!isMounted) return;
 
-        setRows((data ?? []) as TrendRow[]);
+        const fetched = (data ?? []) as TrendRow[];
+        // 끝난 구간만 담는다 — 진행 중인 구간을 담으면 새 날짜가 영영 안 보인다.
+        if (range.to && range.to < format(new Date(), 'yyyy-MM-dd')) {
+          rangeCache.set(cacheKey, fetched);
+        }
+
+        setRows(fetched);
         setError(null);
         setLoading(false);
       } catch (err) {
