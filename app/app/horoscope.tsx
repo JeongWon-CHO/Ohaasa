@@ -15,8 +15,13 @@ import { DailyReviewEntryCard } from "@/src/components/daily-review/DailyReviewE
 import { useDailyQuestion } from "@/src/hooks/useDailyQuestion";
 import { useFocusEffect } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { CircleDeco, MoonDeco, StarDeco } from "@/src/components/final/ScreenDeco";
+import {
+  CircleDeco,
+  MoonDeco,
+  StarDeco,
+} from "@/src/components/final/ScreenDeco";
 import { DatePill } from "@/src/components/final/DatePill";
 import { FinalHeader } from "@/src/components/final/FinalHeader";
 import { GogoInfoGrid } from "@/src/components/final/GogoInfoGrid";
@@ -28,7 +33,13 @@ import { PushPermissionSheet } from "@/src/components/PushPermissionSheet";
 import { ShareCard } from "@/src/components/share/ShareCard";
 import { Toast } from "@/src/components/common/Toast";
 import { useHoroscopeDateContext } from "@/src/context/HoroscopeDateContext";
-import { colors, gradients, layout } from "@/src/constants/design";
+import {
+  colors,
+  gradients,
+  layout,
+  radius,
+  spacing,
+} from "@/src/constants/design";
 import { ZODIAC_MAP } from "@/src/constants/zodiac";
 import { useAllHoroscopes } from "@/src/hooks/useHoroscope";
 import { getDailyReview, type DailyReview } from "@/src/lib/dailyReviews";
@@ -46,8 +57,17 @@ const COPY = {
 };
 
 export default function TodayScreen() {
+  const insets = useSafeAreaInsets();
   const { showToast, toastProps } = useToast();
-  const { cardRef, share, sharing, saveImage, saving, mediaDeniedSheetVisible, closeMediaDeniedSheet } = useShareHoroscope({
+  const {
+    cardRef,
+    share,
+    sharing,
+    saveImage,
+    saving,
+    mediaDeniedSheetVisible,
+    closeMediaDeniedSheet,
+  } = useShareHoroscope({
     showToast,
   });
 
@@ -84,17 +104,21 @@ export default function TodayScreen() {
   const [dateSheetVisible, setDateSheetVisible] = useState(false);
   const [currentReview, setCurrentReview] = useState<DailyReview | null>(null);
 
-  useFocusEffect(useCallback(() => {
-    scrollRef.current?.scrollTo({ y: 0, animated: false });
-  }, []));
+  useFocusEffect(
+    useCallback(() => {
+      scrollRef.current?.scrollTo({ y: 0, animated: false });
+    }, []),
+  );
 
-  useFocusEffect(useCallback(() => {
-    if (!horoscope?.date || !zodiacSign) {
-      setCurrentReview(null);
-      return;
-    }
-    getDailyReview(horoscope.date, zodiacSign).then(setCurrentReview);
-  }, [horoscope?.date, zodiacSign]));
+  useFocusEffect(
+    useCallback(() => {
+      if (!horoscope?.date || !zodiacSign) {
+        setCurrentReview(null);
+        return;
+      }
+      getDailyReview(horoscope.date, zodiacSign).then(setCurrentReview);
+    }, [horoscope?.date, zodiacSign]),
+  );
 
   const { pushSheetVisible, handlePushAccept, handlePushDecline } =
     usePushPermissionPrompt({ loading, zodiacSign });
@@ -142,7 +166,10 @@ export default function TodayScreen() {
 
       <ScrollView
         ref={scrollRef}
-        contentContainerStyle={[styles.content, { paddingBottom: 24 }]}
+        contentContainerStyle={[
+          styles.content,
+          { paddingBottom: insets.bottom + 40 },
+        ]}
         showsVerticalScrollIndicator={false}
         bounces={false}
         style={styles.scroll}
@@ -193,7 +220,11 @@ export default function TodayScreen() {
                 // 최신 방송일이면 커뮤니티 탭으로 보낸다. 과거 날짜를 골라 본 상태에서는
                 // 그 날짜의 질문을 열어야 하므로 파라미터 진입(스택 라우트)을 유지한다.
                 if (isLatest) router.push("/(tabs)/community");
-                else router.push({ pathname: "/daily-question", params: { date: horoscope.date } });
+                else
+                  router.push({
+                    pathname: "/daily-question",
+                    params: { date: horoscope.date },
+                  });
               }}
               style={styles.cardSection}
             />
@@ -206,14 +237,41 @@ export default function TodayScreen() {
             />
 
             {/* 순위·통계는 탭에서 빠져 이 화면 안에서만 들어간다 */}
-            <View style={styles.moreLinks}>
-              <Pressable onPress={() => router.push("/rankings")} style={styles.moreLink}>
-                <Text style={styles.moreLinkText}>전체 별자리 순위</Text>
-                <Feather name="chevron-right" size={16} color={colors.textSoft} />
+            <View style={styles.moreGrid}>
+              <Pressable
+                onPress={() => router.push("/rankings")}
+                style={({ pressed }) => [
+                  styles.moreTile,
+                  pressed && styles.moreTilePressed,
+                ]}
+              >
+                <View style={styles.moreIconWrap}>
+                  <Feather name="award" size={18} color={colors.apricotDark} />
+                </View>
+                <Text style={styles.moreTileTitle}>전체 순위</Text>
+                <Text style={styles.moreTileSubtitle}>
+                  12개의 별자리를 한눈에
+                </Text>
               </Pressable>
-              <Pressable onPress={() => router.push("/stats")} style={styles.moreLink}>
-                <Text style={styles.moreLinkText}>운세 통계 · 기록</Text>
-                <Feather name="chevron-right" size={16} color={colors.textSoft} />
+
+              <Pressable
+                onPress={() => router.push("/stats")}
+                style={({ pressed }) => [
+                  styles.moreTile,
+                  pressed && styles.moreTilePressed,
+                ]}
+              >
+                <View style={styles.moreIconWrap}>
+                  <Feather
+                    name="bar-chart-2"
+                    size={18}
+                    color={colors.apricotDark}
+                  />
+                </View>
+                <Text style={styles.moreTileTitle}>운세 통계</Text>
+                <Text style={styles.moreTileSubtitle}>
+                  최근 운세 추이와 기록
+                </Text>
               </Pressable>
             </View>
           </>
@@ -222,7 +280,6 @@ export default function TodayScreen() {
             <Text style={styles.emptyText}>{emptyText}</Text>
           </View>
         )}
-
       </ScrollView>
 
       {/* 오프스크린 캡처용 ShareCard */}
@@ -243,7 +300,10 @@ export default function TodayScreen() {
       <MediaDeniedSheet
         visible={mediaDeniedSheetVisible}
         onClose={closeMediaDeniedSheet}
-        onOpenSettings={() => { Linking.openSettings(); closeMediaDeniedSheet(); }}
+        onOpenSettings={() => {
+          Linking.openSettings();
+          closeMediaDeniedSheet();
+        }}
       />
 
       <HoroscopeDateSheet
@@ -259,26 +319,50 @@ export default function TodayScreen() {
 // ─── Styles ───────────────────────────────────────────────────
 
 const styles = StyleSheet.create({
-  moreLinks: {
-    marginTop: 16,
-    marginHorizontal: 20,
-    borderRadius: 12,
-    backgroundColor: colors.card,
-    borderWidth: 1,
-    borderColor: colors.border,
-    overflow: "hidden",
-  },
-  moreLink: {
+  // 카드 두 장을 나란히 둔다. 배경은 비우고 테두리만 남겨 위 카드들과 무게를 나눈다.
+  moreGrid: {
     flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingVertical: 14,
-    paddingHorizontal: 16,
+    gap: 10,
+    marginTop: 16,
+    marginHorizontal: 24,
   },
-  moreLinkText: {
-    fontSize: 14,
+  moreTile: {
+    flex: 1,
+    borderWidth: 1.5,
+    // colors.border는 흰 카드 위에서만 보이는 값이라, 배경이 그대로 비치는
+    // 이 타일에서는 거의 사라진다. 안쪽 아이콘 원과 같은 살구 톤을 쓴다.
+    borderColor: "rgba(240,184,154,0.5)",
+    borderRadius: radius.lg,
+    paddingVertical: spacing.lg,
+    paddingHorizontal: spacing.md,
+    alignItems: "center",
+    gap: 2,
+  },
+  moreTilePressed: {
+    opacity: 0.72,
+  },
+  moreIconWrap: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: "rgba(240,184,154,0.5)",
+    backgroundColor: "rgba(240,184,154,0.1)",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: spacing.sm,
+  },
+  moreTileTitle: {
+    fontSize: 13,
     fontFamily: "NotoSansKR_400Regular",
     color: colors.text,
+    lineHeight: 19,
+  },
+  moreTileSubtitle: {
+    fontSize: 11,
+    fontFamily: "NotoSansKR_300Light",
+    color: colors.textSoft,
+    lineHeight: 17,
   },
   fill: {
     flex: 1,
