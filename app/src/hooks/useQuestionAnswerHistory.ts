@@ -26,6 +26,7 @@ export function useQuestionAnswerHistory(year: number, month: number) {
       return () => {
         cancelled = true;
       };
+      // eslint-disable-next-line react-hooks/exhaustive-deps -- reloadTick은 본문이 읽지 않지만 refetch()의 유일한 트리거다.
     }, [year, month, reloadTick]),
   );
 

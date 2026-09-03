@@ -9,9 +9,8 @@ import {
   Text,
   View,
 } from "react-native";
-import { useFocusEffect } from "expo-router";
+import { useFocusEffect , useRouter } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
-import { useRouter } from "expo-router";
 
 import { NotificationDeniedSheet } from "@/src/components/NotificationDeniedSheet";
 import { ResponsiveContainer } from "@/src/components/common/ResponsiveContainer";

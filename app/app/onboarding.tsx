@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Platform,
@@ -8,8 +8,7 @@ import {
   Text,
   View,
 } from "react-native";
-import { useLocalSearchParams, useRouter } from "expo-router";
-import { useFocusEffect } from "expo-router";
+import { useLocalSearchParams, useRouter , useFocusEffect } from "expo-router";
 import {
   SafeAreaView,
   useSafeAreaInsets,
@@ -98,11 +97,13 @@ export default function OnboardingScreen() {
     }, []),
   );
 
-  useEffect(() => {
-    if (zodiacSign) {
-      setSelectedZodiacSign(zodiacSign);
-    }
-  }, [zodiacSign]);
+  // 저장돼 있던 별자리를 선택 상태로 끌어온다. effect가 아니라 렌더 중 조정인 이유는
+  // 한 프레임 동안 아무것도 선택되지 않은 화면이 보이지 않게 하기 위함.
+  const [lastZodiacSign, setLastZodiacSign] = useState(zodiacSign);
+  if (lastZodiacSign !== zodiacSign) {
+    setLastZodiacSign(zodiacSign);
+    if (zodiacSign) setSelectedZodiacSign(zodiacSign);
+  }
 
   async function handleStart() {
     if (!selectedZodiacSign || navigatingRef.current || multiTouchRef.current) {

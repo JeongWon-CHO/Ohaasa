@@ -26,12 +26,16 @@ export function usePushNavigation() {
   // 같은 알림으로 두 번 이동하지 않게 한다 — 콜드 스타트에서는
   // getInitialNotificationTap과 리스너가 같은 탭을 함께 알려줄 수 있다.
   const handledRef = useRef(new Set<string>());
-  const [pendingTap, setPendingTap] = useState<NotificationTap | null>(null);
+  // 탭 자체는 ref에 담고 state로는 "새 탭이 왔다"만 알린다 — 아래 effect가
+  // 처리 후 ref를 비우므로, 처리 때문에 다시 렌더가 도는 일이 없다.
+  const pendingRef = useRef<NotificationTap | null>(null);
+  const [tapTick, setTapTick] = useState(0);
 
   const enqueue = useCallback((tap: NotificationTap) => {
     if (handledRef.current.has(tap.id)) return;
     handledRef.current.add(tap.id);
-    setPendingTap(tap);
+    pendingRef.current = tap;
+    setTapTick((n) => n + 1);
   }, []);
 
   useEffect(() => {
@@ -57,10 +61,10 @@ export function usePushNavigation() {
   const ready = Boolean(navigationState?.key) && root !== undefined && root !== 'onboarding';
 
   useEffect(() => {
-    if (!pendingTap || !ready) return;
-    setPendingTap(null);
+    if (!pendingRef.current || !ready) return;
+    pendingRef.current = null;
     resetToLatestDate();
     // 이미 운세 화면이면 날짜만 최신으로 되돌린다 — push하면 같은 화면이 겹쳐 쌓인다.
     if (root !== 'horoscope') router.push('/horoscope');
-  }, [pendingTap, ready, root, resetToLatestDate]);
+  }, [tapTick, ready, root, resetToLatestDate]);
 }

@@ -211,6 +211,7 @@ export function useHoroscopeTrends(
    */
   useEffect(() => {
     let isMounted = true;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- 기간이 바뀌는 즉시 로딩으로 바꿔야 이전 기간의 그래프가 남지 않는다.
     setLoading(true);
 
     async function load() {

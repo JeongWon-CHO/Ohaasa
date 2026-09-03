@@ -49,6 +49,7 @@ export function useQuestionAnswerForm({
 
   useEffect(() => {
     if (!date) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- 읽을 대상이 없으니 로딩을 여기서 끝낸다. 비동기 경로가 없어 콜백으로 미룰 수 없다.
       setIsLoaded(true);
       return;
     }

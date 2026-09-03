@@ -6,9 +6,8 @@ import {
   Text,
   View,
 } from "react-native";
-import { useFocusEffect } from "expo-router";
+import { useFocusEffect , useRouter } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
-import { useRouter } from "expo-router";
 
 import { DatePill } from "@/src/components/final/DatePill";
 import { FinalHeader } from "@/src/components/final/FinalHeader";

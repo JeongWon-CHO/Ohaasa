@@ -162,6 +162,7 @@ export function useAllHoroscopes(options?: UseAllHoroscopesOptions): AllHoroscop
 
     // 캐시에 있으면 로딩 상태를 거치지 않는다. 아래 fetchRows도 즉시 반환하지만,
     // 여기서 loading을 올려버리면 그 한 틱 동안 화면이 비어 깜빡인다.
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- 날짜가 바뀌면 이전 날짜의 12행을 즉시 비워야 한다.
     if (!cacheHit(targetDate)) setState(EMPTY_STATE);
 
     async function load() {

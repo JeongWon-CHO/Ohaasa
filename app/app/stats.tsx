@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { Linking, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { router, useFocusEffect } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
@@ -15,8 +15,7 @@ import { ReviewHistoryTab } from "@/src/components/stats/ReviewHistoryTab";
 import { StatsLoadingState } from "@/src/components/stats/StatsLoadingState";
 import { SummaryCard } from "@/src/components/stats/SummaryCard";
 import { ZodiacSelectBottomSheet } from "@/src/components/stats/ZodiacSelectBottomSheet";
-import { colors, shadows } from "@/src/constants/design";
-import { gradients } from "@/src/constants/design";
+import { colors, shadows , gradients } from "@/src/constants/design";
 import { ZODIAC_MAP } from "@/src/constants/zodiac";
 import type { ZodiacSign } from "@/src/constants/zodiac";
 import { useHoroscopeTrends, type TrendsPeriod } from "@/src/hooks/useHoroscopeTrends";
@@ -43,9 +42,13 @@ export default function StatsScreen() {
   const { points, comparePoints, averageRank, minRank, maxRank, signAverages, loading, error, refetch } =
     useHoroscopeTrends(zodiacSign, period, compareId);
 
-  useEffect(() => {
+  // 내 별자리가 바뀌면 비교 대상을 푼다. 렌더 중에 조정하면 낡은 compareId로
+  // 조회가 한 번 도는 일이 없다.
+  const [lastZodiacSign, setLastZodiacSign] = useState(zodiacSign);
+  if (lastZodiacSign !== zodiacSign) {
+    setLastZodiacSign(zodiacSign);
     setCompareId(null);
-  }, [zodiacSign]);
+  }
 
   const scrollRef = useRef<ScrollView>(null);
   useFocusEffect(() => {

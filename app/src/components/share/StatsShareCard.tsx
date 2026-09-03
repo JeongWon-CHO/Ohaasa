@@ -42,7 +42,7 @@ function HairlineLabel({ children }: { children: ReactNode }) {
 }
 
 export const StatsShareCard = forwardRef<View, StatsShareCardProps>(
-  ({ zodiac, period, points, averageRank }, ref) => {
+  function StatsShareCard({ zodiac, period, points, averageRank }, ref) {
     const lastPoint = points[points.length - 1];
     const isLatestToday = lastPoint.date === format(new Date(), "yyyy-MM-dd");
     const latestLabel = isLatestToday ? "오늘" : "최근";
