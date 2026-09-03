@@ -38,6 +38,7 @@ import {
   getPlatform,
   setPushToken,
   setPlatform,
+  clearHasSeenOnboarding,
   clearZodiacSign,
 } from "@/src/lib/storage";
 import { ConfirmDialog } from "@/src/components/common/ConfirmDialog";
@@ -503,10 +504,12 @@ export default function SettingsScreen() {
             />
             <SettingsRow
               title="온보딩으로 돌아가기"
-              description="별자리 초기화 → 맨처음 화면으로 이동"
+              description="별자리·온보딩 기록 초기화 → 맨처음 화면으로 이동"
               showChevron
               onPress={async () => {
-                await clearZodiacSign();
+                // 둘 다 지워야 한다 — 진입 라우트가 (플래그 || 별자리)로 판정해서
+                // 하나만 지우면 그대로 홈으로 간다.
+                await Promise.all([clearZodiacSign(), clearHasSeenOnboarding()]);
                 router.replace("/");
               }}
               style={styles.aboutRow}
