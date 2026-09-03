@@ -153,6 +153,10 @@ CREATE POLICY "user_devices_anon_select" ON public.user_devices FOR SELECT  TO a
 - 앱 이름: **하루끄적** (부제 "하루 한 장, 그림일기" — App Store Connect에서 입력, 코드에 없다)
   - **`slug`·`bundleIdentifier`는 여전히 `ohaasa`다.** slug는 EAS 프로젝트 식별자라 바꾸면 프로젝트가 갈리고, bundleId는 스토어 등록 후 변경 불가다. 이름만 갈린 상태가 정상이다.
   - 앱 안 표기는 `src/constants/app.ts`의 `APP_TITLE` 하나다(`FinalHeader` · `JournalHeader`가 같이 본다). **`app.config.js`의 `name`과 항상 같이 바꾼다.** 헤더가 둘이라 각자 하드코딩했더니 한쪽만 바뀐 적이 있어 상수로 묶었다.
+  - **앱 이름은 탭 루트에서만 쓴다.** push된 화면(`horoscope` · `rankings` · `stats`)은 `FinalHeader`에 `title`로 **화면 이름**을 넘긴다 — 뒤로가기 바로 옆에 앱 이름을 반복하면 지금 어디인지를 알려주지 못한다. `title`을 비우는 건 탭 루트뿐이고, 그때만 `APP_TITLE`이 들어간다.
+    - 스타일이 둘로 갈린다: 앱 이름은 로고 취급이라 `letterSpacing: 2`(`wordmark`), 화면 이름은 읽는 글자라 자간 0(`screenTitle`). 로고용 자간을 단어에 그대로 쓰면 흩어져 보인다.
+    - 헤더로 올린 문구를 **본문에서 지워야 한다** — `rankings`가 "오늘의 전체 순위"를 헤더와 본문에 두 번 갖고 있었다.
+  - **`FinalHeader`의 뒤로가기는 `marginLeft: -10`으로 광학 정렬한다.** 헤더 패딩(28)이 본문과 같아도 셰브론은 더 안쪽에서 시작해 보인다 — 30 박스에 22 아이콘이 가운데 정렬돼 +4, Feather `chevron-left`가 24 viewBox에서 x축 9~15만 차지해 +7이라 잉크가 약 39pt에서 시작한다. 터치 영역은 그대로 두고 획만 옮긴다.
 - 현재 버전: v1.7.0 - 보관함 탭 · 오늘의 질문 커뮤니티 탭 승격 · 앱 이름 변경
 
 ---

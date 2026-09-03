@@ -66,7 +66,7 @@ export default function StatsScreen() {
         <View style={styles.headerSpacer}>
           <FinalHeader
             onBackPress={() => router.back()}
-            subtitle={activeTab === "trend" ? "운세 흐름" : "운세 기록"}
+            title={activeTab === "trend" ? "운세 흐름" : "운세 기록"}
             rightSlot={
               activeTab === "trend" ? (
                 <View style={styles.periodToggle}>

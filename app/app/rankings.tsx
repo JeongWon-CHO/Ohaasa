@@ -94,7 +94,11 @@ export default function RankingsScreen() {
 
       <ResponsiveContainer>
         {/* Header */}
-        <FinalHeader onBackPress={() => router.back()} subtitle="12개 별자리 오하아사 순위" />
+        <FinalHeader
+          onBackPress={() => router.back()}
+          title={sectionTitle}
+          subtitle="12개 별자리 오하아사 순위"
+        />
 
         {/* DatePill */}
         <View style={styles.pillWrap}>
@@ -106,7 +110,6 @@ export default function RankingsScreen() {
 
         {/* Section title */}
         <View style={styles.titleWrap}>
-          <Text style={styles.sectionTitle}>{sectionTitle}</Text>
         </View>
 
         {loading ? (
@@ -191,15 +194,6 @@ const styles = StyleSheet.create({
     marginTop: 10,
     marginHorizontal: 28,
     zIndex: 1,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    lineHeight: 24,
-    fontFamily: "NotoSansKR_400Regular",
-    includeFontPadding: false,
-    color: colors.text,
-    paddingTop: 6,
-    paddingBottom: 6,
   },
   loadingBox: {
     flex: 1,

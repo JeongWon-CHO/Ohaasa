@@ -15,6 +15,12 @@ import { colors } from "@/src/constants/design";
 interface FinalHeaderProps {
   /** push된 화면에서 뒤로가기를 붙인다. 탭 화면에서는 넘기지 않는다. */
   onBackPress?: () => void;
+  /**
+   * 화면 이름. **push된 화면은 앱 이름을 반복하지 않고 여기에 화면 이름을 넣는다** —
+   * 뒤로가기 바로 옆에 앱 이름이 또 나오면 어디에 있는지를 알려주지 못한다.
+   * 비우면 앱 이름(`APP_TITLE`)이 들어가므로, 비우는 건 탭 루트뿐이다.
+   */
+  title?: string;
   subtitle?: string;
   onSharePress?: () => void;
   sharing?: boolean;
@@ -25,7 +31,8 @@ interface FinalHeaderProps {
 
 export function FinalHeader({
   onBackPress,
-  subtitle = "오늘도 좋은 하루 되세요 ☀️",
+  title,
+  subtitle,
   onSharePress,
   sharing = false,
   onSavePress,
@@ -41,7 +48,7 @@ export function FinalHeader({
         </TouchableOpacity>
       )}
       <View style={styles.copy}>
-        <Text style={styles.title}>{APP_TITLE}</Text>
+        <Text style={title ? styles.screenTitle : styles.wordmark}>{title ?? APP_TITLE}</Text>
         {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
       </View>
       <View style={styles.actions}>
@@ -88,6 +95,13 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     marginRight: 4,
+    /**
+     * 광학 정렬. 헤더 패딩(28)은 아래 콘텐츠와 같은데도 셰브론이 더 안쪽에서 시작해 보인다 —
+     * 30 박스에 22 아이콘이 가운데 정렬돼 +4, Feather `chevron-left`가 24 viewBox에서
+     * x축 9~15만 차지해 +7, 합쳐서 잉크가 약 39pt에서 시작하기 때문이다.
+     * 터치 영역(30×30)은 그대로 두고 눈에 보이는 획만 콘텐츠 선(28)에 맞춘다.
+     */
+    marginLeft: -10,
   },
   header: {
     flexDirection: "row",
@@ -98,13 +112,22 @@ const styles = StyleSheet.create({
   copy: {
     flex: 1,
   },
-  title: {
+  // 앱 이름은 로고 취급이라 자간을 벌린다.
+  wordmark: {
     fontSize: 20,
     lineHeight: 26,
     fontFamily: "NotoSansKR_300Light",
     includeFontPadding: false,
     color: colors.text,
     letterSpacing: 2,
+  },
+  // 화면 이름은 읽는 글자다 — 로고용 자간을 그대로 쓰면 단어가 흩어져 보인다.
+  screenTitle: {
+    fontSize: 20,
+    lineHeight: 26,
+    fontFamily: "NotoSansKR_500Medium",
+    includeFontPadding: false,
+    color: colors.text,
   },
   subtitle: {
     fontSize: 11,
