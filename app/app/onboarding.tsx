@@ -28,7 +28,11 @@ import {
   ZODIAC_SIGN_COLORS,
 } from "@/src/components/ZodiacPicker";
 import { ConstellationBadge } from "@/src/components/final/ConstellationBadge";
-import { CircleDeco, MoonDeco, StarDeco } from "@/src/components/final/ScreenDeco";
+import {
+  CircleDeco,
+  MoonDeco,
+  StarDeco,
+} from "@/src/components/final/ScreenDeco";
 import {
   ZODIAC_MAP,
   type ZodiacInfo,
@@ -42,7 +46,7 @@ import {
   getPlatform,
   getNotificationsEnabled,
   setHasSeenOnboarding,
-} from '@/src/lib/storage';
+} from "@/src/lib/storage";
 import { APP_TITLE } from "@/src/constants/app";
 import { upsertDevice } from "@/src/lib/supabase";
 
@@ -79,7 +83,7 @@ export default function OnboardingScreen() {
   const { from } = useLocalSearchParams<{ from?: string }>();
   const { zodiacSign, loading, saving, error, saveZodiacSign } = useZodiac();
   const [step, setStep] = useState<OnboardingStep>(
-    from === 'settings' ? 'selection' : 'intro'
+    from === "settings" ? "selection" : "intro",
   );
   const [selectedZodiacSign, setSelectedZodiacSign] =
     useState<ZodiacSign | null>(null);
@@ -87,10 +91,12 @@ export default function OnboardingScreen() {
   const multiTouchRef = useRef(false);
   const navigatingRef = useRef(false);
 
-  useFocusEffect(useCallback(() => {
-    navigatingRef.current = false;
-    multiTouchRef.current = false;
-  }, []));
+  useFocusEffect(
+    useCallback(() => {
+      navigatingRef.current = false;
+      multiTouchRef.current = false;
+    }, []),
+  );
 
   useEffect(() => {
     if (zodiacSign) {
@@ -128,7 +134,7 @@ export default function OnboardingScreen() {
         });
       })();
 
-      if (from === 'settings') {
+      if (from === "settings") {
         router.back();
       } else {
         await setHasSeenOnboarding();
@@ -291,7 +297,9 @@ export default function OnboardingScreen() {
             <Text style={styles.selectionKicker}>STEP 1 / 1</Text>
             <Text style={styles.selectionTitle}>내 별자리를 선택해 주세요</Text>
             <Text style={styles.selectionBody}>
-              {"생년월일에 맞는 별자리를 골라주세요.\n아침 운세를 보여드릴 때 써요."}
+              {
+                "생년월일에 맞는 별자리를 골라주세요.\n아침 운세를 보여드릴 때 써요."
+              }
             </Text>
           </View>
 
@@ -320,7 +328,7 @@ export default function OnboardingScreen() {
             disabled={!selectedZodiacSign || disabled}
             error={deviceError ?? error}
             onPress={handleStart}
-            onSkip={from === 'settings' ? undefined : handleSkip}
+            onSkip={from === "settings" ? undefined : handleSkip}
             saving={saving}
             selectedZodiac={selectedZodiac}
           />
@@ -469,7 +477,7 @@ function OnboardingIntro({ onStart }: { onStart: () => void }) {
 
       {/* Body */}
       <Text style={styles.introBody}>
-        {"오늘 하루를 그림 한 장과\n한 줄로 남겨보세요."}
+        {"오하아사와 함께 오늘 하루를\n그림 한 장으로 남겨보세요."}
       </Text>
 
       {/* CTA — dark bg, borderRadius 28 per HTML spec */}
@@ -554,7 +562,11 @@ function SelectedZodiacBar({
         </Text>
       </Pressable>
       {onSkip ? (
-        <Pressable accessibilityRole="button" onPress={onSkip} style={styles.skipButton}>
+        <Pressable
+          accessibilityRole="button"
+          onPress={onSkip}
+          style={styles.skipButton}
+        >
           <Text style={styles.skipText}>나중에 할게요</Text>
         </Pressable>
       ) : null}

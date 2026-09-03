@@ -321,9 +321,7 @@ export default function SettingsScreen() {
                   <ConstellationBadge size={36} />
                 </View>
                 <View style={styles.zodiacCopy}>
-                  <Text style={styles.zodiacName}>
-                    선택된 별자리가 없습니다
-                  </Text>
+                  <Text style={styles.zodiacEmpty}>선택된 별자리가 없습니다</Text>
                 </View>
               </>
             )}
@@ -617,6 +615,18 @@ const styles = StyleSheet.create({
     fontSize: 15,
     lineHeight: 20,
     fontFamily: "NotoSansKR_400Regular",
+    includeFontPadding: false,
+    color: colors.text,
+  },
+  /**
+   * 값이 없다는 안내라 선택된 별자리 이름(`zodiacName`)보다 한 단계 낮춘다.
+   * 저기는 아래에 `zodiacSub`가 한 줄 더 붙지만 여기는 한 줄뿐이라,
+   * 같은 크기·굵기를 쓰면 실제 값이 있는 것처럼 무겁게 읽힌다.
+   */
+  zodiacEmpty: {
+    fontSize: 13,
+    lineHeight: 18,
+    fontFamily: "NotoSansKR_300Light",
     includeFontPadding: false,
     color: colors.text,
   },
