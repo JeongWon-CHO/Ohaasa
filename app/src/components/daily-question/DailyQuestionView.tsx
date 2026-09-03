@@ -1,4 +1,3 @@
-import { Feather } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
 import {
@@ -18,6 +17,7 @@ import {
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { FinalHeader } from "@/src/components/final/FinalHeader";
 import { AnswerCard } from "@/src/components/daily-question/AnswerCard";
 import { AnswerFeedTabs } from "@/src/components/daily-question/AnswerFeedTabs";
 import { AnswerModerationSheet } from "@/src/components/daily-question/AnswerModerationSheet";
@@ -370,12 +370,9 @@ export function DailyQuestionView({
 
   const canSave = form.body.trim().length > 0;
 
-  // 커뮤니티 단계에는 제목을 두지 않는다 — 바로 아래 질문 요약 카드가 같은 말을 하고,
-  // 탭에서는 탭 라벨이 이미 어디인지 알려준다.
-  const headerTitle = step === "answer" ? "오늘의 질문" : null;
+  // 탭에는 나갈 곳이 없어 평소엔 뒤로가기를 감춘다. 단 수정 중에는 피드로 돌아갈
+  // 유일한 수단이라 그때만 띄운다 — 없으면 저장 말고는 빠져나올 길이 없다.
   const showBack = !isTab || returnToCommunity;
-  // 뒤로가기도 제목도 없으면 빈 줄만 남는다(높이 36 + 여백 24). 그럴 땐 줄째로 걷어낸다.
-  const showHeader = showBack || headerTitle !== null;
 
   async function handleSave() {
     const saved = await save();
@@ -436,7 +433,8 @@ export function DailyQuestionView({
             ref={scrollRef}
             style={styles.scroll}
             contentContainerStyle={{
-              paddingTop: insets.top + (showHeader ? 16 : 28),
+              // 상단 안전영역은 FinalHeader가 자기 paddingTop으로 처리한다 — 여기서 또 주면 이중이다.
+              paddingTop: 0,
               // 키보드가 올라오면 탭바는 그 뒤에 가려지므로 그때는 더하지 않는다 — 더하면 이중 여백이다.
               paddingBottom:
                 (keyboardVisible ? 40 : 32) + (keyboardVisible ? 0 : tabBarHeight),
@@ -461,29 +459,12 @@ export function DailyQuestionView({
             }
           >
             <View>
-              {showHeader && (
-                <View style={styles.header}>
-                  {/* 탭에는 나갈 곳이 없어 평소엔 감춘다. 단 수정 중에는 피드로 돌아갈
-                      유일한 수단이라 그때만 띄운다 — 없으면 저장 말고는 빠져나올 길이 없다. */}
-                  {showBack ? (
-                    <Pressable
-                      onPress={handleBack}
-                      style={({ pressed }) => [styles.headerBtn, pressed && { opacity: 0.6 }]}
-                      hitSlop={12}
-                    >
-                      <Feather name="chevron-left" size={24} color={colors.text} />
-                    </Pressable>
-                  ) : (
-                    <View style={styles.headerBtn} />
-                  )}
-
-                  <View style={styles.headerCenter}>
-                    {headerTitle && <Text style={styles.headerTitle}>{headerTitle}</Text>}
-                  </View>
-
-                  <View style={styles.headerBtn} />
-                </View>
-              )}
+              <View style={styles.headerWrap}>
+                <FinalHeader
+                  onBackPress={showBack ? handleBack : undefined}
+                  subtitle="오늘의 질문"
+                />
+              </View>
 
               <View style={styles.body}>
                 {step === "answer" ? (
@@ -707,31 +688,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
   },
 
-  // 아이콘 버튼은 글리프 자체 여백이 있어 본문과 같은 24를 주면 왼쪽이 너무 비어 보인다.
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.sm,
+  headerWrap: {
     marginBottom: 24,
-    paddingHorizontal: 16,
-  },
-  headerBtn: {
-    width: 36,
-    height: 36,
-    alignItems: "center",
-    justifyContent: "center",
-    flexShrink: 0,
-  },
-  headerCenter: {
-    flex: 1,
-    alignItems: "center",
-    gap: 4,
-  },
-  headerTitle: {
-    fontSize: 16,
-    fontFamily: "NotoSansKR_600SemiBold",
-    color: colors.text,
-    lineHeight: 24,
   },
   communitySection: {
     gap: spacing.lg,

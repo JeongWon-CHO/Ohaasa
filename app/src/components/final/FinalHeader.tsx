@@ -10,7 +10,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 
 import { APP_TITLE } from "@/src/constants/app";
-import { colors, layout } from "@/src/constants/design";
+import { colors, layout, typography } from "@/src/constants/design";
 
 interface FinalHeaderProps {
   /** push된 화면에서 뒤로가기를 붙인다. 탭 화면에서는 넘기지 않는다. */
@@ -111,21 +111,9 @@ const styles = StyleSheet.create({
   copy: {
     flex: 1,
   },
-  // 워드마크 조판. 이름을 성글게 벌려 쓰는 게 이 헤더의 기본값이다.
-  title: {
-    fontSize: 20,
-    lineHeight: 26,
-    fontFamily: "NotoSansKR_300Light",
-    includeFontPadding: false,
-    color: colors.text,
-    letterSpacing: 2,
-  },
+  title: typography.headerTitle,
   subtitle: {
-    fontSize: 11,
-    lineHeight: 16,
-    fontFamily: "NotoSansKR_400Regular",
-    includeFontPadding: false,
-    color: colors.textSoft,
+    ...typography.headerSubtitle,
     marginTop: 2,
   },
   actions: {

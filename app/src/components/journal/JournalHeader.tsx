@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { APP_TITLE } from '@/src/constants/app';
-import { colors, layout, spacing } from '@/src/constants/design';
+import { layout, spacing, typography } from '@/src/constants/design';
 
 /** 홈 상단 헤더. 앱 이름은 FinalHeader와 같은 상수를 본다(constants/app.ts). */
 
@@ -45,17 +45,10 @@ const styles = StyleSheet.create({
   copy: {
     flex: 1,
   },
-  title: {
-    fontSize: 26,
-    fontFamily: 'NotoSansKR_300Light',
-    color: colors.text,
-    letterSpacing: 0.5,
-  },
+  title: typography.headerTitle,
   subtitle: {
+    ...typography.headerSubtitle,
     marginTop: 2,
-    fontSize: 12,
-    fontFamily: 'NotoSansKR_400Regular',
-    color: colors.textSoft,
   },
   actions: {
     flexDirection: 'row',

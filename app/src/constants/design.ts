@@ -66,6 +66,27 @@ export const radius = {
 } as const;
 
 export const typography = {
+  /**
+   * 헤더 한 줄(앱 이름 · 워드마크)과 그 아래 설명.
+   *
+   * 헤더 컴포넌트가 여럿이라(`FinalHeader` · `JournalHeader` · 보관함) 각자 크기를
+   * 들고 있으면 탭을 옮길 때 제목만 커졌다 작아진다. 실제로 26과 20이 섞여 있었다.
+   */
+  headerTitle: {
+    fontSize: 20,
+    lineHeight: 26,
+    fontFamily: 'NotoSansKR_300Light',
+    includeFontPadding: false,
+    color: colors.text,
+    letterSpacing: 2,
+  },
+  headerSubtitle: {
+    fontSize: 11,
+    lineHeight: 16,
+    fontFamily: 'NotoSansKR_400Regular',
+    includeFontPadding: false,
+    color: colors.textSoft,
+  },
   appName: {
     fontSize: 28,
     fontFamily: 'NotoSansKR_300Light',

@@ -21,7 +21,7 @@ import {
 import { ResponsiveContainer } from '@/src/components/common/ResponsiveContainer';
 import { ScreenBackground } from '@/src/components/final/ScreenBackground';
 import { monthLabelKo } from '@/src/components/journal/MonthCalendar';
-import { colors, layout, radius, spacing } from '@/src/constants/design';
+import { colors, layout, radius, spacing, typography } from '@/src/constants/design';
 import { useJournalArchive } from '@/src/hooks/useJournalArchive';
 import type { DailyJournal } from '@/src/lib/journal';
 
@@ -133,17 +133,10 @@ const styles = StyleSheet.create({
     marginHorizontal: -spacing.lg,
     paddingHorizontal: layout.headerPaddingH,
   },
-  title: {
-    fontSize: 26,
-    fontFamily: 'NotoSansKR_300Light',
-    color: colors.text,
-    letterSpacing: 0.5,
-  },
+  title: typography.headerTitle,
   subtitle: {
+    ...typography.headerSubtitle,
     marginTop: 2,
-    fontSize: 12,
-    fontFamily: 'NotoSansKR_400Regular',
-    color: colors.textSoft,
   },
   empty: {
     flex: 1,
