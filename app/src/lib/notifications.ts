@@ -106,3 +106,42 @@ export async function requestPushToken(): Promise<PushTokenResult> {
     return NULL_RESULT;
   }
 }
+
+export type NotificationTap = { id: string };
+
+/**
+ * 알림을 눌러 앱이 켜진 경우 그 탭을 돌려준다(콜드 스타트). 아니면 null.
+ *
+ * 리스너는 이미 떠 있는 앱에서만 불리므로, 종료 상태에서 눌린 알림은 이걸로만 알 수 있다.
+ */
+export async function getInitialNotificationTap(): Promise<NotificationTap | null> {
+  if (isExpoGoAndroid()) return null;
+
+  try {
+    const Notifications = await import('expo-notifications');
+    const response = await Notifications.getLastNotificationResponseAsync();
+    if (!response) return null;
+    return { id: response.notification.request.identifier };
+  } catch (err) {
+    console.warn('[notifications] getInitialNotificationTap failed:', err);
+    return null;
+  }
+}
+
+/** 앱이 살아 있는 동안(포그라운드·백그라운드) 눌린 알림을 구독한다. */
+export async function subscribeToNotificationTaps(
+  onTap: (tap: NotificationTap) => void,
+): Promise<() => void> {
+  if (isExpoGoAndroid()) return NOOP_CLEANUP;
+
+  try {
+    const Notifications = await import('expo-notifications');
+    const subscription = Notifications.addNotificationResponseReceivedListener(response => {
+      onTap({ id: response.notification.request.identifier });
+    });
+    return () => subscription.remove();
+  } catch (err) {
+    console.warn('[notifications] subscribeToNotificationTaps failed:', err);
+    return NOOP_CLEANUP;
+  }
+}

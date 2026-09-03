@@ -17,6 +17,7 @@ import 'react-native-reanimated';
 import { useColorScheme } from '@/components/useColorScheme';
 import { HoroscopeDateProvider } from '@/src/context/HoroscopeDateContext';
 import { ZodiacProvider } from '@/src/context/ZodiacContext';
+import { usePushNavigation } from '@/src/hooks/usePushNavigation';
 import { setupForegroundHandler } from '@/src/lib/notifications';
 
 const AppLightTheme = {
@@ -65,6 +66,15 @@ export default function RootLayout() {
   return <RootLayoutNav />;
 }
 
+/**
+ * 알림 탭 라우팅은 `HoroscopeDateProvider` 안에서만 동작한다(날짜를 최신으로 되돌려야 하므로).
+ * 훅 하나를 부르려고 provider를 옮기는 대신 자식 컴포넌트로 끼워 넣는다.
+ */
+function PushNavigationBridge() {
+  usePushNavigation();
+  return null;
+}
+
 function RootLayoutNav() {
   const colorScheme = useColorScheme();
 
@@ -78,6 +88,7 @@ function RootLayoutNav() {
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : AppLightTheme}>
       <ZodiacProvider>
         <HoroscopeDateProvider>
+          <PushNavigationBridge />
           <StatusBar style="dark" />
           <Stack>
             <Stack.Screen name="index" options={{ headerShown: false }} />
