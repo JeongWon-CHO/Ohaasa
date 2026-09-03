@@ -43,6 +43,7 @@ import {
   getNotificationsEnabled,
   setHasSeenOnboarding,
 } from '@/src/lib/storage';
+import { APP_TITLE } from "@/src/constants/app";
 import { upsertDevice } from "@/src/lib/supabase";
 
 type OnboardingStep = "intro" | "selection";
@@ -50,7 +51,7 @@ type OnboardingStep = "intro" | "selection";
 // const COPY = {
 //   selectionKicker: "STEP 1 / 1",
 //   selectionTitle: "내 별자리를 선택해 주세요",
-//   selectionBody: "생년월일에 맞는 별자리를 골라보세요",
+//   selectionBody: "생년월일에 맞는 별자리를 골라주세요. 아침 운세를 보여드릴 때 써요.",
 //   saving: "저장 중...",
 //   finalCta: "시작하기 ✦",
 //   errorFallback: "온보딩 정보를 저장하지 못했습니다.",
@@ -290,7 +291,7 @@ export default function OnboardingScreen() {
             <Text style={styles.selectionKicker}>STEP 1 / 1</Text>
             <Text style={styles.selectionTitle}>내 별자리를 선택해 주세요</Text>
             <Text style={styles.selectionBody}>
-              생년월일에 맞는 별자리를 골라보세요
+              {"생년월일에 맞는 별자리를 골라주세요.\n아침 운세를 보여드릴 때 써요."}
             </Text>
           </View>
 
@@ -460,14 +461,15 @@ function OnboardingIntro({ onStart }: { onStart: () => void }) {
       </View>
 
       {/* Logo */}
-      <Text style={styles.introLogo}>ohaasa</Text>
+      <Text style={styles.introLogo}>{APP_TITLE}</Text>
 
-      {/* おはあさ subtitle */}
-      <Text style={styles.introSubtext}>おはあさ</Text>
+      {/* Tagline — App Store 부제와 같은 문장으로 둔다. 스토어에서 보고 들어온
+          사람이 첫 화면에서 같은 말을 만나야 같은 앱으로 읽힌다. */}
+      <Text style={styles.introSubtext}>하루 한 장, 그림일기</Text>
 
       {/* Body */}
       <Text style={styles.introBody}>
-        {"매일 아침, 나의 별자리 운세를\n가장 먼저 확인하세요."}
+        {"오늘 하루를 그림 한 장과\n한 줄로 남겨보세요."}
       </Text>
 
       {/* CTA — dark bg, borderRadius 28 per HTML spec */}
@@ -483,7 +485,7 @@ function OnboardingIntro({ onStart }: { onStart: () => void }) {
       </Pressable>
 
       {/* Caption */}
-      <Text style={styles.introCaption}>매일 아침 업데이트됩니다</Text>
+      <Text style={styles.introCaption}>매일 새로운 그림 질문이 올라와요</Text>
     </View>
   );
 }
@@ -604,7 +606,9 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontFamily: "NotoSansKR_400Regular",
     color: colors.textSoft,
-    letterSpacing: 2.42,
+    // 원래 2.42였다 — 'おはあさ' 네 글자짜리 워드마크에 맞춘 값이라
+    // 문장을 넣으면 글자가 흩어진다.
+    letterSpacing: 0.5,
     marginBottom: 16,
   },
   introBody: {
