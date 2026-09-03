@@ -26,6 +26,13 @@ interface FinalHeaderProps {
   onSavePress?: () => void;
   saving?: boolean;
   rightSlot?: ReactNode;
+  /**
+   * 상단 안전영역을 이 헤더가 직접 먹을지.
+   *
+   * 컨테이너가 이미 인셋을 준 화면에서는 꺼야 한다 — 보관함은 sticky 월 헤더가
+   * 상태바에 붙지 않게 리스트 **바깥**에 인셋을 주고 있어서, 여기서 또 주면 이중이 된다.
+   */
+  withTopInset?: boolean;
 }
 
 export function FinalHeader({
@@ -37,10 +44,11 @@ export function FinalHeader({
   onSavePress,
   saving = false,
   rightSlot,
+  withTopInset = true,
 }: FinalHeaderProps) {
   const insets = useSafeAreaInsets();
   return (
-    <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
+    <View style={[styles.header, { paddingTop: (withTopInset ? insets.top : 0) + 12 }]}>
       {onBackPress && (
         <TouchableOpacity onPress={onBackPress} hitSlop={12} style={styles.backButton}>
           <Feather name="chevron-left" size={22} color={colors.text} />
@@ -103,6 +111,8 @@ const styles = StyleSheet.create({
     marginLeft: -10,
   },
   header: {
+    // 부모가 가운데 정렬이어도(홈 스크롤 컨테이너) 헤더는 폭을 꽉 채워야 한다.
+    alignSelf: "stretch",
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",

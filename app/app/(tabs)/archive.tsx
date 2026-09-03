@@ -19,9 +19,10 @@ import {
   columnsFor,
 } from '@/src/components/archive/ArchiveGrid';
 import { ResponsiveContainer } from '@/src/components/common/ResponsiveContainer';
+import { FinalHeader } from '@/src/components/final/FinalHeader';
 import { ScreenBackground } from '@/src/components/final/ScreenBackground';
 import { monthLabelKo } from '@/src/components/journal/MonthCalendar';
-import { colors, layout, radius, spacing, typography } from '@/src/constants/design';
+import { colors, layout, radius, spacing } from '@/src/constants/design';
 import { useJournalArchive } from '@/src/hooks/useJournalArchive';
 import type { DailyJournal } from '@/src/lib/journal';
 
@@ -90,12 +91,12 @@ export default function ArchiveScreen() {
           showsVerticalScrollIndicator={false}
           contentContainerStyle={[
             styles.content,
-            { paddingTop: spacing.md, paddingBottom: tabBarHeight + spacing.xl },
+            { paddingBottom: tabBarHeight + spacing.xl },
           ]}
           ListHeaderComponent={
-            <View style={styles.header}>
-              <Text style={styles.title}>보관함</Text>
-              <Text style={styles.subtitle}>지금까지 남긴 그림</Text>
+            <View style={styles.headerWrap}>
+              {/* 상단 인셋은 ResponsiveContainer가 이미 줬다(sticky 월 헤더 때문에). */}
+              <FinalHeader subtitle="지금까지 남긴 그림" withTopInset={false} />
             </View>
           }
           ListEmptyComponent={
@@ -127,16 +128,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     flexGrow: 1,
   },
-  header: {
-    paddingBottom: spacing.xs,
-    // 홈·My와 제목 시작점을 맞춘다(→ JournalHeader의 같은 주석).
+  // FinalHeader는 자기 좌우 여백(28)을 갖고 있으므로 본문 여백을 되물어 준다.
+  headerWrap: {
     marginHorizontal: -spacing.lg,
-    paddingHorizontal: layout.headerPaddingH,
-  },
-  title: typography.headerTitle,
-  subtitle: {
-    ...typography.headerSubtitle,
-    marginTop: 2,
   },
   empty: {
     flex: 1,

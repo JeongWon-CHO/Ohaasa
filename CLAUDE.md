@@ -156,9 +156,10 @@ CREATE POLICY "user_devices_anon_select" ON public.user_devices FOR SELECT  TO a
   - **운세 계열 push 화면(`horoscope` · `rankings` · `stats`)의 헤더는 영문 워드마크다** — `ohaasa` · `Ranking` · `Trends`/`History`. 오하아사에서 온 화면이라는 결을 유지하되 앱 이름(`하루끄적`)과 섞이지 않게 한다. 한글 설명은 부제가 맡는다.
     - `FinalHeader`의 `title`을 비우면 `APP_TITLE`이 들어가고, **비우는 건 탭 루트(설정)뿐이다.**
     - 조판은 하나다(`styles.title`, `NotoSansKR_300Light` + `letterSpacing: 2`). 워드마크용 자간이라 한글 문장을 넣으면 흩어져 보인다 — 그래서 화면 이름은 영문으로 둔다.
-  - **헤더 조판과 여백은 상수로 공유한다** — `typography.headerTitle` · `typography.headerSubtitle` · `layout.headerPaddingH`(28). 헤더 컴포넌트가 여럿이라(`FinalHeader` · `JournalHeader` · 보관함 자체 헤더) 각자 값을 들고 있으면 **탭을 옮길 때 제목만 커졌다 작아지고 좌우로 흔들린다** — 실제로 26과 20, 16과 28이 섞여 있었다.
-    - 여백은 본문(16)보다 크므로, 본문 컨테이너 안에 있는 헤더는 `marginHorizontal: -spacing.lg`로 부모 여백을 되문 뒤 이 값을 직접 준다.
-    - **커뮤니티(`DailyQuestionView`)는 `FinalHeader`를 쓴다.** 원래 가운데 정렬 제목("오늘의 질문")을 가진 자체 헤더였는데, 헤더가 넷이 되면 규칙을 넷에 반복해야 한다. 상단 안전영역은 `FinalHeader`가 자기 `paddingTop`으로 처리하므로 **스크롤 컨테이너의 `paddingTop`은 0이어야 한다** — 둘 다 주면 이중 여백이다.
+  - **헤더는 `FinalHeader` 하나다.** 홈·보관함·커뮤니티가 각자 헤더를 갖고 있었고, 그래서 글자 크기가 26과 20으로, 좌우 여백이 16과 28로 갈려 **탭을 옮길 때마다 제목만 커졌다 작아지고 좌우로 흔들렸다.** 조판·여백은 `typography.headerTitle` · `typography.headerSubtitle` · `layout.headerPaddingH`(28)에 있다.
+    - **상단 안전영역은 `FinalHeader`가 자기 `paddingTop`으로 먹는다** — 스크롤 컨테이너에서 또 주면 이중 여백이다. 반대로 컨테이너가 이미 인셋을 준 화면(보관함: sticky 월 헤더가 상태바에 붙지 않게 리스트 **바깥**에 인셋을 준다)은 `withTopInset={false}`로 꺼야 한다.
+    - 헤더 여백(28)이 본문(16)보다 크므로, **본문 컨테이너 안에 들어가는 헤더는 `marginHorizontal: -spacing.lg`로 부모 여백을 되물어야** 한다.
+    - `alignSelf: "stretch"`가 load-bearing이다 — 홈 스크롤 컨테이너가 `alignItems: 'center'`라 없으면 헤더가 글자 폭으로 쪼그라든다.
   - **`FinalHeader`의 뒤로가기는 `marginLeft: -10`으로 광학 정렬한다.** 헤더 패딩(28)이 본문과 같아도 셰브론은 더 안쪽에서 시작해 보인다 — 30 박스에 22 아이콘이 가운데 정렬돼 +4, Feather `chevron-left`가 24 viewBox에서 x축 9~15만 차지해 +7이라 잉크가 약 39pt에서 시작한다. 터치 영역은 그대로 두고 획만 옮긴다.
 - 현재 버전: v1.7.0 - 보관함 탭 · 오늘의 질문 커뮤니티 탭 승격 · 앱 이름 변경
 
