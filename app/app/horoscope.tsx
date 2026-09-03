@@ -150,7 +150,7 @@ export default function TodayScreen() {
         {/* Header */}
         <FinalHeader
           onBackPress={() => router.back()}
-          title={isLatest ? "오늘의 운세" : "지난 운세"}
+          title="ohaasa"
           subtitle={isLatest ? COPY.headerToday : COPY.headerPast}
           onSharePress={horoscope ? share : undefined}
           sharing={sharing}

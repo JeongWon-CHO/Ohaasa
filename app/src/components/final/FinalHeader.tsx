@@ -10,15 +10,14 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 
 import { APP_TITLE } from "@/src/constants/app";
-import { colors } from "@/src/constants/design";
+import { colors, layout } from "@/src/constants/design";
 
 interface FinalHeaderProps {
   /** push된 화면에서 뒤로가기를 붙인다. 탭 화면에서는 넘기지 않는다. */
   onBackPress?: () => void;
   /**
-   * 화면 이름. **push된 화면은 앱 이름을 반복하지 않고 여기에 화면 이름을 넣는다** —
-   * 뒤로가기 바로 옆에 앱 이름이 또 나오면 어디에 있는지를 알려주지 못한다.
-   * 비우면 앱 이름(`APP_TITLE`)이 들어가므로, 비우는 건 탭 루트뿐이다.
+   * 헤더 큰 글자. 운세 계열 push 화면은 영문 워드마크를 쓴다(`ohaasa` · `Ranking` …).
+   * 비우면 앱 이름(`APP_TITLE`)이 들어가고, 비우는 건 탭 루트(설정)뿐이다.
    */
   title?: string;
   subtitle?: string;
@@ -48,7 +47,7 @@ export function FinalHeader({
         </TouchableOpacity>
       )}
       <View style={styles.copy}>
-        <Text style={title ? styles.screenTitle : styles.wordmark}>{title ?? APP_TITLE}</Text>
+        <Text style={styles.title}>{title ?? APP_TITLE}</Text>
         {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
       </View>
       <View style={styles.actions}>
@@ -107,27 +106,19 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: 28,
+    paddingHorizontal: layout.headerPaddingH,
   },
   copy: {
     flex: 1,
   },
-  // 앱 이름은 로고 취급이라 자간을 벌린다.
-  wordmark: {
+  // 워드마크 조판. 이름을 성글게 벌려 쓰는 게 이 헤더의 기본값이다.
+  title: {
     fontSize: 20,
     lineHeight: 26,
     fontFamily: "NotoSansKR_300Light",
     includeFontPadding: false,
     color: colors.text,
     letterSpacing: 2,
-  },
-  // 화면 이름은 읽는 글자다 — 로고용 자간을 그대로 쓰면 단어가 흩어져 보인다.
-  screenTitle: {
-    fontSize: 20,
-    lineHeight: 26,
-    fontFamily: "NotoSansKR_500Medium",
-    includeFontPadding: false,
-    color: colors.text,
   },
   subtitle: {
     fontSize: 11,

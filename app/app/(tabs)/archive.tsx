@@ -129,6 +129,9 @@ const styles = StyleSheet.create({
   },
   header: {
     paddingBottom: spacing.xs,
+    // 홈·My와 제목 시작점을 맞춘다(→ JournalHeader의 같은 주석).
+    marginHorizontal: -spacing.lg,
+    paddingHorizontal: layout.headerPaddingH,
   },
   title: {
     fontSize: 26,

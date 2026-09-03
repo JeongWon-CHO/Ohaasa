@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { APP_TITLE } from '@/src/constants/app';
-import { colors, spacing } from '@/src/constants/design';
+import { colors, layout, spacing } from '@/src/constants/design';
 
 /** 홈 상단 헤더. 앱 이름은 FinalHeader와 같은 상수를 본다(constants/app.ts). */
 
@@ -37,6 +37,10 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end',
     justifyContent: 'space-between',
     paddingBottom: spacing.xs,
+    // 부모(홈 스크롤 컨테이너)가 이미 본문용 여백을 주고 있어 그만큼 되물린 뒤
+    // 헤더 값을 직접 준다 — My 탭(FinalHeader)과 제목 시작점을 맞추기 위함이다.
+    marginHorizontal: -spacing.lg,
+    paddingHorizontal: layout.headerPaddingH,
   },
   copy: {
     flex: 1,

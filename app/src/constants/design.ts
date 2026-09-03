@@ -39,6 +39,13 @@ export const gradients = {
 export const layout = {
   // maxContentWidth: 480,
   maxContentWidth: 600,
+  /**
+   * 헤더(앱 이름 · 화면 이름 줄)의 좌우 여백. 본문보다 조금 더 들여 쓴다.
+   *
+   * 화면마다 헤더 컴포넌트가 다르다(`FinalHeader` · `JournalHeader` · 보관함 자체 헤더).
+   * 각자 값을 들고 있으면 탭을 옮길 때 제목만 좌우로 흔들리므로 여기 하나로 묶는다.
+   */
+  headerPaddingH: 28,
 } as const;
 
 export const spacing = {
