@@ -6,11 +6,11 @@ import { colors, spacing } from '@/src/constants/design';
 /**
  * 홈 상단 헤더.
  *
- * 앱 이름이 아직 안 정해졌지만 자리를 먼저 잡아둔다 — 나중에 끼워 넣으면
- * 그 아래 레이아웃을 전부 다시 잡아야 한다.
- * 이름이 정해지면 APP_TITLE과 app.config.js의 `name`을 같이 바꾼다.
+ * `app.config.js`의 `name`과 항상 같은 값이어야 한다 — 홈 화면 아이콘 라벨과
+ * 앱 안 헤더가 다른 이름을 말하면 같은 앱으로 안 읽힌다.
+ * slug·bundleId('ohaasa')는 별개다(EAS 프로젝트 식별자 · 스토어 등록 후 변경 불가).
  */
-const APP_TITLE = 'ohaasa';
+const APP_TITLE = '하루 끄적';
 
 const WEEKDAY_KO = ['일', '월', '화', '수', '목', '금', '토'];
 

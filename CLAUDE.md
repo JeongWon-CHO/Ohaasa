@@ -150,7 +150,10 @@ CREATE POLICY "user_devices_anon_select" ON public.user_devices FOR SELECT  TO a
 - 개인정보처리방침 URL: `https://jeongwon-cho.github.io/Ohaasa/privacy-policy.html`
 - 커뮤니티 가이드라인 URL: `https://jeongwon-cho.github.io/Ohaasa/community-guidelines.html`
 - `google-services.json`: 커밋 대상(앱 수신용) · Firebase service account JSON은 커밋 금지
-- 현재 버전: v1.6.0 - 오늘의 질문 답글 + 내 답변 고정 카드 · 새 답글 배지
+- 앱 이름: **하루 끄적** (부제 "하루 한 장, 그림일기" — App Store Connect에서 입력, 코드에 없다)
+  - **`slug`·`bundleIdentifier`는 여전히 `ohaasa`다.** slug는 EAS 프로젝트 식별자라 바꾸면 프로젝트가 갈리고, bundleId는 스토어 등록 후 변경 불가다. 이름만 갈린 상태가 정상이다.
+  - `app.config.js`의 `name`과 `JournalHeader.tsx`의 `APP_TITLE`은 **항상 같이 바꾼다.**
+- 현재 버전: v1.7.0 - 보관함 탭 · 오늘의 질문 커뮤니티 탭 승격 · 앱 이름 변경
 
 ---
 
