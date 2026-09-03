@@ -32,7 +32,8 @@ export function HoroscopeDateSheet({
   selectedDate,
   onSelect,
 }: HoroscopeDateSheetProps) {
-  const { dates, loading, error } = useAvailableHoroscopeDates();
+  // 시트는 닫혀 있어도 마운트돼 있다. visible을 넘기지 않으면 화면에 들어가기만 해도 조회가 돈다.
+  const { dates, loading, error } = useAvailableHoroscopeDates(visible);
 
   function isSelected(index: number, date: string): boolean {
     if (selectedDate === null) return index === 0; // null = 최신 = 첫 항목

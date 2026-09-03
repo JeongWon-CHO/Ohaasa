@@ -10,7 +10,7 @@ import { colors, spacing } from '@/src/constants/design';
  * 앱 안 헤더가 다른 이름을 말하면 같은 앱으로 안 읽힌다.
  * slug·bundleId('ohaasa')는 별개다(EAS 프로젝트 식별자 · 스토어 등록 후 변경 불가).
  */
-const APP_TITLE = '하루 끄적';
+const APP_TITLE = '하루끄적';
 
 const WEEKDAY_KO = ['일', '월', '화', '수', '목', '금', '토'];
 

@@ -1,9 +1,9 @@
 const IS_DEV = process.env.APP_VARIANT === 'development';
 const IS_PREVIEW = process.env.APP_VARIANT === 'preview';
 
-// 앱 이름은 '하루 끄적'이지만 slug·bundleId는 'ohaasa'로 둔다 —
+// 앱 이름은 '하루끄적'이지만 slug·bundleId는 'ohaasa'로 둔다 —
 // slug는 EAS 프로젝트 식별자라 바꾸면 프로젝트가 갈리고, bundleId는 스토어 등록 후 못 바꾼다.
-const appName = IS_DEV ? '하루 끄적 Dev' : IS_PREVIEW ? '하루 끄적 Preview' : '하루 끄적';
+const appName = IS_DEV ? '하루끄적 Dev' : IS_PREVIEW ? '하루끄적 Preview' : '하루끄적';
 const packageName = IS_DEV
   ? 'com.ohaasa.app.dev'
   : IS_PREVIEW
