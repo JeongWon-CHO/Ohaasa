@@ -21,6 +21,7 @@ import { MoodStep } from '@/src/components/journal/MoodStep';
 import { SummaryStep } from '@/src/components/journal/SummaryStep';
 import { DrawingCanvas } from '@/src/components/sketch/DrawingCanvas';
 import { MoodFace } from '@/src/components/sketch/MoodFace';
+import { ColorPickerSheet } from '@/src/components/sketch/ColorPickerSheet';
 import { SketchThumbnail } from '@/src/components/sketch/SketchThumbnail';
 import {
   SKETCH_COLORS,
@@ -54,6 +55,22 @@ export default function JournalWriteScreen() {
   const [androidKeyboardHeight, setAndroidKeyboardHeight] = useState(0);
   const [step, setStep] = useState<Step>('mood');
   const [color, setColor] = useState<string>(SKETCH_COLORS[0]);
+  // 직접 고른 색은 팔레트 마지막 칸에 남는다 — 한 그림 안에서 다시 집으려고
+  // 매번 시트를 여는 일이 없게 한다.
+  const [customColor, setCustomColor] = useState<string | null>(null);
+  const [colorSheetOpen, setColorSheetOpen] = useState(false);
+  const [picking, setPicking] = useState(false);
+
+  // 손을 뗄 때 확정되고 스포이드는 바로 꺼진다 — 켜둔 채 그리려다 획이 안 그어지는 게
+  // 이 모드에서 제일 헷갈리는 지점이다. 빈 종이를 짚었을 때도 끈다(짚기는 끝난 것).
+  const handlePickColor = useCallback((picked: string | null) => {
+    setPicking(false);
+    if (!picked) return;
+    setColor(picked);
+    // 프리셋에 없는 색이면 팔레트 마지막 칸에 남겨 다시 집을 수 있게 한다.
+    if (!(SKETCH_COLORS as readonly string[]).includes(picked)) setCustomColor(picked);
+  }, []);
+
   const [strokeWidth, setStrokeWidth] = useState<number>(BRUSH_WIDTH_DEFAULT);
   const [brush, setBrush] = useState<BrushKind>('pen');
 
@@ -160,9 +177,12 @@ export default function JournalWriteScreen() {
             strokeWidth={strokeWidth}
             brush={brush}
             onStrokeEnd={handleStrokeEnd}
+            picking={picking}
+            onPickColor={handlePickColor}
           />
           <SketchToolbar
             color={color}
+            customColor={customColor}
             strokeWidth={strokeWidth}
             canUndo={hasDrawing}
             onSelectColor={setColor}
@@ -170,6 +190,9 @@ export default function JournalWriteScreen() {
             onSelectWidth={setStrokeWidth}
             brush={brush}
             onSelectBrush={setBrush}
+            onOpenColorPicker={() => setColorSheetOpen(true)}
+            picking={picking}
+            onTogglePick={() => setPicking((v) => !v)}
             onUndo={handleUndo}
             onClear={handleClear}
           />
@@ -249,6 +272,15 @@ export default function JournalWriteScreen() {
           </View>
         </ResponsiveContainer>
       </KeyboardAvoidingView>
+
+      <ColorPickerSheet
+        visible={colorSheetOpen}
+        onClose={() => setColorSheetOpen(false)}
+        onSelect={(picked) => {
+          setCustomColor(picked);
+          setColor(picked);
+        }}
+      />
     </ScreenBackground>
   );
 }

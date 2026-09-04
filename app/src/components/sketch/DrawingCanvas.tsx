@@ -5,13 +5,34 @@ import { PanResponder, StyleSheet, View } from 'react-native';
 import { GraphPaper } from '@/src/components/sketch/GraphPaper';
 import { SkiaStroke, SkiaStrokes } from '@/src/components/sketch/SkiaStroke';
 import { colors, radius } from '@/src/constants/design';
-import { CANVAS_ASPECT, type BrushKind, type Point, type Stroke } from '@/src/lib/sketch';
+import {
+  CANVAS_ASPECT,
+  pickStrokeColorAt,
+  type BrushKind,
+  type Point,
+  type Stroke,
+} from '@/src/lib/sketch';
 
 /**
  * 터치 이벤트는 1px만 움직여도 들어온다. 전부 담으면 점이 수천 개가 되어
  * 용량과 path 계산 비용만 늘고 선 모양은 달라지지 않는다.
  */
 const MIN_DISTANCE_PX = 1.5;
+
+/** 스포이드 돋보기. 손가락 위로 띄워 지금 짚고 있는 자리를 확대해 보여준다. */
+const LOUPE_SIZE = 96;
+const LOUPE_ZOOM = 2.6;
+/** 손가락과 돋보기 사이. 이보다 가까우면 돋보기 아래쪽이 손가락에 가린다. */
+const LOUPE_LIFT = 64;
+const CROSSHAIR = 16;
+
+interface PickState {
+  /** 정규화 좌표 */
+  x: number;
+  y: number;
+  /** 그 자리 획의 색. 빈 종이면 null. */
+  color: string | null;
+}
 
 interface DrawingCanvasProps {
   /** 캔버스 폭(px). 높이는 size * CANVAS_ASPECT. */
@@ -22,6 +43,10 @@ interface DrawingCanvasProps {
   strokeWidth: number;
   brush: BrushKind;
   onStrokeEnd: (stroke: Stroke) => void;
+  /** 스포이드 모드. 켜져 있으면 캔버스를 눌러도 획이 그어지지 않는다. */
+  picking?: boolean;
+  /** 짚은 자리의 색. 빈 종이를 짚으면 null. */
+  onPickColor?: (color: string | null) => void;
 }
 
 function clamp(value: number, max: number): number {
@@ -49,11 +74,17 @@ export function DrawingCanvas({
   strokeWidth,
   brush,
   onStrokeEnd,
+  picking = false,
+  onPickColor,
 }: DrawingCanvasProps) {
   const pointsRef = useRef<Point[]>([]);
   const originRef = useRef({ x: 0, y: 0 });
   const lastPxRef = useRef({ x: 0, y: 0 });
   const [livePoints, setLivePoints] = useState<Point[]>([]);
+  // 손을 뗄 때 확정할 색은 마지막 위치의 것이다. state는 다음 렌더에나 반영되므로
+  // release 콜백에서 바로 읽을 수 있는 ref를 따로 둔다.
+  const pickRef = useRef<PickState | null>(null);
+  const [pick, setPick] = useState<PickState | null>(null);
 
   // PanResponder가 제스처 도중에 새로 만들어지면 그 획이 끊긴다.
   // 아래 값은 모두 손가락이 닿아 있는 동안에는 바뀔 수 없어서(색·굵기·재질은 툴바 탭,
@@ -65,7 +96,16 @@ export function DrawingCanvas({
       // 그 콜백은 네이티브 터치 이벤트로만 호출되고 렌더 중에는 실행되지 않는데,
       // 린터가 PanResponder.create 안쪽까지는 보지 못해 오탐이 난다.
       // eslint-disable-next-line react-hooks/refs
-      PanResponder.create({
+      (() => {
+        function updatePick(offsetX: number, offsetY: number) {
+          const x = clamp(offsetX / size, 1);
+          const y = clamp(offsetY / size, CANVAS_ASPECT);
+          const next: PickState = { x, y, color: pickStrokeColorAt(strokes, x, y) };
+          pickRef.current = next;
+          setPick(next);
+        }
+
+        return PanResponder.create({
         onStartShouldSetPanResponder: () => true,
         onMoveShouldSetPanResponder: () => true,
         // 캔버스가 스크롤뷰 안에 있어도 그리기가 스크롤에 뺏기지 않게 한다.
@@ -79,6 +119,13 @@ export function DrawingCanvas({
           originRef.current = { x: pageX - locationX, y: pageY - locationY };
           lastPxRef.current = { x: pageX, y: pageY };
 
+          if (picking) {
+            // 짚는 동안에는 확정하지 않는다 — 손가락이 가린 자리를 돋보기로 보여주고,
+            // 뗄 때의 위치로 정한다.
+            updatePick(locationX, locationY);
+            return;
+          }
+
           const s = size;
           const point: Point = [
             clamp(locationX / s, 1),
@@ -89,6 +136,11 @@ export function DrawingCanvas({
         },
 
         onPanResponderMove: (evt) => {
+          if (picking) {
+            const { pageX, pageY } = evt.nativeEvent;
+            updatePick(pageX - originRef.current.x, pageY - originRef.current.y);
+            return;
+          }
           const { pageX, pageY } = evt.nativeEvent;
           const dx = pageX - lastPxRef.current.x;
           const dy = pageY - lastPxRef.current.y;
@@ -105,6 +157,12 @@ export function DrawingCanvas({
         },
 
         onPanResponderRelease: () => {
+          if (picking) {
+            onPickColor?.(pickRef.current?.color ?? null);
+            pickRef.current = null;
+            setPick(null);
+            return;
+          }
           if (pointsRef.current.length > 0) {
             onStrokeEnd({
               points: pointsRef.current,
@@ -117,11 +175,15 @@ export function DrawingCanvas({
           setLivePoints([]);
         },
         onPanResponderTerminate: () => {
+          pickRef.current = null;
+          setPick(null);
           pointsRef.current = [];
           setLivePoints([]);
         },
-      }),
-    [size, color, strokeWidth, brush, onStrokeEnd],
+        });
+      })(),
+    // strokes는 획을 놓는 순간에만 바뀐다 — 제스처 도중에는 그대로라 여기 둬도 안전하다.
+    [size, color, strokeWidth, brush, onStrokeEnd, picking, onPickColor, strokes],
   );
 
   const height = size * CANVAS_ASPECT;
@@ -142,11 +204,96 @@ export function DrawingCanvas({
         <CommittedStrokes strokes={strokes} size={size} />
         {livePoints.length > 0 && <SkiaStroke stroke={liveStroke} size={size} />}
       </Canvas>
+
+      {pick && (
+        <PickLoupe pick={pick} strokes={strokes} size={size} canvasHeight={height} />
+      )}
+    </View>
+  );
+}
+
+/**
+ * 스포이드 돋보기.
+ *
+ * 같은 그림을 확대 배율로 한 번 더 그려서 보여준다 — 캔버스를 이미지로 떠서
+ * 확대하면 획이 뭉개지지만, 벡터를 다시 그리면 확대해도 선이 그대로다.
+ *
+ * 캔버스가 `overflow: hidden`이라 돋보기는 캔버스 밖으로 나갈 수 없다. 그래서
+ * 손가락 위에 띄우되 가장자리에서는 안쪽으로 물린다 — 위쪽 끝에서 잘려 보이는 것보다
+ * 자리를 옮기는 편이 낫다.
+ */
+function PickLoupe({
+  pick,
+  strokes,
+  size,
+  canvasHeight,
+}: {
+  pick: PickState;
+  strokes: Stroke[];
+  size: number;
+  canvasHeight: number;
+}) {
+  const radius = LOUPE_SIZE / 2;
+  const zoomedWidth = size * LOUPE_ZOOM;
+  const zoomedHeight = canvasHeight * LOUPE_ZOOM;
+
+  const fingerX = pick.x * size;
+  const fingerY = pick.y * size;
+
+  const left = Math.min(Math.max(fingerX - radius, 0), Math.max(size - LOUPE_SIZE, 0));
+  const top = Math.min(
+    Math.max(fingerY - LOUPE_LIFT - LOUPE_SIZE, 0),
+    Math.max(canvasHeight - LOUPE_SIZE, 0),
+  );
+
+  return (
+    <View
+      pointerEvents="none"
+      style={[
+        styles.loupe,
+        { left, top, borderColor: pick.color ?? colors.border },
+      ]}
+    >
+      {/* 짚은 자리가 돋보기 한가운데 오도록 확대판을 밀어 놓는다. */}
+      <View
+        style={{
+          position: 'absolute',
+          width: zoomedWidth,
+          height: zoomedHeight,
+          left: -(fingerX * LOUPE_ZOOM - radius),
+          top: -(fingerY * LOUPE_ZOOM - radius),
+        }}
+      >
+        <GraphPaper size={zoomedWidth} aspect={CANVAS_ASPECT} />
+        <Canvas style={[StyleSheet.absoluteFill, { width: zoomedWidth, height: zoomedHeight }]}>
+          <SkiaStrokes strokes={strokes} size={zoomedWidth} />
+        </Canvas>
+      </View>
+
+      <View style={styles.crosshair} />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+  loupe: {
+    position: 'absolute',
+    width: LOUPE_SIZE,
+    height: LOUPE_SIZE,
+    borderRadius: LOUPE_SIZE / 2,
+    borderWidth: 3,
+    backgroundColor: colors.cardSolid,
+    overflow: 'hidden',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  crosshair: {
+    width: CROSSHAIR,
+    height: CROSSHAIR,
+    borderRadius: CROSSHAIR / 2,
+    borderWidth: 2,
+    borderColor: 'rgba(255,253,249,0.9)',
+  },
   canvas: {
     backgroundColor: colors.cardSolid,
     borderRadius: radius.md,

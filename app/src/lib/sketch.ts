@@ -35,6 +35,29 @@ export const SKETCH_COLORS = [
 ] as const;
 
 /**
+ * HSV를 hex로. 커스텀 색 선택기가 사각형 위의 좌표를 색으로 바꿀 때 쓴다.
+ *
+ * HSL이 아니라 HSV인 건 선택기 사각형이 HSV 좌표계이기 때문이다 —
+ * 가로가 채도, 세로가 명도라 좌상단이 흰색, 아래 전체가 검정이 된다.
+ * HSL로 같은 사각형을 그리려면 두 축이 서로 얽혀 좌표 변환이 지저분해진다.
+ *
+ * 저장되는 값은 항상 hex 문자열이라, 프리셋에서 고른 색과 직접 고른 색이
+ * 같은 형태로 획에 들어간다 — 그림 데이터에 "커스텀"이라는 구분이 생기지 않는다.
+ *
+ * @param h 0~360, @param s 0~1, @param v 0~1
+ */
+export function hsvToHex(h: number, s: number, v: number): string {
+  const channel = (n: number) => {
+    const k = (n + h / 60) % 6;
+    const value = v - v * s * Math.max(0, Math.min(k, 4 - k, 1));
+    return Math.round(255 * value)
+      .toString(16)
+      .padStart(2, '0');
+  };
+  return `#${channel(5)}${channel(3)}${channel(1)}`;
+}
+
+/**
  * 굵기는 캔버스 폭 대비 비율이다(좌표와 같은 단위라 확대해도 함께 간다).
  * 폭 350px 기준 약 1.4px ~ 16px.
  */
@@ -56,6 +79,64 @@ export const BRUSHES: { kind: BrushKind; label: string }[] = [
   { kind: 'crayon', label: '크레파스' },
   { kind: 'pencil', label: '연필' },
 ];
+
+/**
+ * 스포이드가 획을 집었다고 볼 여유. 정규화 단위(캔버스 폭 대비)다.
+ *
+ * 가장 얇은 획은 폭의 0.004(350px 캔버스에서 1.4px)라, 굵기만으로 판정하면
+ * 사람 손가락으로는 사실상 집을 수 없다.
+ */
+const PICK_TOLERANCE = 0.02;
+
+function distanceToSegment(
+  px: number,
+  py: number,
+  ax: number,
+  ay: number,
+  bx: number,
+  by: number,
+): number {
+  const dx = bx - ax;
+  const dy = by - ay;
+  const lengthSq = dx * dx + dy * dy;
+  // 길이가 0인 구간은 점 하나다(툭 찍은 점).
+  const t = lengthSq === 0 ? 0 : Math.min(Math.max(((px - ax) * dx + (py - ay) * dy) / lengthSq, 0), 1);
+  const cx = ax + t * dx;
+  const cy = ay + t * dy;
+  return Math.hypot(px - cx, py - cy);
+}
+
+/**
+ * 그 자리에 있는 획의 색. 없으면 null(빈 종이를 짚은 것).
+ *
+ * 화면 픽셀을 읽지 않고 획 데이터를 직접 짚는다. Skia 스냅샷을 떠서 픽셀을 읽으면
+ * 안티에일리어싱된 가장자리에서 실제로는 칠한 적 없는 중간색이 나오고, 모눈 종이가
+ * 비쳐 섞이기도 한다. 벡터를 짚으면 **칠했던 그 색 그대로** 나온다.
+ *
+ * 겹친 자리에서는 나중에 그은 획이 이긴다 — 화면에서 위에 보이는 것과 같다.
+ *
+ * @param x·y 캔버스 폭으로 정규화한 좌표
+ */
+export function pickStrokeColorAt(strokes: Stroke[], x: number, y: number): string | null {
+  for (let i = strokes.length - 1; i >= 0; i -= 1) {
+    const stroke = strokes[i];
+    const reach = stroke.width / 2 + PICK_TOLERANCE;
+    const points = stroke.points;
+    if (points.length === 0) continue;
+
+    if (points.length === 1) {
+      if (Math.hypot(x - points[0][0], y - points[0][1]) <= reach) return stroke.color;
+      continue;
+    }
+
+    for (let j = 1; j < points.length; j += 1) {
+      const [ax, ay] = points[j - 1];
+      const [bx, by] = points[j];
+      if (distanceToSegment(x, y, ax, ay, bx, by) <= reach) return stroke.color;
+    }
+  }
+  return null;
+}
 
 export interface Stroke {
   points: Point[];
