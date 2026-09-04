@@ -9,7 +9,10 @@ import Svg, { Line } from 'react-native-svg';
  * 어떤 크기로 그리든 그림과 모눈의 상대 위치가 같아야 한다.
  * 간격을 px로 고정하면 큰 화면에서 그린 그림이 작은 화면에서 다른 칸에 걸린다.
  */
-const CELLS = 20;
+/** 스포이드 돋보기가 같은 모눈을 Skia로 다시 그릴 때 쓴다 — 두 벌이 되면 칸이 어긋난다. */
+export const GRAPH_CELLS = 20;
+
+const CELLS = GRAPH_CELLS;
 
 interface GraphPaperProps {
   size: number;

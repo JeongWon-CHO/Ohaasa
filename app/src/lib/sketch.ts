@@ -88,6 +88,34 @@ export const BRUSHES: { kind: BrushKind; label: string }[] = [
  */
 const PICK_TOLERANCE = 0.02;
 
+/**
+ * 획의 경계 상자. 스포이드가 손가락을 따라 매 프레임 판정하는데, 빗나간 획까지
+ * 점을 전부 훑으면 획이 쌓일수록 느려진다 — 상자 밖이면 구간 계산 없이 건너뛴다.
+ *
+ * 획 객체는 한 번 만들어지면 바뀌지 않으므로(그을 때마다 새 객체) WeakMap에 붙여두면
+ * 지워진 획과 함께 자동으로 정리된다.
+ */
+const boundsCache = new WeakMap<Stroke, { minX: number; minY: number; maxX: number; maxY: number }>();
+
+function boundsOf(stroke: Stroke) {
+  const cached = boundsCache.get(stroke);
+  if (cached) return cached;
+
+  let minX = Infinity;
+  let minY = Infinity;
+  let maxX = -Infinity;
+  let maxY = -Infinity;
+  for (const [x, y] of stroke.points) {
+    if (x < minX) minX = x;
+    if (y < minY) minY = y;
+    if (x > maxX) maxX = x;
+    if (y > maxY) maxY = y;
+  }
+  const bounds = { minX, minY, maxX, maxY };
+  boundsCache.set(stroke, bounds);
+  return bounds;
+}
+
 function distanceToSegment(
   px: number,
   py: number,
@@ -123,6 +151,16 @@ export function pickStrokeColorAt(strokes: Stroke[], x: number, y: number): stri
     const reach = stroke.width / 2 + PICK_TOLERANCE;
     const points = stroke.points;
     if (points.length === 0) continue;
+
+    const bounds = boundsOf(stroke);
+    if (
+      x < bounds.minX - reach ||
+      x > bounds.maxX + reach ||
+      y < bounds.minY - reach ||
+      y > bounds.maxY + reach
+    ) {
+      continue;
+    }
 
     if (points.length === 1) {
       if (Math.hypot(x - points[0][0], y - points[0][1]) <= reach) return stroke.color;

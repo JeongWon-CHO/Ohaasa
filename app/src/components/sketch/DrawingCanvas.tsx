@@ -1,8 +1,8 @@
-import { Canvas } from '@shopify/react-native-skia';
+import { Canvas, Group, Line, vec } from '@shopify/react-native-skia';
 import { memo, useMemo, useRef, useState } from 'react';
 import { PanResponder, StyleSheet, View } from 'react-native';
 
-import { GraphPaper } from '@/src/components/sketch/GraphPaper';
+import { GRAPH_CELLS, GraphPaper } from '@/src/components/sketch/GraphPaper';
 import { SkiaStroke, SkiaStrokes } from '@/src/components/sketch/SkiaStroke';
 import { colors, radius } from '@/src/constants/design';
 import {
@@ -25,6 +25,11 @@ const LOUPE_ZOOM = 2.6;
 /** 손가락과 돋보기 사이. 이보다 가까우면 돋보기 아래쪽이 손가락에 가린다. */
 const LOUPE_LIFT = 64;
 const CROSSHAIR = 16;
+/**
+ * 스포이드가 다시 판정할 최소 이동 거리. 그리기(MIN_DISTANCE_PX)보다 크게 잡는다 —
+ * 획은 점이 촘촘해야 선이 매끄럽지만, 스포이드는 2px 움직임으로 집히는 색이 바뀌지 않는다.
+ */
+const PICK_MIN_DISTANCE_PX = 3;
 
 interface PickState {
   /** 정규화 좌표 */
@@ -57,6 +62,43 @@ function clamp(value: number, max: number): number {
  * 이미 그은 획은 그리는 동안 바뀌지 않는다. 분리해두지 않으면 손가락이 움직일 때마다
  * 전체 획의 path 문자열을 다시 만들게 되어 획이 쌓일수록 눈에 띄게 느려진다.
  */
+/**
+ * 그림이 실제로 올라가는 면.
+ *
+ * 스포이드로 손가락을 끌면 DrawingCanvas가 매 프레임 다시 렌더되는데, 그때
+ * 이 면까지 함께 다시 그릴 이유는 없다. liveStroke 객체를 만들어 넘기면 매번
+ * 새 참조라 memo가 항상 빗나가므로, 재료를 그대로 받아 안에서 만든다.
+ */
+const DrawingSurface = memo(function DrawingSurface({
+  strokes,
+  size,
+  height,
+  livePoints,
+  color,
+  strokeWidth,
+  brush,
+}: {
+  strokes: Stroke[];
+  size: number;
+  height: number;
+  livePoints: Point[];
+  color: string;
+  strokeWidth: number;
+  brush: BrushKind;
+}) {
+  return (
+    <Canvas style={{ width: size, height }} pointerEvents="none">
+      <CommittedStrokes strokes={strokes} size={size} />
+      {livePoints.length > 0 && (
+        <SkiaStroke
+          stroke={{ points: livePoints, color, width: strokeWidth, brush }}
+          size={size}
+        />
+      )}
+    </Canvas>
+  );
+});
+
 const CommittedStrokes = memo(function CommittedStrokes({
   strokes,
   size,
@@ -138,6 +180,10 @@ export function DrawingCanvas({
         onPanResponderMove: (evt) => {
           if (picking) {
             const { pageX, pageY } = evt.nativeEvent;
+            const pdx = pageX - lastPxRef.current.x;
+            const pdy = pageY - lastPxRef.current.y;
+            if (pdx * pdx + pdy * pdy < PICK_MIN_DISTANCE_PX * PICK_MIN_DISTANCE_PX) return;
+            lastPxRef.current = { x: pageX, y: pageY };
             updatePick(pageX - originRef.current.x, pageY - originRef.current.y);
             return;
           }
@@ -187,7 +233,6 @@ export function DrawingCanvas({
   );
 
   const height = size * CANVAS_ASPECT;
-  const liveStroke: Stroke = { points: livePoints, color, width: strokeWidth, brush };
 
   return (
     <View
@@ -200,10 +245,15 @@ export function DrawingCanvas({
       </View>
 
       {/* 터치는 부모 View가 받아야 grant의 locationX/Y가 캔버스 기준이 된다. */}
-      <Canvas style={{ width: size, height }} pointerEvents="none">
-        <CommittedStrokes strokes={strokes} size={size} />
-        {livePoints.length > 0 && <SkiaStroke stroke={liveStroke} size={size} />}
-      </Canvas>
+      <DrawingSurface
+        strokes={strokes}
+        size={size}
+        height={height}
+        livePoints={livePoints}
+        color={color}
+        strokeWidth={strokeWidth}
+        brush={brush}
+      />
 
       {pick && (
         <PickLoupe pick={pick} strokes={strokes} size={size} canvasHeight={height} />
@@ -215,8 +265,12 @@ export function DrawingCanvas({
 /**
  * 스포이드 돋보기.
  *
- * 같은 그림을 확대 배율로 한 번 더 그려서 보여준다 — 캔버스를 이미지로 떠서
- * 확대하면 획이 뭉개지지만, 벡터를 다시 그리면 확대해도 선이 그대로다.
+ * 같은 그림을 확대해 보여준다 — 캔버스를 이미지로 떠서 확대하면 획이 뭉개지지만,
+ * 벡터를 다시 그리면 확대해도 선이 그대로다.
+ *
+ * **면은 돋보기 크기(96)만 만들고 그 안에서 Skia가 확대한다.** 그림 전체를
+ * 2.6배 면에 그린 뒤 96px 구멍으로 들여다보게 하면, 실제로는 910×910짜리 면을
+ * 매 프레임 합성하면서 그중 1%만 보게 되는 셈이라 손가락을 끌 때 그대로 밀린다.
  *
  * 캔버스가 `overflow: hidden`이라 돋보기는 캔버스 밖으로 나갈 수 없다. 그래서
  * 손가락 위에 띄우되 가장자리에서는 안쪽으로 물린다 — 위쪽 끝에서 잘려 보이는 것보다
@@ -234,9 +288,6 @@ function PickLoupe({
   canvasHeight: number;
 }) {
   const radius = LOUPE_SIZE / 2;
-  const zoomedWidth = size * LOUPE_ZOOM;
-  const zoomedHeight = canvasHeight * LOUPE_ZOOM;
-
   const fingerX = pick.x * size;
   const fingerY = pick.y * size;
 
@@ -246,32 +297,69 @@ function PickLoupe({
     Math.max(canvasHeight - LOUPE_SIZE, 0),
   );
 
+  // 손가락을 끄는 동안 바뀌는 건 아래 Group의 transform 하나뿐이다. 그림 자체는
+  // 같은 element 참조를 유지해 Skia가 획마다 path를 다시 만들지 않게 한다.
+  const content = useMemo(
+    () => (
+      <>
+        <LoupeGrid size={size} />
+        <SkiaStrokes strokes={strokes} size={size} />
+      </>
+    ),
+    [strokes, size],
+  );
+
   return (
     <View
       pointerEvents="none"
-      style={[
-        styles.loupe,
-        { left, top, borderColor: pick.color ?? colors.border },
-      ]}
+      style={[styles.loupe, { left, top, borderColor: pick.color ?? colors.border }]}
     >
-      {/* 짚은 자리가 돋보기 한가운데 오도록 확대판을 밀어 놓는다. */}
-      <View
-        style={{
-          position: 'absolute',
-          width: zoomedWidth,
-          height: zoomedHeight,
-          left: -(fingerX * LOUPE_ZOOM - radius),
-          top: -(fingerY * LOUPE_ZOOM - radius),
-        }}
-      >
-        <GraphPaper size={zoomedWidth} aspect={CANVAS_ASPECT} />
-        <Canvas style={[StyleSheet.absoluteFill, { width: zoomedWidth, height: zoomedHeight }]}>
-          <SkiaStrokes strokes={strokes} size={zoomedWidth} />
-        </Canvas>
-      </View>
+      <Canvas style={styles.loupeCanvas}>
+        {/* 짚은 자리가 돋보기 한가운데 오도록: 화면좌표 = (캔버스좌표 - 손가락) × 배율 + 반지름 */}
+        <Group
+          transform={[
+            { translateX: radius - fingerX * LOUPE_ZOOM },
+            { translateY: radius - fingerY * LOUPE_ZOOM },
+            { scale: LOUPE_ZOOM },
+          ]}
+        >
+          {content}
+        </Group>
+      </Canvas>
 
       <View style={styles.crosshair} />
     </View>
+  );
+}
+
+/**
+ * 돋보기 안의 모눈. 밖의 모눈(GraphPaper)은 SVG라 Skia 캔버스에 들어갈 수 없어
+ * 같은 칸 수로 다시 그린다 — 칸이 어긋나면 확대한 자리가 어디인지 알 수 없다.
+ */
+function LoupeGrid({ size }: { size: number }) {
+  const step = size / GRAPH_CELLS;
+  // Group이 통째로 확대하므로 선 굵기는 배율로 나눠야 화면에서 실선 한 겹으로 보인다.
+  const width = 1 / LOUPE_ZOOM;
+
+  return (
+    <Group color="rgba(122,104,84,0.11)">
+      {Array.from({ length: GRAPH_CELLS + 1 }, (_, i) => (
+        <Line
+          key={`v${i}`}
+          p1={vec(i * step, 0)}
+          p2={vec(i * step, size * CANVAS_ASPECT)}
+          strokeWidth={width}
+        />
+      ))}
+      {Array.from({ length: Math.ceil(GRAPH_CELLS * CANVAS_ASPECT) + 1 }, (_, i) => (
+        <Line
+          key={`h${i}`}
+          p1={vec(0, i * step)}
+          p2={vec(size, i * step)}
+          strokeWidth={width}
+        />
+      ))}
+    </Group>
   );
 }
 
@@ -286,6 +374,10 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  loupeCanvas: {
+    width: LOUPE_SIZE,
+    height: LOUPE_SIZE,
   },
   crosshair: {
     width: CROSSHAIR,
