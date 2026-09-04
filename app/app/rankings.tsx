@@ -8,6 +8,7 @@ import {
 } from "react-native";
 import { useFocusEffect , useRouter } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { DatePill } from "@/src/components/final/DatePill";
 import { FinalHeader } from "@/src/components/final/FinalHeader";
@@ -24,8 +25,9 @@ import { useZodiac } from "@/src/hooks/useZodiac";
 
 export default function RankingsScreen() {
   const router = useRouter();
-  // 탭이 아니라 push된 화면이라 탭바가 없다. useBottomTabBarHeight는 탭 밖에서 throw한다.
-  const tabBarHeight = 0;
+  // 탭이 아니라 push된 화면이라 탭바가 없다(useBottomTabBarHeight는 탭 밖에서 throw한다).
+  // 바닥 안전영역을 대신 먹어줄 게 없으므로 화면이 직접 인셋을 더한다.
+  const insets = useSafeAreaInsets();
   const { zodiacSign } = useZodiac();
   const { selectedDate, isLatest, setSelectedDate } = useHoroscopeDateContext();
   const { horoscopes, broadcastDate, loading, error } = useAllHoroscopes({ date: selectedDate });
@@ -142,7 +144,7 @@ export default function RankingsScreen() {
             }}
             contentContainerStyle={[
               styles.list,
-              { paddingBottom: tabBarHeight + 16 },
+              { paddingBottom: insets.bottom + 48 },
             ]}
             showsVerticalScrollIndicator={false}
             style={styles.scroll}

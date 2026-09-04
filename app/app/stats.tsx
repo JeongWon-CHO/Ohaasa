@@ -2,6 +2,7 @@ import { useRef, useState } from "react";
 import { Linking, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { router, useFocusEffect } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { FinalHeader } from "@/src/components/final/FinalHeader";
 import { ResponsiveContainer } from "@/src/components/common/ResponsiveContainer";
@@ -49,8 +50,9 @@ function formatMonthToggleLabel(month: MonthKey): string {
 }
 
 export default function StatsScreen() {
-  // 탭이 아니라 push된 화면이라 탭바가 없다. useBottomTabBarHeight는 탭 밖에서 throw한다.
-  const tabBarHeight = 0;
+  // 탭이 아니라 push된 화면이라 탭바가 없다(useBottomTabBarHeight는 탭 밖에서 throw한다).
+  // 바닥 안전영역을 대신 먹어줄 게 없으므로 화면이 직접 인셋을 더한다.
+  const insets = useSafeAreaInsets();
   const { zodiacSign } = useZodiac();
   const [activeTab, setActiveTab] = useState<StatsTab>("trend");
   const [period, setPeriod] = useState<TrendsPeriod>("7d");
@@ -159,7 +161,7 @@ export default function StatsScreen() {
           ) : (
             <ScrollView
               ref={scrollRef}
-              contentContainerStyle={[styles.list, { paddingBottom: tabBarHeight + 16 }]}
+              contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + 48 }]}
               showsVerticalScrollIndicator={false}
               style={styles.scroll}
             >
@@ -199,7 +201,7 @@ export default function StatsScreen() {
             </ScrollView>
           )
         ) : (
-          <ReviewHistoryTab bottomInset={tabBarHeight} />
+          <ReviewHistoryTab bottomInset={insets.bottom} />
         )}
       </ResponsiveContainer>
 
