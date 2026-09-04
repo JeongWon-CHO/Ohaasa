@@ -1,5 +1,4 @@
 import {
-  ImageBackground,
   StyleSheet,
   Text,
   TextInput,
@@ -7,22 +6,19 @@ import {
   View,
 } from 'react-native';
 
-import { colors, layout, radius, spacing } from '@/src/constants/design';
+import { colors, layout, spacing } from '@/src/constants/design';
 
 /** 제목처럼 쓰는 한 줄이라 짧게 잡는다. 길면 달력·카드에서 잘린다. */
 export const MAX_SUMMARY = 30;
 
-/**
- * background.png의 실제 비율(1254 × 975). 이미지를 갈아끼우면 여기도 같이 고쳐야 한다 —
- * 안 맞추면 resizeMode="cover"가 가장자리를 잘라내 달·구름이 사라진다.
- */
-const MEMO_ASPECT = 975 / 1254;
-
-/** 달·구름 띠가 끝나는 지점. 이보다 위에서 쓰기 시작하면 글자가 구름에 겹친다. */
-const TEXT_TOP_RATIO = 0.44;
-
 const LINE_HEIGHT = 29;
 const SIDE_PADDING = 28;
+
+/**
+ * 30자면 가운데 정렬로 두 줄이면 넉넉하다. 한 줄을 더 깔아 두는 건
+ * 마지막 줄에 걸쳐 썼을 때 밑줄이 없어 허전해 보이지 않게 하기 위함.
+ */
+const RULE_COUNT = 3;
 
 interface SummaryStepProps {
   summary: string;
@@ -33,38 +29,20 @@ interface SummaryStepProps {
 export function SummaryStep({ summary, onChange, onFocus }: SummaryStepProps) {
   const { width } = useWindowDimensions();
   const memoWidth = Math.min(width, layout.maxContentWidth) - spacing.xl * 2;
-  const memoHeight = memoWidth * MEMO_ASPECT;
-
-  const textTop = Math.round(memoHeight * TEXT_TOP_RATIO);
-  // 남은 높이를 줄 간격으로 나눠 편지지처럼 밑줄을 깐다.
-  const ruleCount = Math.max(
-    1,
-    Math.floor((memoHeight - textTop - spacing.md) / LINE_HEIGHT),
-  );
+  const memoHeight = RULE_COUNT * LINE_HEIGHT;
 
   return (
     <View style={styles.container}>
-      {/* 질문은 왼쪽 정렬 두 줄 — 가운데 정렬하면 아래 메모지와 축이 겹쳐 답답하다. */}
+      {/* 메모지 그림이 빠지면서 축을 나눌 상대가 없어졌다 — 줄과 같은 가운데로 맞춘다. */}
       <Text style={styles.question}>
         마지막으로,{'\n'}오늘을 한마디로 남겨볼까요?
       </Text>
 
-      <ImageBackground
-        source={require('@/assets/images/background.png')}
-        style={[styles.memo, { width: memoWidth, height: memoHeight }]}
-        imageStyle={styles.memoImage}
-        resizeMode="cover"
-      >
+      <View style={[styles.memo, { width: memoWidth, height: memoHeight }]}>
         {/* 밑줄은 글자 줄 아래에 놓는다 — 줄 상자의 바닥이라 글자와 겹치지 않는다. */}
         <View pointerEvents="none" style={StyleSheet.absoluteFill}>
-          {Array.from({ length: ruleCount }, (_, i) => (
-            <View
-              key={i}
-              style={[
-                styles.rule,
-                { top: textTop + LINE_HEIGHT * (i + 1) },
-              ]}
-            />
+          {Array.from({ length: RULE_COUNT }, (_, i) => (
+            <View key={i} style={[styles.rule, { top: LINE_HEIGHT * (i + 1) }]} />
           ))}
         </View>
 
@@ -74,16 +52,13 @@ export function SummaryStep({ summary, onChange, onFocus }: SummaryStepProps) {
           onFocus={onFocus}
           placeholder="생각보다 괜찮았던 하루"
           placeholderTextColor="rgba(90,70,54,0.4)"
-          style={[
-            styles.input,
-            { marginTop: textTop, height: ruleCount * LINE_HEIGHT },
-          ]}
+          style={[styles.input, { height: memoHeight }]}
           maxLength={MAX_SUMMARY}
           returnKeyType="done"
           multiline
           textAlign="center"
         />
-      </ImageBackground>
+      </View>
 
       <View style={styles.meta}>
         {/* 강제하지 않는다 — 매일 쓰는 것이라 한 칸이라도 의무가 되면 부담이 된다. */}
@@ -106,13 +81,14 @@ const styles = StyleSheet.create({
     lineHeight: 30,
     fontFamily: 'NotoSansKR_400Regular',
     color: colors.text,
+    textAlign: 'center',
   },
   memo: {
     alignSelf: 'center',
     paddingHorizontal: SIDE_PADDING,
-  },
-  memoImage: {
-    borderRadius: radius.lg,
+    // 컨테이너 gap(16) 위에 얹는다 — 질문과 줄 사이가 52로 벌어진다.
+    // 아래 카운터는 gap 그대로라 줄에 붙어 있고, 질문만 한 덩어리로 떨어진다.
+    marginTop: spacing.xxxl,
   },
   rule: {
     position: 'absolute',

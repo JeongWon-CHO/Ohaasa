@@ -132,6 +132,9 @@ export default function JournalWriteScreen() {
       ref={scrollRef}
       contentContainerStyle={[
         styles.content,
+        // 짧은 일기는 줄 세 개뿐이라 가운데 정렬하면 화면 한복판에 덩그러니 뜬다.
+        // 질문을 헤더 바로 아래에 붙여 읽는 순서대로 내려가게 한다.
+        step === 'summary' && styles.contentTop,
         { paddingBottom: insets.bottom + spacing.xxxl },
       ]}
       keyboardShouldPersistTaps="handled"
@@ -227,9 +230,9 @@ export default function JournalWriteScreen() {
           <View style={[styles.footer, { paddingBottom: insets.bottom + spacing.lg }]}>
             {step === 'done' ? (
               <Pressable
-                onPress={() =>
-                  router.replace({ pathname: '/journal-view', params: { date } })
-                }
+                // 다 쓰고 나면 홈으로 보낸다. 방금 쓴 걸 다시 읽히는 것보다
+                // 달력에 오늘이 채워진 걸 보여주는 게 흐름의 끝으로 맞다.
+                onPress={() => router.replace('/(tabs)')}
                 style={styles.primaryBtn}
               >
                 <Text style={styles.primaryText}>다 남겼어요</Text>
@@ -291,6 +294,9 @@ const styles = StyleSheet.create({
     paddingTop: spacing.xl,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  contentTop: {
+    justifyContent: 'flex-start',
   },
   loading: { height: 200 },
   question: {
