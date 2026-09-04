@@ -110,6 +110,22 @@ export async function requestPushToken(): Promise<PushTokenResult> {
 export type NotificationTap = { id: string };
 
 /**
+ * 이미 처리한 알림 탭. 콜드 스타트에서는 `getInitialNotificationTap`과 리스너가
+ * **같은 탭을 둘 다 알려줄 수 있어서**, 먼저 집은 쪽만 처리하도록 모듈 단위로 둔다.
+ *
+ * 화면과 훅이 나눠 가지므로 컴포넌트 안에 두면 안 된다 — 앱을 연 알림은 화면 진입
+ * 경로를 정하는 쪽(`app/index.tsx`)이, 그 뒤의 탭은 훅이 맡는다.
+ */
+const handledTapIds = new Set<string>();
+
+/** 아직 아무도 처리하지 않았으면 이번 호출이 가져간다. */
+export function claimNotificationTap(id: string): boolean {
+  if (handledTapIds.has(id)) return false;
+  handledTapIds.add(id);
+  return true;
+}
+
+/**
  * 알림을 눌러 앱이 켜진 경우 그 탭을 돌려준다(콜드 스타트). 아니면 null.
  *
  * 리스너는 이미 떠 있는 앱에서만 불리므로, 종료 상태에서 눌린 알림은 이걸로만 알 수 있다.
