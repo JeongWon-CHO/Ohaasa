@@ -245,11 +245,13 @@ export default function JournalWriteScreen() {
       >
         <ResponsiveContainer>
           <View style={[styles.header, { paddingTop: insets.top + spacing.sm }]}>
-            {step !== 'done' && (
-              <Pressable onPress={goBack} disabled={isSaving} hitSlop={12} style={styles.iconBtn}>
-                <Feather name="chevron-left" size={22} color={colors.text} />
-              </Pressable>
-            )}
+            <View style={styles.headerSide}>
+              {step !== 'done' && (
+                <Pressable onPress={goBack} disabled={isSaving} hitSlop={12} style={styles.iconBtn}>
+                  <Feather name="chevron-left" size={22} color={colors.text} />
+                </Pressable>
+              )}
+            </View>
             <Pressable
               onPress={() => { Keyboard.dismiss(); setDateSheetOpen(true); }}
               disabled={!isLoaded || isSaving || step === 'done'}
@@ -261,14 +263,15 @@ export default function JournalWriteScreen() {
               <Text style={styles.date}>{formatKoreanDate(date)}</Text>
               {step !== 'done' && <Feather name="calendar" size={14} color={colors.textMid} />}
             </Pressable>
-            <View style={styles.spacer} />
-            {step !== 'done' && (
-              <View style={styles.dots}>
-                {STEPS.slice(0, 3).map((s, i) => (
-                  <View key={s} style={[styles.dot, i === index && styles.dotActive]} />
-                ))}
-              </View>
-            )}
+            <View style={styles.headerSide}>
+              {step !== 'done' && (
+                <View style={styles.dots}>
+                  {STEPS.slice(0, 3).map((s, i) => (
+                    <View key={s} style={[styles.dot, i === index && styles.dotActive]} />
+                  ))}
+                </View>
+              )}
+            </View>
           </View>
 
           {dismissesKeyboard ? (
@@ -331,7 +334,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     paddingBottom: spacing.lg,
   },
-  spacer: { flex: 1 },
+  headerSide: { width: 36, alignItems: 'center', justifyContent: 'center' },
   iconBtn: {
     width: 32,
     height: 32,
@@ -343,7 +346,7 @@ const styles = StyleSheet.create({
     fontFamily: 'NotoSansKR_500Medium',
     color: colors.textMid,
   },
-  dateButton: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, flexShrink: 1 },
+  dateButton: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.xs },
   dots: {
     flexDirection: 'row',
     gap: 5,
