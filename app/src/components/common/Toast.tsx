@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useState } from "react";
 import { Animated, StyleSheet, Text } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -10,7 +10,8 @@ interface ToastProps {
 }
 
 export function Toast({ message, visible }: ToastProps) {
-  const opacity = useRef(new Animated.Value(0)).current;
+  // 렌더 간 같은 인스턴스여야 하지만 렌더 중 ref를 읽으면 안 된다 (→ BottomSheet).
+  const [opacity] = useState(() => new Animated.Value(0));
   const insets = useSafeAreaInsets();
 
   useEffect(() => {

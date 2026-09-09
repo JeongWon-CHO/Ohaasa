@@ -449,3 +449,30 @@ export async function reportReply(
 
   return { ok: true };
 }
+
+/** 한 별자리분만 받으면 하루 1행이라 곧 "데이터가 있는 날짜 목록"이 된다. */
+const DATE_PROBE_SIGN = 'aries';
+
+/**
+ * 데이터가 있는 방송일 전체(최신순). 월 선택 목록을 만드는 데 쓴다.
+ *
+ * 달마다 개수를 세면 조회가 달 수만큼 늘어나므로 날짜만 한 번에 받아 클라이언트에서 묶는다.
+ * 12별자리를 다 받으면 행이 12배가 되므로 `aries` 하나로 자른다.
+ *
+ * 상한은 `db-max-rows`(이 프로젝트 1000) 때문이다 — 넘으면 **에러 없이 잘리므로**
+ * 최신순으로 받아 오래된 쪽이 떨어지게 한다(약 2.7년치). 그보다 옛 달은 목록에 안 뜬다.
+ */
+export async function fetchHoroscopeDates(): Promise<string[] | null> {
+  const { data, error } = await supabase
+    .from('horoscopes')
+    .select('date')
+    .eq('zodiac_sign', DATE_PROBE_SIGN)
+    .order('date', { ascending: false })
+    .limit(1000);
+
+  if (error) {
+    console.warn('[supabase] fetchHoroscopeDates failed:', error.message);
+    return null;
+  }
+  return (data ?? []).map((row) => row.date as string);
+}

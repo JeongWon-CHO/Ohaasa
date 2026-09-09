@@ -21,6 +21,7 @@ import { MoodStep } from '@/src/components/journal/MoodStep';
 import { SummaryStep } from '@/src/components/journal/SummaryStep';
 import { DrawingCanvas } from '@/src/components/sketch/DrawingCanvas';
 import { MoodFace } from '@/src/components/sketch/MoodFace';
+import { ColorPickerSheet } from '@/src/components/sketch/ColorPickerSheet';
 import { SketchThumbnail } from '@/src/components/sketch/SketchThumbnail';
 import {
   SKETCH_COLORS,
@@ -54,6 +55,22 @@ export default function JournalWriteScreen() {
   const [androidKeyboardHeight, setAndroidKeyboardHeight] = useState(0);
   const [step, setStep] = useState<Step>('mood');
   const [color, setColor] = useState<string>(SKETCH_COLORS[0]);
+  // 직접 고른 색은 팔레트 마지막 칸에 남는다 — 한 그림 안에서 다시 집으려고
+  // 매번 시트를 여는 일이 없게 한다.
+  const [customColor, setCustomColor] = useState<string | null>(null);
+  const [colorSheetOpen, setColorSheetOpen] = useState(false);
+  const [picking, setPicking] = useState(false);
+
+  // 손을 뗄 때 확정되고 스포이드는 바로 꺼진다 — 켜둔 채 그리려다 획이 안 그어지는 게
+  // 이 모드에서 제일 헷갈리는 지점이다. 빈 종이를 짚었을 때도 끈다(짚기는 끝난 것).
+  const handlePickColor = useCallback((picked: string | null) => {
+    setPicking(false);
+    if (!picked) return;
+    setColor(picked);
+    // 프리셋에 없는 색이면 팔레트 마지막 칸에 남겨 다시 집을 수 있게 한다.
+    if (!(SKETCH_COLORS as readonly string[]).includes(picked)) setCustomColor(picked);
+  }, []);
+
   const [strokeWidth, setStrokeWidth] = useState<number>(BRUSH_WIDTH_DEFAULT);
   const [brush, setBrush] = useState<BrushKind>('pen');
 
@@ -132,6 +149,9 @@ export default function JournalWriteScreen() {
       ref={scrollRef}
       contentContainerStyle={[
         styles.content,
+        // 짧은 일기는 줄 세 개뿐이라 가운데 정렬하면 화면 한복판에 덩그러니 뜬다.
+        // 질문을 헤더 바로 아래에 붙여 읽는 순서대로 내려가게 한다.
+        step === 'summary' && styles.contentTop,
         { paddingBottom: insets.bottom + spacing.xxxl },
       ]}
       keyboardShouldPersistTaps="handled"
@@ -157,9 +177,12 @@ export default function JournalWriteScreen() {
             strokeWidth={strokeWidth}
             brush={brush}
             onStrokeEnd={handleStrokeEnd}
+            picking={picking}
+            onPickColor={handlePickColor}
           />
           <SketchToolbar
             color={color}
+            customColor={customColor}
             strokeWidth={strokeWidth}
             canUndo={hasDrawing}
             onSelectColor={setColor}
@@ -167,6 +190,9 @@ export default function JournalWriteScreen() {
             onSelectWidth={setStrokeWidth}
             brush={brush}
             onSelectBrush={setBrush}
+            onOpenColorPicker={() => setColorSheetOpen(true)}
+            picking={picking}
+            onTogglePick={() => setPicking((v) => !v)}
             onUndo={handleUndo}
             onClear={handleClear}
           />
@@ -227,9 +253,9 @@ export default function JournalWriteScreen() {
           <View style={[styles.footer, { paddingBottom: insets.bottom + spacing.lg }]}>
             {step === 'done' ? (
               <Pressable
-                onPress={() =>
-                  router.replace({ pathname: '/journal-view', params: { date } })
-                }
+                // 다 쓰고 나면 홈으로 보낸다. 방금 쓴 걸 다시 읽히는 것보다
+                // 달력에 오늘이 채워진 걸 보여주는 게 흐름의 끝으로 맞다.
+                onPress={() => router.replace('/(tabs)')}
                 style={styles.primaryBtn}
               >
                 <Text style={styles.primaryText}>다 남겼어요</Text>
@@ -246,6 +272,15 @@ export default function JournalWriteScreen() {
           </View>
         </ResponsiveContainer>
       </KeyboardAvoidingView>
+
+      <ColorPickerSheet
+        visible={colorSheetOpen}
+        onClose={() => setColorSheetOpen(false)}
+        onSelect={(picked) => {
+          setCustomColor(picked);
+          setColor(picked);
+        }}
+      />
     </ScreenBackground>
   );
 }
@@ -291,6 +326,9 @@ const styles = StyleSheet.create({
     paddingTop: spacing.xl,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  contentTop: {
+    justifyContent: 'flex-start',
   },
   loading: { height: 200 },
   question: {

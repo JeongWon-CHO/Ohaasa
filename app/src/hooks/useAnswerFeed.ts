@@ -79,6 +79,7 @@ export function useAnswerFeed(
 
   useEffect(() => {
     if (!date || !deviceId) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- 조회를 시작하기 전에 이전 결과를 비우는 자리다. 지우지 않으면 date/별자리를 바꾼 순간 남의 데이터가 잠깐 보인다.
       setAnswers([]);
       setLikedIds(new Set());
       setLoading(false);

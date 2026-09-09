@@ -124,7 +124,7 @@ function ShareInfoGrid({ horoscope }: { horoscope: Horoscope }) {
 }
 
 export const ShareCard = forwardRef<View, ShareCardProps>(
-  ({ horoscope, zodiac }, ref) => {
+  function ShareCard({ horoscope, zodiac }, ref) {
     const dateLabel = formatShareDate(horoscope.date, horoscope.source);
     const advice = horoscope.advice_ko ?? horoscope.advice;
     const adviceFontSize = (advice?.length ?? 0) > 55 ? 11 : 12;

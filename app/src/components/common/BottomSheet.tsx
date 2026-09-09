@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Animated,
   Modal,
@@ -21,12 +21,19 @@ const CLOSE_DURATION = 240;
 
 export function BottomSheet({ visible, onClose, children }: BottomSheetProps) {
   const [modalVisible, setModalVisible] = useState(false);
-  const translateY = useRef(new Animated.Value(SHEET_HEIGHT)).current;
-  const backdropOpacity = useRef(new Animated.Value(0)).current;
+  // Animated.Value는 렌더 간 같은 인스턴스여야 한다. useRef(...).current는
+  // 렌더 중 ref를 읽는 셈이라, 같은 보장을 주는 useState의 lazy initializer를 쓴다.
+  const [translateY] = useState(() => new Animated.Value(SHEET_HEIGHT));
+  const [backdropOpacity] = useState(() => new Animated.Value(0));
   const insets = useSafeAreaInsets();
 
   useEffect(() => {
     if (visible) {
+      // Modal을 올리는 것과 애니메이션 시작은 같은 tick에 있어야 한다.
+      // 렌더 중 setModalVisible로 앞당겼더니 시트가 화면 밖에 뜬 채 화면 전체가
+      // 눌리지 않는 상태가 됐다 — Modal이 이미 떠 있는데 여는 애니메이션은
+      // 붙지 않아 투명한 오버레이만 남은 것이다.
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- 위 이유로 effect 안에 있어야 한다.
       setModalVisible(true);
       translateY.setValue(SHEET_HEIGHT);
       backdropOpacity.setValue(0);

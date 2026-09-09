@@ -3,7 +3,12 @@ import { StyleSheet, Text, View } from "react-native";
 import { AverageRankRow } from "@/src/components/final/AverageRankRow";
 import { colors } from "@/src/constants/design";
 import type { ZodiacSign } from "@/src/constants/zodiac";
-import { periodLabel, type SignAverage, type TrendsPeriod } from "@/src/hooks/useHoroscopeTrends";
+import {
+  getPeriodMonth,
+  periodLabel,
+  type SignAverage,
+  type TrendsPeriod,
+} from "@/src/hooks/useHoroscopeTrends";
 
 interface RankingCardProps {
   period: TrendsPeriod;
@@ -20,7 +25,10 @@ export function RankingCard({ period, signAverages, detailMode, zodiacSign, comp
         <Text style={styles.sectionTitle}>별자리별 평균 순위</Text>
         <Text style={styles.rankingPeriodLabel}>{periodLabel(period)}</Text>
       </View>
-      <Text style={styles.rankingCaption}>화살표는 전날 대비 등수 변화예요</Text>
+      {/* 비교 기준이 기간에 따라 다르다 — 월간은 전 달 전체와 견준다 (→ useHoroscopeTrends) */}
+      <Text style={styles.rankingCaption}>
+        화살표는 {getPeriodMonth(period) ? "전 달" : "전날"} 대비 등수 변화예요
+      </Text>
       <View style={styles.rankingList}>
         {signAverages.map((item) => (
           <AverageRankRow
@@ -52,7 +60,9 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    marginBottom: 10,
+    // 캡션은 제목에 딸린 설명이라 붙여 둔다. 목록과의 간격(rankingCaption의 8)보다
+    // 작아야 "제목+캡션"이 한 덩어리로 읽힌다.
+    marginBottom: 4,
   },
   sectionTitle: {
     fontSize: 16,

@@ -37,6 +37,7 @@ export function useNewReplyBadge({
 
   useEffect(() => {
     if (!answerId) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- 대상이 없으면 이전 답변의 읽음 기준값을 즉시 버려야 한다.
       setSeenAt(null);
       setSeenLoaded(false);
       return;
@@ -68,8 +69,15 @@ export function useNewReplyBadge({
     if (latestCreatedAt === null) return;
     if (seenAt !== null && seenAt >= latestCreatedAt) return;
 
-    setSeenAt(latestCreatedAt);
-    void setReplySeenAt(answerId, latestCreatedAt);
+    let cancelled = false;
+    // 저장이 끝난 뒤에 로컬 상태를 맞춘다. 저장 실패로 기준값이 안 남았는데
+    // 배지만 사라지는 어긋남도 이 순서라야 생기지 않는다.
+    setReplySeenAt(answerId, latestCreatedAt).then(() => {
+      if (!cancelled) setSeenAt(latestCreatedAt);
+    });
+    return () => {
+      cancelled = true;
+    };
   }, [expanded, answerId, loaded, seenLoaded, latestCreatedAt, seenAt]);
 
   if (!answerId || !loaded || !seenLoaded) return 0;

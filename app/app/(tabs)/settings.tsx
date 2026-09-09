@@ -9,9 +9,8 @@ import {
   Text,
   View,
 } from "react-native";
-import { useFocusEffect } from "expo-router";
+import { useFocusEffect , useRouter } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
-import { useRouter } from "expo-router";
 
 import { NotificationDeniedSheet } from "@/src/components/NotificationDeniedSheet";
 import { ResponsiveContainer } from "@/src/components/common/ResponsiveContainer";
@@ -508,7 +507,10 @@ export default function SettingsScreen() {
                 // 둘 다 지워야 한다 — 진입 라우트가 (플래그 || 별자리)로 판정해서
                 // 하나만 지우면 그대로 홈으로 간다.
                 await Promise.all([clearZodiacSign(), clearHasSeenOnboarding()]);
-                router.replace("/");
+                // "/"로 보내면 안 된다 — 그룹은 경로에 안 들어가서 app/index.tsx와
+                // app/(tabs)/index.tsx가 둘 다 "/"를 갖고, 탭 쪽이 이겨 홈이 열린다.
+                // 방금 두 키를 지웠으니 스플래시가 내릴 결론도 온보딩이라 바로 보낸다.
+                router.replace("/onboarding");
               }}
               style={styles.aboutRow}
             />
@@ -535,7 +537,7 @@ export default function SettingsScreen() {
             <Text style={styles.footerLogo}>ohaasa ✦</Text>
           </View>
           <Text style={styles.footerJa}>おはあさ</Text>
-          <Text style={styles.footerCaption}>v1.7.0</Text>
+          <Text style={styles.footerCaption}>v1.8.0</Text>
         </View>
 
         <View style={styles.spacer} />

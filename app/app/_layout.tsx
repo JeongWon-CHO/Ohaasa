@@ -1,5 +1,5 @@
 import FontAwesome from '@expo/vector-icons/FontAwesome';
-import { DarkTheme, DefaultTheme, ThemeProvider } from 'expo-router';
+import { DarkTheme, DefaultTheme, ThemeProvider , Stack } from 'expo-router';
 import { useFonts } from 'expo-font';
 import {
   NotoSansKR_300Light,
@@ -8,7 +8,6 @@ import {
   NotoSansKR_600SemiBold,
   NotoSansKR_700Bold,
 } from '@expo-google-fonts/noto-sans-kr';
-import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';

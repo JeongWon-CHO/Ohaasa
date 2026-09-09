@@ -1,5 +1,5 @@
 import { useCallback, useRef, useState } from "react";
-import { router } from "expo-router";
+import { router , useFocusEffect } from "expo-router";
 import {
   ActivityIndicator,
   Linking,
@@ -13,7 +13,6 @@ import { Feather } from "@expo/vector-icons";
 import { TodayQuestionSection } from "@/src/components/daily-question/TodayQuestionSection";
 import { DailyReviewEntryCard } from "@/src/components/daily-review/DailyReviewEntryCard";
 import { useDailyQuestion } from "@/src/hooks/useDailyQuestion";
-import { useFocusEffect } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -106,14 +105,17 @@ export default function TodayScreen() {
     }, []),
   );
 
+  // 날짜를 먼저 꺼내둔다 — 본문에서 horoscope를 통째로 참조하면
+  // 추론된 의존성이 horoscope 객체가 되어 실제 deps와 어긋난다.
+  const horoscopeDate = horoscope?.date ?? null;
   useFocusEffect(
     useCallback(() => {
-      if (!horoscope?.date || !zodiacSign) {
+      if (!horoscopeDate || !zodiacSign) {
         setCurrentReview(null);
         return;
       }
-      getDailyReview(horoscope.date, zodiacSign).then(setCurrentReview);
-    }, [horoscope?.date, zodiacSign]),
+      getDailyReview(horoscopeDate, zodiacSign).then(setCurrentReview);
+    }, [horoscopeDate, zodiacSign]),
   );
 
   const { pushSheetVisible, handlePushAccept, handlePushDecline } =

@@ -65,8 +65,9 @@ export function BoardingPassNoteInput({
   rank,
 }: BoardingPassNoteInputProps) {
   const [isFlipped, setIsFlipped] = useState(false);
-  const frontAnim = useRef(new Animated.Value(0)).current;
-  const backAnim = useRef(new Animated.Value(0)).current;
+  // 렌더 간 같은 인스턴스여야 하지만 렌더 중 ref를 읽으면 안 된다 (→ BottomSheet).
+  const [frontAnim] = useState(() => new Animated.Value(0));
+  const [backAnim] = useState(() => new Animated.Value(0));
   const inputRef = useRef<TextInput>(null);
 
   const frontRotateY = frontAnim.interpolate({
@@ -163,7 +164,7 @@ export function BoardingPassNoteInput({
                 {/* 힌트 or 기록 미리보기 */}
                 {hasNote ? (
                   <Text style={styles.notePreview} numberOfLines={1}>
-                    "{value}"
+                    &quot;{value}&quot;
                   </Text>
                 ) : (
                   <Text style={styles.tapHint}>탭하여 오늘을 기록해요 →</Text>

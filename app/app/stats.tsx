@@ -1,7 +1,8 @@
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { Linking, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { router, useFocusEffect } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { FinalHeader } from "@/src/components/final/FinalHeader";
 import { ResponsiveContainer } from "@/src/components/common/ResponsiveContainer";
@@ -14,12 +15,18 @@ import { RankingCard } from "@/src/components/stats/RankingCard";
 import { ReviewHistoryTab } from "@/src/components/stats/ReviewHistoryTab";
 import { StatsLoadingState } from "@/src/components/stats/StatsLoadingState";
 import { SummaryCard } from "@/src/components/stats/SummaryCard";
+import { MonthSelectSheet } from "@/src/components/stats/MonthSelectSheet";
 import { ZodiacSelectBottomSheet } from "@/src/components/stats/ZodiacSelectBottomSheet";
-import { colors, shadows } from "@/src/constants/design";
-import { gradients } from "@/src/constants/design";
+import { colors, shadows , gradients } from "@/src/constants/design";
 import { ZODIAC_MAP } from "@/src/constants/zodiac";
 import type { ZodiacSign } from "@/src/constants/zodiac";
-import { useHoroscopeTrends, type TrendsPeriod } from "@/src/hooks/useHoroscopeTrends";
+import {
+  getPeriodMonth,
+  monthPeriod,
+  useHoroscopeTrends,
+  type MonthKey,
+  type TrendsPeriod,
+} from "@/src/hooks/useHoroscopeTrends";
 import { useShareHoroscope } from "@/src/hooks/useShareHoroscope";
 import { useToast } from "@/src/hooks/useToast";
 import { useZodiac } from "@/src/hooks/useZodiac";
@@ -31,21 +38,40 @@ const TAB_OPTIONS: { value: StatsTab; label: string }[] = [
   { value: "history", label: "기록" },
 ];
 
+const DAY_PERIODS: { value: TrendsPeriod; label: string }[] = [
+  { value: "7d", label: "7일" },
+  { value: "14d", label: "14일" },
+];
+
+// 헤더는 자리가 좁아 "8월"만 쓰지만, 해가 넘어간 달은 연도까지 붙여야 구분된다.
+function formatMonthToggleLabel(month: MonthKey): string {
+  const [year, monthNum] = month.split("-").map(Number);
+  return year === new Date().getFullYear() ? `${monthNum}월` : `${year}.${monthNum}`;
+}
+
 export default function StatsScreen() {
-  // 탭이 아니라 push된 화면이라 탭바가 없다. useBottomTabBarHeight는 탭 밖에서 throw한다.
-  const tabBarHeight = 0;
+  // 탭이 아니라 push된 화면이라 탭바가 없다(useBottomTabBarHeight는 탭 밖에서 throw한다).
+  // 바닥 안전영역을 대신 먹어줄 게 없으므로 화면이 직접 인셋을 더한다.
+  const insets = useSafeAreaInsets();
   const { zodiacSign } = useZodiac();
   const [activeTab, setActiveTab] = useState<StatsTab>("trend");
   const [period, setPeriod] = useState<TrendsPeriod>("7d");
+  const [monthSheetOpen, setMonthSheetOpen] = useState(false);
+  // 월간을 벗어나도 마지막으로 고른 달을 기억해, 시트를 다시 열면 그 달이 체크돼 있게 한다.
+  const [lastMonth, setLastMonth] = useState<MonthKey | null>(null);
   const [detailMode, setDetailMode] = useState(false);
   const [compareId, setCompareId] = useState<ZodiacSign | null>(null);
   const [compareSheetOpen, setCompareSheetOpen] = useState(false);
   const { points, comparePoints, averageRank, minRank, maxRank, signAverages, loading, error, refetch } =
     useHoroscopeTrends(zodiacSign, period, compareId);
 
-  useEffect(() => {
+  // 내 별자리가 바뀌면 비교 대상을 푼다. 렌더 중에 조정하면 낡은 compareId로
+  // 조회가 한 번 도는 일이 없다.
+  const [lastZodiacSign, setLastZodiacSign] = useState(zodiacSign);
+  if (lastZodiacSign !== zodiacSign) {
+    setLastZodiacSign(zodiacSign);
     setCompareId(null);
-  }, [zodiacSign]);
+  }
 
   const scrollRef = useRef<ScrollView>(null);
   useFocusEffect(() => {
@@ -55,6 +81,8 @@ export default function StatsScreen() {
   const { showToast, toastProps } = useToast();
   const { cardRef, share, sharing, saveImage, saving, mediaDeniedSheetVisible, closeMediaDeniedSheet } =
     useShareHoroscope({ showToast });
+
+  const activeMonth = getPeriodMonth(period);
 
   const zodiac = zodiacSign ? ZODIAC_MAP[zodiacSign] : null;
   const compareSign = compareId ? ZODIAC_MAP[compareId] : null;
@@ -71,14 +99,34 @@ export default function StatsScreen() {
             rightSlot={
               activeTab === "trend" ? (
                 <View style={styles.periodToggle}>
-                  {(["7d", "30d"] as TrendsPeriod[]).map((p) => (
-                    <Pressable key={p} onPress={() => setPeriod(p)} style={styles.periodBtn}>
-                      <Text style={[styles.periodLabel, period === p && styles.periodLabelActive]}>
-                        {p === "7d" ? "7일" : "30일"}
+                  {DAY_PERIODS.map((option) => (
+                    <Pressable
+                      key={option.value}
+                      onPress={() => setPeriod(option.value)}
+                      style={styles.periodBtn}
+                    >
+                      <Text
+                        numberOfLines={1}
+                        style={[
+                          styles.periodLabel,
+                          period === option.value && styles.periodLabelActive,
+                        ]}
+                      >
+                        {option.label}
                       </Text>
-                      {period === p && <View style={styles.periodDot} />}
+                      {period === option.value && <View style={styles.periodDot} />}
                     </Pressable>
                   ))}
+                  {/* 월간은 기간 선택이 아니라 "어느 달?"을 물어야 해서 누르면 바로 시트를 연다 */}
+                  <Pressable onPress={() => setMonthSheetOpen(true)} style={styles.periodBtn}>
+                    <Text
+                      numberOfLines={1}
+                      style={[styles.periodLabel, activeMonth !== null && styles.periodLabelActive]}
+                    >
+                      {activeMonth ? formatMonthToggleLabel(activeMonth) : "월간"}
+                    </Text>
+                    {activeMonth !== null && <View style={styles.periodDot} />}
+                  </Pressable>
                 </View>
               ) : undefined
             }
@@ -113,7 +161,7 @@ export default function StatsScreen() {
           ) : (
             <ScrollView
               ref={scrollRef}
-              contentContainerStyle={[styles.list, { paddingBottom: tabBarHeight + 16 }]}
+              contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + 48 }]}
               showsVerticalScrollIndicator={false}
               style={styles.scroll}
             >
@@ -153,9 +201,19 @@ export default function StatsScreen() {
             </ScrollView>
           )
         ) : (
-          <ReviewHistoryTab bottomInset={tabBarHeight} />
+          <ReviewHistoryTab bottomInset={insets.bottom} />
         )}
       </ResponsiveContainer>
+
+      <MonthSelectSheet
+        visible={monthSheetOpen}
+        selectedMonth={activeMonth ?? lastMonth}
+        onClose={() => setMonthSheetOpen(false)}
+        onSelect={(month) => {
+          setLastMonth(month);
+          setPeriod(monthPeriod(month));
+        }}
+      />
 
       <ZodiacSelectBottomSheet
         visible={compareSheetOpen}

@@ -71,7 +71,11 @@ export function useAnswerReplies(
   // 차단/숨김이 바뀔 때마다 참조가 달라진다. 그대로 deps에 넣으면 무한 refetch가 된다.
   const idsKey = answerIds.join(',');
   const answerIdsRef = useRef(answerIds);
-  answerIdsRef.current = answerIds;
+  // 렌더 중에 쓰면 안 되므로 effect로 옮긴다. 아래 조회 effect보다 먼저 선언돼 있어야
+  // 같은 렌더에서 최신 배열을 보고 조회가 돈다 — effect는 선언 순서대로 실행된다.
+  useEffect(() => {
+    answerIdsRef.current = answerIds;
+  });
 
   useEffect(() => {
     let cancelled = false;

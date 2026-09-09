@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 
@@ -35,11 +35,15 @@ export function AnswerModerationSheet({
   const [selectedReason, setSelectedReason] = useState<ReportReason | null>(null);
 
   // 시트를 닫았다 다시 열면 항상 메뉴부터, 선택도 비운 상태로 시작한다.
-  useEffect(() => {
-    if (!visible) return;
-    setStep('menu');
-    setSelectedReason(null);
-  }, [visible]);
+  // 렌더 중에 되돌려야 지난번 단계가 한 프레임 비치지 않는다.
+  const [lastVisible, setLastVisible] = useState(visible);
+  if (lastVisible !== visible) {
+    setLastVisible(visible);
+    if (visible) {
+      setStep('menu');
+      setSelectedReason(null);
+    }
+  }
 
   return (
     <BottomSheet visible={visible} onClose={onClose}>

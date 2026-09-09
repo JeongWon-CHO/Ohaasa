@@ -161,11 +161,12 @@ export function DailyQuestionView({
     setReturnToCommunity(false);
   }
 
-  useEffect(() => {
-    if (stepInitialized || !isLoaded) return;
-    if (!isEditMode && existingAnswer) setStep("community");
+  // 답을 이미 남겼으면 피드부터 연다. 위 lastDate 블록과 같은 이유로 렌더 중에 정한다 —
+  // effect면 작성 화면이 한 프레임 보였다가 피드로 바뀐다.
+  if (!stepInitialized && isLoaded) {
     setStepInitialized(true);
-  }, [isLoaded, existingAnswer, isEditMode, stepInitialized]);
+    if (!isEditMode && existingAnswer) setStep("community");
+  }
 
   const [deviceId, setDeviceId] = useState<string | null>(null);
   useEffect(() => {

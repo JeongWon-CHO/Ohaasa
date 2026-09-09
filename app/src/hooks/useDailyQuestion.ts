@@ -40,6 +40,7 @@ export function useDailyQuestion(date: string | null | undefined): UseDailyQuest
       return () => {
         cancelled = true;
       };
+      // eslint-disable-next-line react-hooks/exhaustive-deps -- reloadTick은 본문이 읽지 않지만 refetch()의 유일한 트리거다.
     }, [date, reloadTick]),
   );
 
