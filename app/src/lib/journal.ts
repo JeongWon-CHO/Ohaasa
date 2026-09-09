@@ -1,4 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { toDateString } from './dateKeys';
 
 import { deserializeSketch, emptySketch, serializeSketch, type Sketch } from './sketch';
 
@@ -68,13 +69,26 @@ export async function loadJournal(date: string): Promise<DailyJournal | null> {
   return raw ? deserialize(raw) : null;
 }
 
+/** 날짜 선택과 저장 시 같은 기준으로 중복을 확인한다. 원래 날짜로의 수정은 허용한다. */
+export async function assertJournalDateAvailable(date: string, sourceDate: string): Promise<void> {
+  if (date > toDateString(new Date())) {
+    throw new Error('미래 날짜에는 일기를 쓸 수 없어요.\n오늘이나 이전 날짜를 골라주세요.');
+  }
+  if (sourceDate !== date && (await AsyncStorage.getItem(key(date))) !== null) {
+    throw new Error('이미 일기가 있는 날짜예요.\n다른 날짜를 골라주세요.');
+  }
+}
+
 /** 이미 있으면 createdAt을 보존한다 — 수정 기한 판정이 createdAt 기준이라 덮으면 안 된다. */
 export async function saveJournal(
   date: string,
   draft: JournalDraft,
+  sourceDate: string = date,
 ): Promise<DailyJournal> {
   const now = new Date().toISOString();
-  const existing = await loadJournal(date);
+  const moving = sourceDate !== date;
+  await assertJournalDateAvailable(date, sourceDate);
+  const existing = await loadJournal(sourceDate);
   const journal: DailyJournal = {
     date,
     ...draft,
@@ -82,6 +96,16 @@ export async function saveJournal(
     updatedAt: now,
   };
   await AsyncStorage.setItem(key(date), serialize(journal));
+  // 새 날짜에 저장된 뒤에만 원본을 지운다. 저장 실패로 그림을 잃지 않게 한다.
+  if (moving && existing) {
+    try {
+      await AsyncStorage.removeItem(key(sourceDate));
+    } catch (error) {
+      // 원본 정리에 실패하면 새 복사본을 되돌려 같은 날짜로 재시도할 수 있게 한다.
+      await AsyncStorage.removeItem(key(date));
+      throw error;
+    }
+  }
   return journal;
 }
 
