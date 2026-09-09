@@ -72,9 +72,14 @@ export async function loadJournal(date: string): Promise<DailyJournal | null> {
 export async function saveJournal(
   date: string,
   draft: JournalDraft,
+  sourceDate: string = date,
 ): Promise<DailyJournal> {
   const now = new Date().toISOString();
-  const existing = await loadJournal(date);
+  const moving = sourceDate !== date;
+  if (moving && (await AsyncStorage.getItem(key(date))) !== null) {
+    throw new Error('이미 일기가 있는 날짜예요. 다른 날짜를 골라주세요.');
+  }
+  const existing = await loadJournal(sourceDate);
   const journal: DailyJournal = {
     date,
     ...draft,
@@ -82,6 +87,16 @@ export async function saveJournal(
     updatedAt: now,
   };
   await AsyncStorage.setItem(key(date), serialize(journal));
+  // 새 날짜에 저장된 뒤에만 원본을 지운다. 저장 실패로 그림을 잃지 않게 한다.
+  if (moving && existing) {
+    try {
+      await AsyncStorage.removeItem(key(sourceDate));
+    } catch (error) {
+      // 원본 정리에 실패하면 새 복사본을 되돌려 같은 날짜로 재시도할 수 있게 한다.
+      await AsyncStorage.removeItem(key(date));
+      throw error;
+    }
+  }
   return journal;
 }
 

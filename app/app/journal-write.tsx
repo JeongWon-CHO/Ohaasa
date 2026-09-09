@@ -1,7 +1,9 @@
 import { Feather } from '@expo/vector-icons';
-import { router, useLocalSearchParams } from 'expo-router';
+import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
+  Alert,
+  BackHandler,
   Keyboard,
   KeyboardAvoidingView,
   Platform,
@@ -18,6 +20,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ResponsiveContainer } from '@/src/components/common/ResponsiveContainer';
 import { ScreenBackground } from '@/src/components/final/ScreenBackground';
 import { MoodStep } from '@/src/components/journal/MoodStep';
+import { JournalDateSheet } from '@/src/components/journal/JournalDateSheet';
 import { SummaryStep } from '@/src/components/journal/SummaryStep';
 import { DrawingCanvas } from '@/src/components/sketch/DrawingCanvas';
 import { MoodFace } from '@/src/components/sketch/MoodFace';
@@ -42,14 +45,16 @@ function formatKoreanDate(date: string): string {
   const weekday = ['일', '월', '화', '수', '목', '금', '토'][
     new Date(y, m - 1, d).getDay()
   ];
-  return `${m}월 ${d}일 ${weekday}요일`;
+  return `${y}년 ${m}월 ${d}일 ${weekday}요일`;
 }
 
 export default function JournalWriteScreen() {
   const insets = useSafeAreaInsets();
   const { width, height } = useWindowDimensions();
   const { date: dateParam } = useLocalSearchParams<{ date?: string }>();
-  const date = dateParam ?? toDateString(new Date());
+  const [sourceDate] = useState(() => dateParam ?? toDateString(new Date()));
+  const [date, setDate] = useState(sourceDate);
+  const [dateSheetOpen, setDateSheetOpen] = useState(false);
 
   const scrollRef = useRef<ScrollView>(null);
   const [androidKeyboardHeight, setAndroidKeyboardHeight] = useState(0);
@@ -74,7 +79,14 @@ export default function JournalWriteScreen() {
   const [strokeWidth, setStrokeWidth] = useState<number>(BRUSH_WIDTH_DEFAULT);
   const [brush, setBrush] = useState<BrushKind>('pen');
 
-  const { draft, setDraft, isLoaded, isSaving, save } = useJournal(date);
+  const { draft, setDraft, isLoaded, isSaving, save } = useJournal(sourceDate);
+
+  useFocusEffect(useCallback(() => {
+    if (Platform.OS !== 'android' || (step !== 'sketch' && !isSaving)) return;
+    // Android 가장자리 뒤로 가기도 그리기 중 화면을 닫지 못하게 한다.
+    const subscription = BackHandler.addEventListener('hardwareBackPress', () => true);
+    return () => subscription.remove();
+  }, [step, isSaving]));
 
   useEffect(() => {
     if (Platform.OS !== 'android') return;
@@ -122,12 +134,18 @@ export default function JournalWriteScreen() {
 
   const goNext = useCallback(async () => {
     if (step === 'summary') {
-      await save();
-      setStep('done');
+      try {
+        await save(date);
+        setStep('done');
+      } catch (error) {
+        Alert.alert('저장하지 못했어요', error instanceof Error && error.message.includes('이미 일기')
+          ? error.message
+          : '그림은 화면에 그대로 있어요. 날짜를 확인하고 다시 저장해 주세요.');
+      }
       return;
     }
     setStep(STEPS[index + 1]);
-  }, [step, index, save]);
+  }, [step, index, save, date]);
 
   const goBack = useCallback(() => {
     if (index === 0) {
@@ -141,8 +159,8 @@ export default function JournalWriteScreen() {
   const dismissesKeyboard = step === 'summary';
 
   const nextLabel =
-    step === 'mood' ? '다음' : step === 'sketch' ? '다음' : '오늘을 남기기';
-  const nextDisabled = step === 'sketch' && !hasDrawing;
+    step === 'mood' ? '다음' : step === 'sketch' ? '다음' : '이 날을 남기기';
+  const nextDisabled = !isLoaded || (step === 'sketch' && !hasDrawing);
 
   const body = (
     <ScrollView
@@ -165,6 +183,7 @@ export default function JournalWriteScreen() {
       ) : step === 'mood' ? (
         <MoodStep
           mood={draft.mood}
+          isPastDate={date < toDateString(new Date())}
           onChange={(mood) => setDraft((d) => ({ ...d, mood }))}
         />
       ) : step === 'sketch' ? (
@@ -205,7 +224,7 @@ export default function JournalWriteScreen() {
         />
       ) : (
         <View style={styles.done}>
-          <Text style={styles.doneTitle}>오늘을 남겼어요</Text>
+          <Text style={styles.doneTitle}>하루를 남겼어요</Text>
           <SketchThumbnail sketch={draft.sketch} size={canvasSize * 0.62} />
           <View style={styles.doneMeta}>
             <MoodFace mood={draft.mood} size={28} />
@@ -227,11 +246,21 @@ export default function JournalWriteScreen() {
         <ResponsiveContainer>
           <View style={[styles.header, { paddingTop: insets.top + spacing.sm }]}>
             {step !== 'done' && (
-              <Pressable onPress={goBack} hitSlop={12} style={styles.iconBtn}>
+              <Pressable onPress={goBack} disabled={isSaving} hitSlop={12} style={styles.iconBtn}>
                 <Feather name="chevron-left" size={22} color={colors.text} />
               </Pressable>
             )}
-            <Text style={styles.date}>{formatKoreanDate(date)}</Text>
+            <Pressable
+              onPress={() => { Keyboard.dismiss(); setDateSheetOpen(true); }}
+              disabled={!isLoaded || isSaving || step === 'done'}
+              accessibilityRole="button"
+              accessibilityLabel={`일기 날짜 ${formatKoreanDate(date)}, 날짜 바꾸기`}
+              style={styles.dateButton}
+              hitSlop={8}
+            >
+              <Text style={styles.date}>{formatKoreanDate(date)}</Text>
+              {step !== 'done' && <Feather name="calendar" size={14} color={colors.textMid} />}
+            </Pressable>
             <View style={styles.spacer} />
             {step !== 'done' && (
               <View style={styles.dots}>
@@ -273,6 +302,13 @@ export default function JournalWriteScreen() {
         </ResponsiveContainer>
       </KeyboardAvoidingView>
 
+      {dateSheetOpen && (
+        <JournalDateSheet
+          date={date}
+          onClose={() => setDateSheetOpen(false)}
+          onSelect={(selected) => { setDate(selected); setDateSheetOpen(false); }}
+        />
+      )}
       <ColorPickerSheet
         visible={colorSheetOpen}
         onClose={() => setColorSheetOpen(false)}
@@ -306,6 +342,7 @@ const styles = StyleSheet.create({
     fontFamily: 'NotoSansKR_500Medium',
     color: colors.textMid,
   },
+  dateButton: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, flexShrink: 1 },
   dots: {
     flexDirection: 'row',
     gap: 5,

@@ -5,10 +5,11 @@ import { colors, layout, spacing } from '@/src/constants/design';
 
 interface MoodStepProps {
   mood: number;
+  isPastDate?: boolean;
   onChange: (mood: number) => void;
 }
 
-export function MoodStep({ mood, onChange }: MoodStepProps) {
+export function MoodStep({ mood, isPastDate = false, onChange }: MoodStepProps) {
   const { width } = useWindowDimensions();
   const innerWidth = Math.min(width, layout.maxContentWidth) - spacing.xl * 2;
   const faceSize = Math.min((innerWidth - spacing.sm * 4) / 5, 68);
@@ -17,7 +18,7 @@ export function MoodStep({ mood, onChange }: MoodStepProps) {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.question}>오늘 하루,{'\n'}어떤 기분이 가장 컸나요?</Text>
+      <Text style={styles.question}>{isPastDate ? '그날 하루,' : '오늘 하루,'}{'\n'}어떤 기분이 가장 컸나요?</Text>
 
       <View style={styles.row}>
         {MOOD_LEVELS.map((level) => (

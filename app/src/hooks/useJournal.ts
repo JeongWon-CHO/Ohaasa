@@ -35,16 +35,16 @@ export function useJournal(date: string) {
     };
   }, [date]);
 
-  const save = useCallback(async () => {
+  const save = useCallback(async (targetDate: string = date) => {
     setIsSaving(true);
     try {
-      const saved = await saveJournal(date, draft);
+      const saved = await saveJournal(targetDate, draft, existing?.date ?? date);
       setExisting(saved);
       return saved;
     } finally {
       setIsSaving(false);
     }
-  }, [date, draft]);
+  }, [date, draft, existing]);
 
   return { draft, setDraft, existing, isLoaded: loadedFor === date, isSaving, save };
 }

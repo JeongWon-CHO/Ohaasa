@@ -99,7 +99,7 @@ function RootLayoutNav() {
             <Stack.Screen name="sketch-prototype" options={{ headerShown: false }} />
             <Stack.Screen name="sketchbook" options={{ headerShown: false }} />
             <Stack.Screen name="mood-prototype" options={{ headerShown: false }} />
-            <Stack.Screen name="journal-write" options={{ headerShown: false }} />
+            <Stack.Screen name="journal-write" options={{ headerShown: false, gestureEnabled: false }} />
             <Stack.Screen name="journal-view" options={{ headerShown: false }} />
             <Stack.Screen name="horoscope" options={{ headerShown: false }} />
             <Stack.Screen name="rankings" options={{ headerShown: false }} />
