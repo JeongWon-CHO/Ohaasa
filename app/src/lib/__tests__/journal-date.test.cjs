@@ -22,6 +22,11 @@ function setup() {
     const module = { exports: {} };
     vm.runInNewContext(outputText, {
       module, exports: module.exports,
+      Date: class extends Date {
+        constructor(...args) {
+          super(...(args.length ? args : [2026, 8, 9, 12]));
+        }
+      },
       require: (id) => id === '@react-native-async-storage/async-storage' ? storage : load(id),
     }, { filename: file });
     return module.exports;
@@ -82,6 +87,32 @@ test('원본 제거 실패 시 복사본을 되돌리고 재시도를 허용한�
   storage.removeItem = remove;
   await journal.saveJournal('2026-09-08', journal.emptyDraft(), '2026-09-09');
   assert.ok(await journal.loadJournal('2026-09-08'));
+});
+
+test('날짜 선택 시 중복을 확인하고 원래 날짜와 빈 날짜는 허용한다', async () => {
+  const { journal, data } = setup();
+  await journal.saveJournal('2026-09-08', journal.emptyDraft());
+  const before = [...data];
+  await assert.rejects(
+    journal.assertJournalDateAvailable('2026-09-08', '2026-09-09'),
+    { message: '이미 일기가 있는 날짜예요.\n다른 날짜를 골라주세요.' },
+  );
+  await journal.assertJournalDateAvailable('2026-09-08', '2026-09-08');
+  await journal.assertJournalDateAvailable('2026-09-07', '2026-09-08');
+  assert.deepEqual([...data], before);
+});
+
+test('내일부터는 날짜 선택과 저장을 막고 오늘은 허용한다', async () => {
+  const { journal, data } = setup();
+  await journal.assertJournalDateAvailable('2026-09-09', '2026-09-08');
+  await journal.saveJournal('2026-09-09', journal.emptyDraft());
+  const before = [...data];
+  for (const future of ['2026-09-10', '2026-10-01', '2027-01-01']) {
+    await assert.rejects(journal.assertJournalDateAvailable(future, future), /미래 날짜/);
+    await assert.rejects(journal.saveJournal(future, journal.emptyDraft(), '2026-09-09'), /미래 날짜/);
+    await assert.rejects(journal.saveJournal(future, journal.emptyDraft()), /미래 날짜/);
+  }
+  assert.deepEqual([...data], before);
 });
 
 test('날짜를 바꾸지 않은 수정은 기존 생성 시각을 보존한다', async () => {

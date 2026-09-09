@@ -138,7 +138,7 @@ export default function JournalWriteScreen() {
         await save(date);
         setStep('done');
       } catch (error) {
-        Alert.alert('저장하지 못했어요', error instanceof Error && error.message.includes('이미 일기')
+        Alert.alert('저장하지 못했어요', error instanceof Error && (error.message.includes('이미 일기') || error.message.includes('미래 날짜'))
           ? error.message
           : '그림은 화면에 그대로 있어요. 날짜를 확인하고 다시 저장해 주세요.');
       }
@@ -305,6 +305,7 @@ export default function JournalWriteScreen() {
       {dateSheetOpen && (
         <JournalDateSheet
           date={date}
+          sourceDate={sourceDate}
           onClose={() => setDateSheetOpen(false)}
           onSelect={(selected) => { setDate(selected); setDateSheetOpen(false); }}
         />

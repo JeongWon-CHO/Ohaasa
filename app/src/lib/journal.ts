@@ -1,4 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { toDateString } from './dateKeys';
 
 import { deserializeSketch, emptySketch, serializeSketch, type Sketch } from './sketch';
 
@@ -68,6 +69,16 @@ export async function loadJournal(date: string): Promise<DailyJournal | null> {
   return raw ? deserialize(raw) : null;
 }
 
+/** 날짜 선택과 저장 시 같은 기준으로 중복을 확인한다. 원래 날짜로의 수정은 허용한다. */
+export async function assertJournalDateAvailable(date: string, sourceDate: string): Promise<void> {
+  if (date > toDateString(new Date())) {
+    throw new Error('미래 날짜에는 일기를 쓸 수 없어요.\n오늘이나 이전 날짜를 골라주세요.');
+  }
+  if (sourceDate !== date && (await AsyncStorage.getItem(key(date))) !== null) {
+    throw new Error('이미 일기가 있는 날짜예요.\n다른 날짜를 골라주세요.');
+  }
+}
+
 /** 이미 있으면 createdAt을 보존한다 — 수정 기한 판정이 createdAt 기준이라 덮으면 안 된다. */
 export async function saveJournal(
   date: string,
@@ -76,9 +87,7 @@ export async function saveJournal(
 ): Promise<DailyJournal> {
   const now = new Date().toISOString();
   const moving = sourceDate !== date;
-  if (moving && (await AsyncStorage.getItem(key(date))) !== null) {
-    throw new Error('이미 일기가 있는 날짜예요. 다른 날짜를 골라주세요.');
-  }
+  await assertJournalDateAvailable(date, sourceDate);
   const existing = await loadJournal(sourceDate);
   const journal: DailyJournal = {
     date,
