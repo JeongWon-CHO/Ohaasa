@@ -3,7 +3,13 @@ import type { ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { ConstellationBadge } from '@/src/components/final/ConstellationBadge';
-import { colors, radius, shadows, spacing, zodiacColors } from '@/src/constants/design';
+import {
+  colors,
+  radius,
+  shadows,
+  spacing,
+  zodiacColors,
+} from '@/src/constants/design';
 import { ZODIAC_MAP } from '@/src/constants/zodiac';
 import type { PublicAnswer } from '@/src/lib/supabase';
 
@@ -33,17 +39,22 @@ export function AnswerCard({
   onToggleReplies,
   children,
 }: AnswerCardProps) {
-  const zodiac = ZODIAC_MAP[answer.zodiac_sign];
+  const zodiac = answer.zodiac_sign ? ZODIAC_MAP[answer.zodiac_sign] : null;
+  const badgeColor = answer.zodiac_sign
+    ? `${zodiacColors[answer.zodiac_sign]}66`
+    : colors.cream3;
 
   return (
     <View style={[styles.card, shadows.card, isMine && styles.cardMine]}>
       <View style={styles.header}>
-        <View
-          style={[styles.badgeWrap, { backgroundColor: `${zodiacColors[answer.zodiac_sign]}66` }]}
-        >
-          <ConstellationBadge sign={answer.zodiac_sign} size={28} />
+        <View style={[styles.badgeWrap, { backgroundColor: badgeColor }]}>
+          {answer.zodiac_sign ? (
+            <ConstellationBadge sign={answer.zodiac_sign} size={28} />
+          ) : (
+            <Feather name="user" size={15} color={colors.textSoft} />
+          )}
         </View>
-        <Text style={styles.zodiacName}>{zodiac.ko}</Text>
+        <Text style={styles.zodiacName}>{zodiac?.ko ?? '별자리 미설정'}</Text>
         <View style={styles.headerActions}>
           {isMine && (
             <View style={styles.mineChip}>
@@ -53,7 +64,10 @@ export function AnswerCard({
           <Pressable
             onPress={onToggleLike}
             hitSlop={8}
-            style={({ pressed }) => [styles.likeBtn, pressed && { opacity: 0.7 }]}
+            style={({ pressed }) => [
+              styles.likeBtn,
+              pressed && { opacity: 0.7 },
+            ]}
             accessibilityRole="button"
             accessibilityLabel={`공감 ${answer.like_count}개`}
           >
@@ -71,11 +85,18 @@ export function AnswerCard({
             <Pressable
               onPress={onOpenModeration}
               hitSlop={8}
-              style={({ pressed }) => [styles.moreBtn, pressed && { opacity: 0.7 }]}
+              style={({ pressed }) => [
+                styles.moreBtn,
+                pressed && { opacity: 0.7 },
+              ]}
               accessibilityRole="button"
               accessibilityLabel="신고 및 차단"
             >
-              <Feather name="more-horizontal" size={16} color={colors.textSoft} />
+              <Feather
+                name="more-horizontal"
+                size={16}
+                color={colors.textSoft}
+              />
             </Pressable>
           )}
         </View>
@@ -88,10 +109,15 @@ export function AnswerCard({
         <Pressable
           onPress={onToggleReplies}
           hitSlop={8}
-          style={({ pressed }) => [styles.replyToggle, pressed && { opacity: 0.6 }]}
+          style={({ pressed }) => [
+            styles.replyToggle,
+            pressed && { opacity: 0.6 },
+          ]}
           accessibilityRole="button"
           accessibilityState={{ expanded: repliesExpanded }}
-          accessibilityLabel={replyCount === null ? '답글 보기' : `답글 ${replyCount}개 보기`}
+          accessibilityLabel={
+            replyCount === null ? '답글 보기' : `답글 ${replyCount}개 보기`
+          }
         >
           <Feather name="message-circle" size={13} color={colors.textSoft} />
           <Text style={styles.replyLabel}>

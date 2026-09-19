@@ -1,5 +1,5 @@
-import { router } from "expo-router";
-import { LinearGradient } from "expo-linear-gradient";
+import { router } from 'expo-router';
+import { LinearGradient } from 'expo-linear-gradient';
 import {
   ActivityIndicator,
   Keyboard,
@@ -13,50 +13,50 @@ import {
   TouchableWithoutFeedback,
   View,
   useWindowDimensions,
-} from "react-native";
-import { useEffect, useMemo, useRef, useState } from "react";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+} from 'react-native';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { FinalHeader } from "@/src/components/final/FinalHeader";
-import { AnswerCard } from "@/src/components/daily-question/AnswerCard";
-import { AnswerFeedTabs } from "@/src/components/daily-question/AnswerFeedTabs";
-import { AnswerModerationSheet } from "@/src/components/daily-question/AnswerModerationSheet";
-import { AnswerSortToggle } from "@/src/components/daily-question/AnswerSortToggle";
-import { MyAnswerCard } from "@/src/components/daily-question/MyAnswerCard";
-import { QuestionAnswerForm } from "@/src/components/daily-question/QuestionAnswerForm";
-import { ReplyThread } from "@/src/components/daily-question/ReplyThread";
-import { ZodiacFilterSheet } from "@/src/components/daily-question/ZodiacFilterSheet";
-import { ConfirmDialog } from "@/src/components/common/ConfirmDialog";
-import { ResponsiveContainer } from "@/src/components/common/ResponsiveContainer";
-import { Toast } from "@/src/components/common/Toast";
-import { getQuestionByDate } from "@/src/constants/dailyQuestions";
-import { colors, gradients, spacing } from "@/src/constants/design";
-import type { ZodiacSign } from "@/src/constants/zodiac";
+import { FinalHeader } from '@/src/components/final/FinalHeader';
+import { AnswerCard } from '@/src/components/daily-question/AnswerCard';
+import { AnswerFeedTabs } from '@/src/components/daily-question/AnswerFeedTabs';
+import { AnswerModerationSheet } from '@/src/components/daily-question/AnswerModerationSheet';
+import { AnswerSortToggle } from '@/src/components/daily-question/AnswerSortToggle';
+import { MyAnswerCard } from '@/src/components/daily-question/MyAnswerCard';
+import { QuestionAnswerForm } from '@/src/components/daily-question/QuestionAnswerForm';
+import { ReplyThread } from '@/src/components/daily-question/ReplyThread';
+import { ZodiacFilterSheet } from '@/src/components/daily-question/ZodiacFilterSheet';
+import { ConfirmDialog } from '@/src/components/common/ConfirmDialog';
+import { ResponsiveContainer } from '@/src/components/common/ResponsiveContainer';
+import { Toast } from '@/src/components/common/Toast';
+import { getQuestionByDate } from '@/src/constants/dailyQuestions';
+import { colors, gradients, spacing } from '@/src/constants/design';
+import type { ZodiacSign } from '@/src/constants/zodiac';
 import {
   useAnswerFeed,
   type AnswerFeedScope,
   type AnswerFeedSort,
   type AnswerFeedTab,
-} from "@/src/hooks/useAnswerFeed";
-import { useAnswerReplies } from "@/src/hooks/useAnswerReplies";
-import { useNewReplyBadge } from "@/src/hooks/useNewReplyBadge";
-import { useQuestionAnswerForm } from "@/src/hooks/useQuestionAnswerForm";
-import { useToast } from "@/src/hooks/useToast";
-import { useZodiac } from "@/src/hooks/useZodiac";
-import type { ReportReason } from "@/src/lib/moderation";
-import { getOrCreateDeviceId } from "@/src/lib/storage";
-import type { PublicReply } from "@/src/lib/supabase";
+} from '@/src/hooks/useAnswerFeed';
+import { useAnswerReplies } from '@/src/hooks/useAnswerReplies';
+import { useNewReplyBadge } from '@/src/hooks/useNewReplyBadge';
+import { useQuestionAnswerForm } from '@/src/hooks/useQuestionAnswerForm';
+import { useToast } from '@/src/hooks/useToast';
+import { useZodiac } from '@/src/hooks/useZodiac';
+import type { ReportReason } from '@/src/lib/moderation';
+import { getOrCreateDeviceId } from '@/src/lib/storage';
+import type { PublicReply } from '@/src/lib/supabase';
 
-type Step = "answer" | "community";
+type Step = 'answer' | 'community';
 
 /** repliesByAnswer.get()이 비었을 때 매 렌더 새 배열이 생기지 않게 고정 참조를 쓴다. */
 const NO_REPLIES: PublicReply[] = [];
 
 function todayLocalDate(): string {
   const now = new Date();
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(
     now.getDate(),
-  ).padStart(2, "0")}`;
+  ).padStart(2, '0')}`;
 }
 
 interface DailyQuestionViewProps {
@@ -77,7 +77,7 @@ interface DailyQuestionViewProps {
    * 탭바는 레이아웃 공간을 차지하고 이 화면은 **이미 탭바 위에서 끝난다.**
    * 더하면 탭바 높이만큼 빈 띠가 한 겹 더 생긴다(→ `(tabs)/settings.tsx`의 같은 주석).
    */
-  chrome?: "stack" | "tab";
+  chrome?: 'stack' | 'tab';
 }
 
 /**
@@ -96,9 +96,9 @@ interface DailyQuestionViewProps {
 export function DailyQuestionView({
   date,
   editMode = false,
-  chrome = "stack",
+  chrome = 'stack',
 }: DailyQuestionViewProps) {
-  const isTab = chrome === "tab";
+  const isTab = chrome === 'tab';
   const insets = useSafeAreaInsets();
   const { height: windowHeight } = useWindowDimensions();
   const scrollRef = useRef<ScrollView>(null);
@@ -111,13 +111,14 @@ export function DailyQuestionView({
   const [deleteDialogVisible, setDeleteDialogVisible] = useState(false);
 
   useEffect(() => {
-    const showSub = Keyboard.addListener("keyboardDidShow", (e) => {
-      if (Platform.OS === "android") setAndroidKeyboardHeight(e.endCoordinates.height);
+    const showSub = Keyboard.addListener('keyboardDidShow', (e) => {
+      if (Platform.OS === 'android')
+        setAndroidKeyboardHeight(e.endCoordinates.height);
       keyboardHeightRef.current = e.endCoordinates.height;
       setKeyboardVisible(true);
     });
-    const hideSub = Keyboard.addListener("keyboardDidHide", () => {
-      if (Platform.OS === "android") setAndroidKeyboardHeight(0);
+    const hideSub = Keyboard.addListener('keyboardDidHide', () => {
+      if (Platform.OS === 'android') setAndroidKeyboardHeight(0);
       keyboardHeightRef.current = 0;
       setKeyboardVisible(false);
     });
@@ -135,18 +136,19 @@ export function DailyQuestionView({
 
   if (!date) {
     // 파라미터 유실·방송일 조회 실패 같은 예외 상황에서도 화면이 완전히 비어버리지 않게 한다.
-    console.warn("[DailyQuestionView] date missing — falling back to today");
+    console.warn('[DailyQuestionView] date missing — falling back to today');
   }
   const questionDate = date ?? todayLocalDate();
   const questionText = getQuestionByDate(questionDate);
 
-  const { form, setForm, save, remove, isSaving, existingAnswer, isLoaded } = useQuestionAnswerForm({
-    date: questionDate,
-    zodiacSign: zodiacSign ?? null,
-    questionText,
-  });
+  const { form, setForm, save, remove, isSaving, existingAnswer, isLoaded } =
+    useQuestionAnswerForm({
+      date: questionDate,
+      zodiacSign: zodiacSign ?? null,
+      questionText,
+    });
 
-  const [step, setStep] = useState<Step>("answer");
+  const [step, setStep] = useState<Step>('answer');
   const [stepInitialized, setStepInitialized] = useState(false);
   const [returnToCommunity, setReturnToCommunity] = useState(false);
 
@@ -157,7 +159,7 @@ export function DailyQuestionView({
   if (lastDate !== date) {
     setLastDate(date);
     setStepInitialized(false);
-    setStep("answer");
+    setStep('answer');
     setReturnToCommunity(false);
   }
 
@@ -165,7 +167,7 @@ export function DailyQuestionView({
   // effect면 작성 화면이 한 프레임 보였다가 피드로 바뀐다.
   if (!stepInitialized && isLoaded) {
     setStepInitialized(true);
-    if (!isEditMode && existingAnswer) setStep("community");
+    if (!isEditMode && existingAnswer) setStep('community');
   }
 
   const [deviceId, setDeviceId] = useState<string | null>(null);
@@ -175,14 +177,14 @@ export function DailyQuestionView({
 
   // 세그먼트 탭(전체/내 별자리)과 별자리 필터는 독립 state로 관리한다 —
   // 필터를 걸어도 상단 탭 선택이 풀리지 않게 하기 위함.
-  const [tab, setTab] = useState<AnswerFeedTab>("all");
+  const [tab, setTab] = useState<AnswerFeedTab>('all');
   const [filterSign, setFilterSign] = useState<ZodiacSign | null>(null);
-  const [sort, setSort] = useState<AnswerFeedSort>("latest");
+  const [sort, setSort] = useState<AnswerFeedSort>('latest');
   const [filterVisible, setFilterVisible] = useState(false);
 
   // 필터가 걸려 있으면 필터가 우선, 없으면 탭 기준.
   const scope: AnswerFeedScope =
-    filterSign ?? (tab === "mine" && zodiacSign ? zodiacSign : "all");
+    filterSign ?? (tab === 'mine' && zodiacSign ? zodiacSign : 'all');
 
   function handleChangeTab(next: AnswerFeedTab) {
     setTab(next);
@@ -192,7 +194,7 @@ export function DailyQuestionView({
   function handleSelectFilter(sign: ZodiacSign | null) {
     setFilterSign(sign);
     // 별자리 필터는 전체 답변 중 골라 보는 동작이므로 탭은 '전체'로 맞춘다.
-    if (sign) setTab("all");
+    if (sign) setTab('all');
     setFilterVisible(false);
   }
 
@@ -206,7 +208,12 @@ export function DailyQuestionView({
     blockedAuthors,
     loading: feedLoading,
     refetch: refetchFeed,
-  } = useAnswerFeed(step === "community" ? questionDate : null, scope, sort, deviceId);
+  } = useAnswerFeed(
+    step === 'community' ? questionDate : null,
+    scope,
+    sort,
+    deviceId,
+  );
 
   // 내 답변은 상단 고정 카드가 전담하므로 목록에서는 뺀다 — 남겨두면 같은 글이 두 번 나오고,
   // 정작 답글이 달린 쪽이 스크롤해야 나오는 쪽이 된다.
@@ -215,7 +222,8 @@ export function DailyQuestionView({
     [answers, myAnswerId],
   );
   const myServerAnswer = useMemo(
-    () => (myAnswerId ? (answers.find((a) => a.id === myAnswerId) ?? null) : null),
+    () =>
+      myAnswerId ? (answers.find((a) => a.id === myAnswerId) ?? null) : null,
     [answers, myAnswerId],
   );
 
@@ -273,16 +281,27 @@ export function DailyQuestionView({
 
   // 답변/답글 어느 쪽이든 같은 시트를 쓴다. 행 전체가 아니라 필요한 세 값만 들고 있으면
   // 핸들러가 kind만 보면 되고, 낡은 타깃이 이미 바뀐 행을 붙들 일도 없다.
-  type ModerationTarget = { kind: "answer" | "reply"; id: string; authorHash: string };
+  type ModerationTarget = {
+    kind: 'answer' | 'reply';
+    id: string;
+    authorHash: string;
+  };
 
   // 신고·차단 메뉴의 대상. 시트는 하나만 두고 대상만 바꿔 끼운다.
   // 확인 단계까지 시트 안에서 끝내므로 여기서 Modal을 추가로 띄우지 않는다.
-  const [moderationTarget, setModerationTarget] = useState<ModerationTarget | null>(null);
+  const [moderationTarget, setModerationTarget] =
+    useState<ModerationTarget | null>(null);
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
-  const [pendingDeleteReplyId, setPendingDeleteReplyId] = useState<string | null>(null);
+  const [pendingDeleteReplyId, setPendingDeleteReplyId] = useState<
+    string | null
+  >(null);
 
-  const myReplies = myAnswerId ? (repliesByAnswer.get(myAnswerId) ?? NO_REPLIES) : NO_REPLIES;
-  const myReplyToMyAnswer = myAnswerId ? (myReplyIdByAnswer.get(myAnswerId) ?? null) : null;
+  const myReplies = myAnswerId
+    ? (repliesByAnswer.get(myAnswerId) ?? NO_REPLIES)
+    : NO_REPLIES;
+  const myReplyToMyAnswer = myAnswerId
+    ? (myReplyIdByAnswer.get(myAnswerId) ?? null)
+    : null;
   const myAnswerExpanded = myAnswerId !== null && expandedIds.has(myAnswerId);
   const newReplyCount = useNewReplyBadge({
     answerId: myAnswerId,
@@ -298,20 +317,22 @@ export function DailyQuestionView({
     setModerationTarget(null);
 
     const result =
-      target.kind === "answer"
+      target.kind === 'answer'
         ? await report(target.id, reason)
         : await reportReply(target.id, reason);
     if (result.ok) {
-      showToast("신고했어요. 24시간 내에 검토할게요");
+      showToast('신고했어요. 24시간 내에 검토할게요');
       return;
     }
     // 서버에 닿지도 못한 경우에만 네트워크를 안내한다. 서버가 거절한 건 사용자가 할 수 있는 게 없다.
     const message = result.offline
-      ? "신고를 보내지 못했어요. 네트워크 연결을 확인해 주세요"
-      : "신고를 보내지 못했어요. 잠시 후 다시 시도해 주세요";
+      ? '신고를 보내지 못했어요. 네트워크 연결을 확인해 주세요'
+      : '신고를 보내지 못했어요. 잠시 후 다시 시도해 주세요';
     // 개발 빌드에서는 원인을 뒤에 덧붙인다 — 콘솔을 못 보는 실기기 QA에서 필요하다.
     // 사용자에게 보이는 문장을 대체하지는 않는다.
-    showToast(__DEV__ && result.error ? `${message} (${result.error})` : message);
+    showToast(
+      __DEV__ && result.error ? `${message} (${result.error})` : message,
+    );
   }
 
   function handleBlock() {
@@ -319,7 +340,7 @@ export function DailyQuestionView({
     // 답변·답글이 같은 차단 Set(useAnswerFeed 소유)을 보므로 한 번 호출로 양쪽이 함께 사라진다.
     blockAuthor(moderationTarget.authorHash);
     setModerationTarget(null);
-    showToast("차단했어요. 이 사용자의 글이 보이지 않아요");
+    showToast('차단했어요. 이 사용자의 글이 보이지 않아요');
   }
 
   function handleToggleReplies(answerId: string) {
@@ -336,12 +357,15 @@ export function DailyQuestionView({
     });
   }
 
-  async function handleSaveReply(answerId: string, body: string): Promise<boolean> {
+  async function handleSaveReply(
+    answerId: string,
+    body: string,
+  ): Promise<boolean> {
     const ok = await saveReply(answerId, body);
     if (ok) {
       Keyboard.dismiss();
     } else {
-      showToast("답글을 저장하지 못했어요. 잠시 후 다시 시도해 주세요");
+      showToast('답글을 저장하지 못했어요. 잠시 후 다시 시도해 주세요');
     }
     return ok;
   }
@@ -352,7 +376,11 @@ export function DailyQuestionView({
     if (!replyId) return;
 
     const ok = await deleteReply(replyId);
-    showToast(ok ? "삭제했어요" : "답글을 삭제하지 못했어요. 잠시 후 다시 시도해 주세요");
+    showToast(
+      ok
+        ? '삭제했어요'
+        : '답글을 삭제하지 못했어요. 잠시 후 다시 시도해 주세요',
+    );
   }
 
   /**
@@ -383,17 +411,17 @@ export function DailyQuestionView({
       return;
     }
 
-    setStep("community");
+    setStep('community');
     setReturnToCommunity(false);
     refetchFeed();
   }
 
   async function handleDeleteMine() {
     await remove();
-    showToast("삭제했어요");
+    showToast('삭제했어요');
     // 탭에는 나갈 곳이 없다. 글을 지웠으니 다시 쓰는 자리로 되돌린다.
     if (isTab) {
-      setStep("answer");
+      setStep('answer');
       setReturnToCommunity(false);
       return;
     }
@@ -407,13 +435,13 @@ export function DailyQuestionView({
 
   function handleEditMine() {
     setReturnToCommunity(true);
-    setStep("answer");
+    setStep('answer');
   }
 
   function handleBack() {
-    if (step === "answer" && returnToCommunity) {
+    if (step === 'answer' && returnToCommunity) {
       Keyboard.dismiss();
-      setStep("community");
+      setStep('community');
       setReturnToCommunity(false);
       return;
     }
@@ -425,7 +453,7 @@ export function DailyQuestionView({
   return (
     <LinearGradient colors={gradients.screen} style={styles.fill}>
       <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={[styles.fill, { paddingBottom: androidKeyboardHeight }]}
       >
         <ResponsiveContainer>
@@ -446,7 +474,7 @@ export function DailyQuestionView({
             scrollEventThrottle={16}
             // 답변 작성 단계에는 갱신할 목록이 없다.
             refreshControl={
-              step === "community" ? (
+              step === 'community' ? (
                 <RefreshControl
                   refreshing={refreshing}
                   onRefresh={handleRefresh}
@@ -465,7 +493,7 @@ export function DailyQuestionView({
               </View>
 
               <View style={styles.body}>
-                {step === "answer" ? (
+                {step === 'answer' ? (
                   // 빈 곳을 눌러 키보드를 내리는 동작은 답변 작성 단계에만 건다.
                   // 커뮤니티 단계까지 감싸면 답글 작성창의 여백·카운터를 눌러도 키보드가 내려간다.
                   <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
@@ -474,12 +502,14 @@ export function DailyQuestionView({
                         <QuestionAnswerForm
                           questionText={questionText}
                           body={form.body}
-                          onChangeBody={(body) => setForm((f) => ({ ...f, body }))}
-                          isPublic={form.visibility === "public"}
+                          onChangeBody={(body) =>
+                            setForm((f) => ({ ...f, body }))
+                          }
+                          isPublic={form.visibility === 'public'}
                           onChangeIsPublic={(isPublic) =>
                             setForm((f) => ({
                               ...f,
-                              visibility: isPublic ? "public" : "private",
+                              visibility: isPublic ? 'public' : 'private',
                             }))
                           }
                         />
@@ -505,8 +535,12 @@ export function DailyQuestionView({
 
                     {questionText && (
                       <View style={styles.questionSummary}>
-                        <Text style={styles.questionSummaryLabel}>오늘의 질문</Text>
-                        <Text style={styles.questionSummaryText}>{questionText}</Text>
+                        <Text style={styles.questionSummaryLabel}>
+                          오늘의 질문
+                        </Text>
+                        <Text style={styles.questionSummaryText}>
+                          {questionText}
+                        </Text>
                       </View>
                     )}
 
@@ -530,18 +564,21 @@ export function DailyQuestionView({
                                     replies={myReplies}
                                     likedReplyIds={likedReplyIds}
                                     myReplyId={myReplyToMyAnswer}
-                                    canWrite={zodiacSign !== null}
                                     onToggleLike={toggleReplyLike}
                                     onOpenModeration={(reply) =>
                                       setModerationTarget({
-                                        kind: "reply",
+                                        kind: 'reply',
                                         id: reply.id,
                                         authorHash: reply.author_hash,
                                       })
                                     }
-                                    onSave={(body) => handleSaveReply(myAnswerId, body)}
+                                    onSave={(body) =>
+                                      handleSaveReply(myAnswerId, body)
+                                    }
                                     onRequestDelete={setPendingDeleteReplyId}
-                                    onComposerFocusBottom={handleComposerFocusBottom}
+                                    onComposerFocusBottom={
+                                      handleComposerFocusBottom
+                                    }
                                   />
                                 ),
                               }
@@ -557,8 +594,8 @@ export function DailyQuestionView({
                       <View style={styles.feedEmpty}>
                         <Text style={styles.feedEmptyText}>
                           {myServerAnswer
-                            ? "아직 다른 사람의 생각이 없어요"
-                            : "아직 남겨진 생각이 없어요"}
+                            ? '아직 다른 사람의 생각이 없어요'
+                            : '아직 남겨진 생각이 없어요'}
                         </Text>
                       </View>
                     ) : (
@@ -574,31 +611,38 @@ export function DailyQuestionView({
                               onToggleLike={() => toggleLike(answer.id)}
                               onOpenModeration={() =>
                                 setModerationTarget({
-                                  kind: "answer",
+                                  kind: 'answer',
                                   id: answer.id,
                                   authorHash: answer.author_hash,
                                 })
                               }
                               replyCount={repliesLoaded ? replies.length : null}
                               repliesExpanded={expandedIds.has(answer.id)}
-                              onToggleReplies={() => handleToggleReplies(answer.id)}
+                              onToggleReplies={() =>
+                                handleToggleReplies(answer.id)
+                              }
                             >
                               <ReplyThread
                                 replies={replies}
                                 likedReplyIds={likedReplyIds}
-                                myReplyId={myReplyIdByAnswer.get(answer.id) ?? null}
-                                canWrite={zodiacSign !== null}
+                                myReplyId={
+                                  myReplyIdByAnswer.get(answer.id) ?? null
+                                }
                                 onToggleLike={toggleReplyLike}
                                 onOpenModeration={(reply) =>
                                   setModerationTarget({
-                                    kind: "reply",
+                                    kind: 'reply',
                                     id: reply.id,
                                     authorHash: reply.author_hash,
                                   })
                                 }
-                                onSave={(body) => handleSaveReply(answer.id, body)}
+                                onSave={(body) =>
+                                  handleSaveReply(answer.id, body)
+                                }
                                 onRequestDelete={setPendingDeleteReplyId}
-                                onComposerFocusBottom={handleComposerFocusBottom}
+                                onComposerFocusBottom={
+                                  handleComposerFocusBottom
+                                }
                               />
                             </AnswerCard>
                           );
@@ -611,7 +655,7 @@ export function DailyQuestionView({
             </View>
           </ScrollView>
 
-          {step === "answer" && (
+          {step === 'answer' && (
             <View
               style={[
                 styles.saveArea,
@@ -619,7 +663,11 @@ export function DailyQuestionView({
                 { paddingBottom: (isTab ? 0 : insets.bottom) + 16 },
               ]}
             >
-              {!canSave && <Text style={styles.saveHint}>생각을 적으면 저장할 수 있어요</Text>}
+              {!canSave && (
+                <Text style={styles.saveHint}>
+                  생각을 적으면 저장할 수 있어요
+                </Text>
+              )}
               <Pressable
                 onPress={handleSave}
                 disabled={!canSave || isSaving}
@@ -630,7 +678,11 @@ export function DailyQuestionView({
                 ]}
               >
                 <Text style={styles.saveBtnText}>
-                  {isSaving ? "저장 중..." : existingAnswer ? "수정하기" : "완료"}
+                  {isSaving
+                    ? '저장 중...'
+                    : existingAnswer
+                      ? '수정하기'
+                      : '완료'}
                 </Text>
               </Pressable>
             </View>
@@ -650,7 +702,7 @@ export function DailyQuestionView({
         onClose={() => setModerationTarget(null)}
         onReport={handleReport}
         onBlock={handleBlock}
-        subject={moderationTarget?.kind === "reply" ? "답글" : "글"}
+        subject={moderationTarget?.kind === 'reply' ? '답글' : '글'}
       />
 
       <ConfirmDialog
@@ -694,39 +746,39 @@ const styles = StyleSheet.create({
     gap: spacing.lg,
   },
   sortRow: {
-    flexDirection: "row",
-    justifyContent: "flex-end",
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
   },
   questionSummary: {
     gap: 4,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
     borderRadius: 12,
-    backgroundColor: "rgba(240,184,154,0.12)",
+    backgroundColor: 'rgba(240,184,154,0.12)',
   },
   questionSummaryLabel: {
     fontSize: 11,
-    fontFamily: "NotoSansKR_600SemiBold",
+    fontFamily: 'NotoSansKR_600SemiBold',
     color: colors.apricotDark,
     lineHeight: 16,
   },
   questionSummaryText: {
     fontSize: 13,
-    fontFamily: "NotoSansKR_400Regular",
+    fontFamily: 'NotoSansKR_400Regular',
     color: colors.text,
     lineHeight: 20,
   },
   feedLoading: {
     paddingVertical: 40,
-    alignItems: "center",
+    alignItems: 'center',
   },
   feedEmpty: {
     paddingVertical: 40,
-    alignItems: "center",
+    alignItems: 'center',
   },
   feedEmptyText: {
     fontSize: 13,
-    fontFamily: "NotoSansKR_300Light",
+    fontFamily: 'NotoSansKR_300Light',
     color: colors.textSoft,
     lineHeight: 20,
   },
@@ -743,24 +795,24 @@ const styles = StyleSheet.create({
   },
   saveHint: {
     fontSize: 12,
-    fontFamily: "NotoSansKR_300Light",
+    fontFamily: 'NotoSansKR_300Light',
     color: colors.textSoft,
-    textAlign: "center",
+    textAlign: 'center',
     lineHeight: 18,
   },
   saveBtn: {
     backgroundColor: colors.apricotDark,
     paddingVertical: 15,
     borderRadius: 14,
-    alignItems: "center",
+    alignItems: 'center',
   },
   saveBtnDisabled: {
-    backgroundColor: "rgba(217,138,104,0.32)",
+    backgroundColor: 'rgba(217,138,104,0.32)',
   },
   saveBtnText: {
     fontSize: 15,
-    fontFamily: "NotoSansKR_500Medium",
-    color: "#FFFDF5",
+    fontFamily: 'NotoSansKR_500Medium',
+    color: '#FFFDF5',
     lineHeight: 22,
   },
 });

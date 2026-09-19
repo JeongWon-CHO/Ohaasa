@@ -80,6 +80,7 @@ CREATE POLICY "user_devices_anon_select" ON public.user_devices FOR SELECT  TO a
 
 - `user_devices`와 동일하게 `device_id`를 베어러 토큰처럼 신뢰하는 RLS(`USING(true)`)를 쓴다 — **앱은 공개 피드 조회 시 절대 `device_id` 컬럼을 select하지 않는다.** 이게 없으면 다른 사용자가 device_id를 알아내 남의 글을 수정/삭제할 수 있다.
 - `question_answers`는 `unique(question_date, device_id)`로 기기당 하루 1개 공개글만 허용 — 작성/수정은 `upsert(onConflict: 'question_date,device_id')`.
+- 온보딩에서 별자리를 건너뛸 수 있으므로 `question_answers.zodiac_sign`은 nullable이다. NULL인 글은 전체 피드에는 보이고 별자리별 필터에서는 제외된다.
 - `like_count`는 `question_answer_likes` insert/delete 트리거(`sync_answer_like_count`)가 자동 동기화 — 클라이언트가 직접 증감시키지 않는다.
 - **"공개글은 올린 날에만 수정" 정책은 현재 앱 UI에서만 막는다**(`canEditAnswer()`). 서버 RLS는 `USING(true)`라 앱을 거치지 않으면 지난 글도 수정 가능하다. 조여야 할 때는 UPDATE 정책에 `created_at::date = current_date` 조건을 건다.
 
@@ -96,11 +97,12 @@ CREATE POLICY "user_devices_anon_select" ON public.user_devices FOR SELECT  TO a
 - 숨김 필터는 RLS가 아니라 쿼리(`.is('hidden_at', null)`)에 있다. RLS SELECT에 걸면 숨겨진 행이 `upsert`의 `ON CONFLICT` → UPDATE RLS에서 막혀 에러가 나고 `deletePublicAnswer`도 조용히 실패한다.
 - **허위신고 복구는 두 단계**: 신고 기록 `delete` + `hidden_at = null`. 숨김만 풀면 `report_count`가 임계값 이상으로 남아 다음 신고 1건에 즉시 재숨김된다. 운영 SQL은 마이그레이션 파일 하단 주석 참고.
 
-### question_answer_replies / _reply_likes / _reply_reports (답글)
+### question_answer_replies / \_reply_likes / \_reply_reports (답글)
 
 `supabase/migrations/20260814000000_question_answer_replies.sql` 참고. 위 세 테이블의 규칙(RLS `USING(true)` · `device_id` 비노출 · `author_hash` · 자동 숨김 · GRANT 필수)이 그대로 반복된다.
 
 - **`unique(answer_id, device_id)`** — 기기당 원글 1개에 답글 1개. 재작성은 `upsert(onConflict: 'answer_id,device_id')`.
+- 답변과 같은 이유로 `question_answer_replies.zodiac_sign`도 nullable이다.
 - **부모 답변 삭제 → `on delete cascade`.** 답변 작성자가 자기 글을 지우면 남의 답글도 같이 사라진다(수용한 대가).
 - **부모가 자동 숨김되면 트리거 없이 답글도 도달 불가**가 된다 — 부모 id가 `.in()` 목록에 안 들어가기 때문이다. 숨김 cascade 트리거를 달면 오신고 복구가 3단계가 되고, 빠뜨리면 복구된 답변의 답글이 영영 안 보인다.
 - `author_hash`의 PEPPER(`'ohaasa-author-hash-v1'`)는 `question_answers`와 **바이트 단위로 동일해야 한다.** 한 글자만 달라도 같은 사람이 답변/답글에서 다른 해시를 갖게 되어 사용자의 차단이 절반만 걸린다.
@@ -122,13 +124,13 @@ CREATE POLICY "user_devices_anon_select" ON public.user_devices FOR SELECT  TO a
 
 ### 환경변수
 
-| 변수                            | 용도                                   |
-| ------------------------------- | -------------------------------------- |
-| `SUPABASE_URL`                  | backend/Actions 전용                   |
-| `SUPABASE_SERVICE_ROLE_KEY`     | service_role JWT — 앱 절대 노출 금지   |
-| `OPENAI_API_KEY`                | GPT 번역 — backend/Actions 전용        |
-| `EXPO_PUBLIC_SUPABASE_URL`      | 앱용 anon 접속 URL                     |
-| `EXPO_PUBLIC_SUPABASE_ANON_KEY` | 앱용 anon key                          |
+| 변수                            | 용도                                 |
+| ------------------------------- | ------------------------------------ |
+| `SUPABASE_URL`                  | backend/Actions 전용                 |
+| `SUPABASE_SERVICE_ROLE_KEY`     | service_role JWT — 앱 절대 노출 금지 |
+| `OPENAI_API_KEY`                | GPT 번역 — backend/Actions 전용      |
+| `EXPO_PUBLIC_SUPABASE_URL`      | 앱용 anon 접속 URL                   |
+| `EXPO_PUBLIC_SUPABASE_ANON_KEY` | 앱용 anon key                        |
 
 ---
 
@@ -230,6 +232,7 @@ CREATE POLICY "user_devices_anon_select" ON public.user_devices FOR SELECT  TO a
 - **데이터 훅**: `useHoroscopeTrends(zodiacSign, period, compareSign?)` — 기간 내 전체 별자리 rank rows를 한 번에 받아 클라이언트에서 가공. `CUTOFF_BUFFER_DAYS = 3`으로 크론 미실행 날 대응.
 - **등수 표시**: 기본은 `roundedRank`(반올림값이 같으면 공동 등수 부여 후 다음 번호 스킵 — 3.4·6.1·6.8 → 1/2/2/4위), 자세히 모드는 `exactRank` + 소수점 1자리. `detailMode`는 저장하지 않아 재진입 시 리셋되고, 공유 카드는 토글과 무관하게 항상 정수.
 - **화살표 트렌드 기준**: 그날의 원본 운세 순위(1~12)가 아니라 **기간 평균 공동 등수(`roundedRank`)의 어제 대비 변화** — 같은 길이의 윈도우를 하루 앞당겨 재계산한다.
+
 ### 탭바 높이
 
 **`useBottomTabBarHeight()`를 쓰는 곳은 이제 하나도 없다.** 두 가지 이유로 계속 사고를 냈다.
@@ -255,10 +258,10 @@ CREATE POLICY "user_devices_anon_select" ON public.user_devices FOR SELECT  TO a
 
 화면 몸통은 `DailyQuestionView`가 갖고, 라우트는 둘이 공유한다.
 
-| | 커뮤니티 탭 `(tabs)/community.tsx` | 스택 `daily-question.tsx` |
-|---|---|---|
-| 날짜 | `latestDate`(방송일), 파라미터 없음 | `date` 파라미터 |
-| 용도 | 오늘 질문 | 지난 글 수정(`mode=edit`, 기록 탭) |
+|      | 커뮤니티 탭 `(tabs)/community.tsx`  | 스택 `daily-question.tsx`          |
+| ---- | ----------------------------------- | ---------------------------------- |
+| 날짜 | `latestDate`(방송일), 파라미터 없음 | `date` 파라미터                    |
+| 용도 | 오늘 질문                           | 지난 글 수정(`mode=edit`, 기록 탭) |
 
 - **한 라우트로 합치면 안 된다.** 탭은 언마운트되지 않아 `date`·`mode` 파라미터로 다시 진입시켜도 `stepInitialized` 가드에 막혀 수정 화면이 안 열린다.
 - **탭이 넘기는 날짜는 로컬 "오늘"이 아니라 `latestDate`(오하아사 방송일)다.** `question_answers`가 `unique(question_date, device_id)`라, 크롤러가 늦은 날이나 KST 05:59 이전 시간대에 로컬 날짜로 쓰기 시작하면 안드로이드 v1과 **다른 행**에 저장돼 같은 날 피드가 조용히 둘로 쪼개진다. 대가로 커뮤니티 탭이 `horoscopes` 조회(`HoroscopeDateContext`)를 기다린다 — 그림일기 앱인데 커뮤니티가 운세 테이블에 묶여 있는 셈이다.
@@ -325,7 +328,7 @@ CREATE POLICY "user_devices_anon_select" ON public.user_devices FOR SELECT  TO a
 ### 이미지 저장 / SNS 공유
 
 - **라이브러리**: `expo-media-library` + `expo-sharing` + `react-native-view-shot`
-- **저장**: `saveToLibraryAsync()` + `requestPermissionsAsync(true)` (writeOnly). writeOnly면 granular 권한(READ_MEDIA_*)은 런타임에 아예 요청되지 않는다(`MediaLibraryModule.kt`의 `shouldIncludeGranular = ... && !writeOnly`) — 매니페스트에 남아도 죽은 선언이지만 스토어 권한 목록에는 그대로 노출된다.
+- **저장**: `saveToLibraryAsync()` + `requestPermissionsAsync(true)` (writeOnly). writeOnly면 granular 권한(READ*MEDIA*\*)은 런타임에 아예 요청되지 않는다(`MediaLibraryModule.kt`의 `shouldIncludeGranular = ... && !writeOnly`) — 매니페스트에 남아도 죽은 선언이지만 스토어 권한 목록에는 그대로 노출된다.
 - **공유**: `captureRef()` → `shareAsync(uri, { mimeType: 'image/png' })` — 추가 권한 불필요.
 - **동적 import**: `await import('expo-media-library')` — static import 금지.
 - **구현 위치**: `src/hooks/useShareHoroscope.ts`
