@@ -29,27 +29,39 @@ export function ReplyItem({
   onEdit,
   onDelete,
 }: ReplyItemProps) {
-  const zodiac = ZODIAC_MAP[reply.zodiac_sign];
+  const zodiac = reply.zodiac_sign ? ZODIAC_MAP[reply.zodiac_sign] : null;
+  const badgeColor = reply.zodiac_sign
+    ? `${zodiacColors[reply.zodiac_sign]}66`
+    : colors.cream3;
 
   return (
     <View style={styles.item}>
       <View style={styles.header}>
-        <View
-          style={[styles.badgeWrap, { backgroundColor: `${zodiacColors[reply.zodiac_sign]}66` }]}
-        >
-          <ConstellationBadge sign={reply.zodiac_sign} size={20} />
+        <View style={[styles.badgeWrap, { backgroundColor: badgeColor }]}>
+          {reply.zodiac_sign ? (
+            <ConstellationBadge sign={reply.zodiac_sign} size={20} />
+          ) : (
+            <Feather name="user" size={12} color={colors.textSoft} />
+          )}
         </View>
-        <Text style={styles.zodiacName}>{zodiac.ko}</Text>
+        <Text style={styles.zodiacName}>{zodiac?.ko ?? '별자리 미설정'}</Text>
 
         <View style={styles.actions}>
           <Pressable
             onPress={onToggleLike}
             hitSlop={8}
-            style={({ pressed }) => [styles.likeBtn, pressed && { opacity: 0.7 }]}
+            style={({ pressed }) => [
+              styles.likeBtn,
+              pressed && { opacity: 0.7 },
+            ]}
             accessibilityRole="button"
             accessibilityLabel={`공감 ${reply.like_count}개`}
           >
-            <Feather name="thumbs-up" size={13} color={liked ? colors.apricotDark : colors.textSoft} />
+            <Feather
+              name="thumbs-up"
+              size={13}
+              color={liked ? colors.apricotDark : colors.textSoft}
+            />
             <Text style={[styles.likeCount, liked && styles.likeCountActive]}>
               {reply.like_count}
             </Text>
@@ -87,7 +99,11 @@ export function ReplyItem({
               accessibilityRole="button"
               accessibilityLabel="신고 및 차단"
             >
-              <Feather name="more-horizontal" size={15} color={colors.textSoft} />
+              <Feather
+                name="more-horizontal"
+                size={15}
+                color={colors.textSoft}
+              />
             </Pressable>
           )}
         </View>
