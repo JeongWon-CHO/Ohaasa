@@ -1,5 +1,12 @@
 import { useRef, useState } from 'react';
-import { Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import {
+  Platform,
+  Pressable,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
 
 import { colors, radius, spacing } from '@/src/constants/design';
 
@@ -14,7 +21,7 @@ interface ReplyComposerProps {
   initialBody?: string;
   editing: boolean;
   submitting: boolean;
-  /** 별자리 미설정 등으로 작성 자체가 불가능한 상태 */
+  /** 서버 준비 중처럼 작성 자체가 불가능한 상태 */
   disabled?: boolean;
   onSubmit: (body: string) => void;
   onCancelEdit?: () => void;
@@ -41,7 +48,9 @@ export function ReplyComposer({
     // 키보드 애니메이션이 끝난 뒤에 재야 화면 좌표가 최종값이다.
     setTimeout(
       () => {
-        inputRef.current?.measureInWindow((_x, y, _w, h) => onFocusBottom(y + h));
+        inputRef.current?.measureInWindow((_x, y, _w, h) =>
+          onFocusBottom(y + h),
+        );
       },
       Platform.OS === 'ios' ? 300 : 100,
     );
@@ -60,7 +69,7 @@ export function ReplyComposer({
         value={body}
         onChangeText={(text) => setBody(text.slice(0, MAX_LENGTH))}
         onFocus={handleFocus}
-        placeholder={disabled ? '별자리를 먼저 설정해 주세요' : '답글을 남겨보세요'}
+        placeholder="답글을 남겨보세요"
         placeholderTextColor={colors.textSoft}
         style={styles.input}
         multiline

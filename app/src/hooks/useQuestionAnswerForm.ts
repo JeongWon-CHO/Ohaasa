@@ -44,7 +44,9 @@ export function useQuestionAnswerForm({
 }: Params): UseQuestionAnswerFormResult {
   const [form, setForm] = useState<QuestionAnswerDraft>(EMPTY_DRAFT);
   const [isSaving, setIsSaving] = useState(false);
-  const [existingAnswer, setExistingAnswer] = useState<QuestionAnswer | null>(null);
+  const [existingAnswer, setExistingAnswer] = useState<QuestionAnswer | null>(
+    null,
+  );
   const [isLoaded, setIsLoaded] = useState(false);
 
   useEffect(() => {
@@ -70,7 +72,7 @@ export function useQuestionAnswerForm({
   }, [date]);
 
   const save = useCallback(async (): Promise<QuestionAnswer | null> => {
-    if (!date || !zodiacSign || !questionText || form.body.trim().length === 0) return null;
+    if (!date || !questionText || form.body.trim().length === 0) return null;
 
     setIsSaving(true);
     try {

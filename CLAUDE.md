@@ -1,385 +1,220 @@
-# CLAUDE.md — ohaasa プロジェクト
+# CLAUDE.md — ohaasa / 하루끄적
 
 ## 프로젝트 개요
 
-일본 아사히방송 おはようさんです！별자리 운세 JSON API → Supabase 저장 → React Native Expo 앱 표시 → Expo Push Notification 발송.
+아사히방송 별자리 운세 JSON을 수집·번역해 Supabase에 저장하고, React Native Expo 앱에서 운세·그림일기·오늘의 질문을 제공한다.
 
-**MVP 방침**: 로그인 없음. `device_id`(AsyncStorage 영속 UUID) + `zodiac_sign` + `push_token`만 서버에 저장.
+- 앱 이름: **하루끄적** / 부제: `하루 한 장, 그림일기`
+- 로그인 없음. 사용자는 AsyncStorage의 영속 UUID `device_id`로 식별한다.
+- 현재 버전: `1.8.0`
 
----
+## 구조
 
-## 아키텍처
-
-```
-GitHub Actions (cron: UTC 20:59 = KST 05:59, 매일 1회)
-  └─ backend (Node.js/TypeScript)
-       ├─ 아사히 JSON API fetch → parse → 12개 HoroscopeEntry
-       ├─ GPT 번역 (advice_ko — advice 불변 + advice_ko IS NOT NULL이면 skip)
-       └─ Supabase horoscopes upsert (INSERT)
-            │
-            └─ Database Webhook (horoscopes INSERT → aries row 1회)
-                 └─ Supabase Edge Function: send-horoscope-notifications
-                      ├─ notification_log dedup (UNIQUE constraint on date)
-                      ├─ horoscopes 12개 조회
-                      ├─ user_devices 조회
-                      └─ Expo Push API 발송 → FCM → 단말기
-
-React Native Expo (app/)
-  └─ Supabase horoscopes SELECT → advice_ko ?? advice 표시
+```text
+app/app/                     Expo Router 화면
+app/src/components/          공통 및 화면별 UI
+app/src/hooks/               화면 간 재사용 로직
+app/src/context/             전역 상태
+app/src/lib/                 Supabase·AsyncStorage·플랫폼 경계
+app/src/constants/           정적 데이터
+backend/src/                 운세 수집·번역·저장 파이프라인
+supabase/functions/          Edge Functions
+supabase/migrations/         DB 스키마와 RLS
+.github/workflows/           크롤링·백업 자동화
+docs/                        개인정보처리방침·커뮤니티 가이드라인
 ```
 
----
+화면은 훅 호출, 상태, 컴포넌트 조합만 담당한다. UI 섹션은 `components/<화면명>/`, 데이터 로딩과 가공은 `hooks/`, 플랫폼·서버·로컬 저장 경계는 `lib/`에 둔다. `stats.tsx`가 기준 구현이다.
 
-## 코드 배치 규칙
+## 데이터 흐름
 
-> 파일 목록은 디렉토리를 직접 읽는다. 여기엔 **새 코드를 어디에 둘지**만 적는다.
-
-```
-app/app/                        expo-router 화면. (tabs)/ 안이 탭, 밖은 router.push 진입
-app/src/context/                전역 상태 (ZodiacContext)
-app/src/constants/              질문 목록 · 외부 URL 등 정적 데이터
-app/src/lib/                    플랫폼·서버 경계 — supabase · AsyncStorage CRUD · notifications
-app/src/hooks/                  화면 간 재사용 로직 (use<도메인>)
-app/src/components/common/      화면 무관 공통 (BottomSheet 등)
-app/src/components/<화면명>/     화면 전용 컴포넌트 (archive · daily-question · daily-review · journal · sketch · stats)
-backend/src/                    crawler(fetcher · parser, 31 tests) · translator · main.ts
-supabase/                       Edge Function + migrations — .gitignore 대상이라 git에 없다
+```text
+GitHub Actions (매일 KST 05:59)
+  → backend: 아사히 API 또는 주말 고고별자리 수집
+  → GPT 번역
+  → Supabase horoscopes upsert
+  → Database Webhook (aries INSERT 1회)
+  → send-horoscope-notifications Edge Function
+  → Expo Push API
 ```
 
-- **화면은 orchestration만 한다** — 훅 호출 · state · 컴포넌트 조합. UI 섹션은 `components/<화면명>/`로, 데이터 로딩·가공은 `hooks/`로 내린다. `stats.tsx`가 이 패턴의 기준점.
-- **로컬 데이터의 source of truth는 `lib/`의 AsyncStorage 모듈**(`dailyReviews` · `questionAnswers` · `moderation`). 화면에서 AsyncStorage를 직접 읽지 않는다.
-- 서버 호출은 전부 `lib/supabase.ts`를 거친다.
+- 원본 API: `https://www.asahi.co.jp/data/ohaasa2020/horoscope.json`
+- 주말은 고고별자리를 사용하며 `isWeekendJST()`에서 분기한다.
+- 운세 필드: `date`, `zodiac_sign`, `zodiac_name`, `rank`, `advice`, `advice_ko`.
+- 앱 표시는 `advice_ko ?? advice`이며 날짜는 로컬 오늘이 아니라 최신 방송일 기준이다.
+- 번역은 원문이 같고 `advice_ko`가 있으면 건너뛴다.
 
----
+## 보안과 환경변수
 
-## 주요 설계 결정
+- 앱에는 `SUPABASE_SERVICE_ROLE_KEY`, `OPENAI_API_KEY`, Firebase 서비스 계정 JSON을 절대 포함하거나 출력하지 않는다.
+- 앱은 `EXPO_PUBLIC_SUPABASE_URL`, `EXPO_PUBLIC_SUPABASE_ANON_KEY`만 사용한다.
+- `google-services.json`은 앱 수신 설정이므로 커밋 가능하다.
+- 공개 피드 쿼리에서 `device_id`를 절대 select하지 않는다.
+- 새 Supabase 테이블은 RLS 정책뿐 아니라 필요한 `GRANT`를 `anon`과 `service_role`에 명시한다.
+- 환경변수 값과 토큰을 로그·문서·커밋에 남기지 않는다.
 
-- **데이터 소스**: `https://www.asahi.co.jp/data/ohaasa2020/horoscope.json`
-- **저장 필드**: `date · zodiac_sign · zodiac_name · rank · advice · advice_ko`
-- **주말 데이터**: 고고별자리(`source=gogo`) 크롤링. 토·일 모두 고고 메인 소스.
-- **일요일 cron**: 방송 없음이지만 매일 실행 (`59 20 * * *` = KST 05:59), 평일/주말 분기는 `isWeekendJST()`에서 처리.
-- **DatePill**: "오늘"이 아닌 오하아사 방송 기준일(`date` 컬럼) 표시
+## 앱 데이터 원칙
 
----
+- `device_id`는 `crypto.randomUUID()`로 만들고 AsyncStorage에 영속화한다. 재설치 시 바뀐다.
+- 별자리는 `ZodiacContext`가 소유한다. 화면에서 AsyncStorage를 직접 읽지 않는다.
+- 로컬 데이터의 source of truth는 `src/lib/`의 저장 모듈이다.
+- 서버 호출은 `src/lib/supabase.ts`를 거친다.
+- 네트워크·기기 등록 실패가 운세 조회 화면을 막아서는 안 된다.
+- `expo-notifications`, `expo-media-library`는 지원 환경 확인 뒤 동적 import한다.
 
-## Supabase 설정
+### 운세 조회
 
-### user_devices RLS (중요)
+- 날짜별 12행은 `useHoroscope.ts`의 세션 캐시와 `inFlight` Map을 공유한다.
+- 빈 결과를 캐시하면 크론이 늦은 날 해당 세션에서 계속 빈 화면이 되므로 캐시하지 않는다.
+- 최신 방송일은 KST 05:59에 바뀌므로 캐시 고정 금지, TTL은 5분이다.
+- `HOROSCOPE_COLUMNS`와 `types/horoscope.ts` 필드는 함께 변경한다.
+- 일본어 `advice`는 번역 실패 시 유일한 fallback이므로 조회 컬럼에서 빼지 않는다.
+- `HoroscopeDateSheet`는 닫혀도 마운트되므로 `visible`을 조회 훅에 전달한다. 그렇지 않으면 화면 진입마다 열지도 않은 시트가 120행을 조회한다.
+- 트렌드 쿼리는 기간에만 의존한다. 별자리 값을 deps에 넣으면 필터 토글마다 30일치 전체 행을 다시 받는다.
 
-anon key로 upsert하려면 세 정책 모두 필요. SELECT가 없으면 `"new row violates row-level security policy"` 발생.
+### 로컬 기록
 
-```sql
-CREATE POLICY "user_devices_anon_insert" ON public.user_devices FOR INSERT  TO anon WITH CHECK (true);
-CREATE POLICY "user_devices_anon_update" ON public.user_devices FOR UPDATE  TO anon USING (true) WITH CHECK (true);
-CREATE POLICY "user_devices_anon_select" ON public.user_devices FOR SELECT  TO anon USING (true);
-```
+- 운세 리뷰: AsyncStorage `ohaasa:daily_reviews:v1`, id는 `{date}:{zodiacSign}`.
+- 보관함은 키 목록을 먼저 읽고 본문은 월 단위로 지연 로딩한다.
+- `SketchThumbnail`이 90px을 넘으면 Skia Canvas가 생기므로 보관함 셀은 88px 이하를 유지한다.
+- 보관함 `refresh()`는 수정된 본문을 감지할 수 있도록 이미 읽은 달도 다시 읽는다.
+- sticky 월 헤더의 상단 inset은 `contentContainerStyle`이 아니라 리스트 바깥에 둔다. 내부 패딩은 sticky 위치에 적용되지 않아 상태바와 겹친다.
+- `stickySectionHeadersEnabled`는 Android 기본값이 false이므로 명시한다.
+- `expo-media-library` 저장은 `requestPermissionsAsync(true)`와 동적 import를 사용한다.
 
-### question_answers / question_answer_likes (오늘의 질문 — 공개 UGC)
+## 푸시 알림
 
-전체 스키마·RLS·트리거는 `supabase/migrations/20260807000000_question_answers.sql` 참고. `supabase db push`로 반영하거나 대시보드 SQL Editor에서 수동 실행.
+- 발송 주체는 `send-horoscope-notifications` Edge Function이다. `backend/src/main.ts`에서 발송하지 않는다.
+- Webhook은 `horoscopes` INSERT 중 `zodiac_sign = 'aries'` 행 하나만 처리한다.
+- 중복 방지는 `notification_log.date`의 UNIQUE 제약과 충돌 코드 `23505`를 기준으로 한다.
+- 기기 조회는 `fetchActiveDevices`에서 `device_id` 정렬 + 500개 페이지네이션을 유지한다.
+- PostgREST는 `db-max-rows` 초과분을 에러 없이 자른다. 페이지 크기는 max rows보다 작아야 하며, max rows를 500 이하로 낮추면 종료 판정이 다시 깨진다.
+- 정렬 없는 OFFSET 페이지네이션은 중복·누락될 수 있다. 소규모 데이터에서 우연히 안정적으로 보여도 `.order("device_id")`를 제거하지 않는다.
+- `requestPushToken()`은 시뮬레이터·권한 거부·발급 실패에도 throw하지 않고 null 값을 반환한다.
+- Android Expo Go에서는 원격 푸시가 없으므로 토큰과 플랫폼 null, 알림 비활성이 정상이다.
+- 권한 설정에서 돌아오면 `AppState`로 재동기화한다. 시스템 권한이 꺼졌다면 앱 토글도 false로 맞춘다.
+- 토큰 없는 환경에서는 알림 토글을 비활성화한다. 네트워크·등록 실패를 운세 화면 실패로 전파하지 않는다.
+- FCM 서비스 계정 JSON은 EAS credentials에만 등록한다.
 
-- `user_devices`와 동일하게 `device_id`를 베어러 토큰처럼 신뢰하는 RLS(`USING(true)`)를 쓴다 — **앱은 공개 피드 조회 시 절대 `device_id` 컬럼을 select하지 않는다.** 이게 없으면 다른 사용자가 device_id를 알아내 남의 글을 수정/삭제할 수 있다.
-- `question_answers`는 `unique(question_date, device_id)`로 기기당 하루 1개 공개글만 허용 — 작성/수정은 `upsert(onConflict: 'question_date,device_id')`.
-- `like_count`는 `question_answer_likes` insert/delete 트리거(`sync_answer_like_count`)가 자동 동기화 — 클라이언트가 직접 증감시키지 않는다.
-- **"공개글은 올린 날에만 수정" 정책은 현재 앱 UI에서만 막는다**(`canEditAnswer()`). 서버 RLS는 `USING(true)`라 앱을 거치지 않으면 지난 글도 수정 가능하다. 조여야 할 때는 UPDATE 정책에 `created_at::date = current_date` 조건을 건다.
+## 오늘의 질문과 공개 UGC
 
-### question_answer_reports (신고 · 자동 숨김)
+- 공개/비공개 답변 모두 `questionAnswers.ts`가 로컬 source of truth이고, 공개 답변만 Supabase에 미러링한다.
+- `question_answers`는 `(question_date, device_id)` UNIQUE이며 upsert로 수정한다. delete+insert는 답글 cascade 삭제를 일으키므로 금지한다.
+- 질문 날짜는 로컬 날짜가 아니라 최신 방송일을 사용한다.
+- 비공개 답변은 언제든 수정 가능하고 공개 답변·답글은 작성 당일에만 수정 가능하다. 현재 서버가 아닌 UI 정책이다.
+- 피드는 답변 작성 전에는 조회하거나 보여주지 않는다.
+- 탭 라우트는 오늘 질문, 스택 라우트는 과거 기록 수정을 담당한다.
+- 두 라우트를 합치지 않는다. 탭은 언마운트되지 않아 재진입 파라미터가 초기화 가드에 막힌다.
+- 탭은 KST 05:59 방송일 경계에서 작성/피드 단계를 리셋한다. 그렇지 않으면 어제의 작성 상태로 오늘 피드가 먼저 열린다.
+- 탭 전환마다 자동 refetch하지 않는다. 새로고침은 사용자의 pull-to-refresh로 수행한다.
 
-`supabase/migrations/20260810000000_question_answer_reports.sql` 참고.
+### 신고·차단
 
-- `question_answers`에 컬럼 3개가 추가된다 — `author_hash`(생성 컬럼) · `report_count` · `hidden_at`.
-- **`question_answer_reports`는 anon에게 INSERT만 연다.** SELECT를 열면 신고자들의 `device_id`가 노출된다(`question_answers`에서 `device_id`를 숨기는 것과 같은 이유). "내가 신고한 글"은 서버에서 되읽지 않고 `moderation.ts`(AsyncStorage)가 기억한다.
-- 기기당 답변 1건 1회(`primary key (answer_id, device_id)`). 중복 신고는 23505로 거절되고 앱은 이를 성공으로 처리한다.
-- `sync_answer_report_count` 트리거가 `report_count`를 동기화하고, **`hide_threshold` 도달 시 `hidden_at`을 세팅**한다(현재 4). 트리거 함수의 상수 한 줄이라 `create or replace function` 블록만 재실행하면 바뀐다 — 트리거는 함수를 이름으로 참조하므로 손댈 필요 없다.
-- **임계값과 확인 주기는 연동된다.** 낮으면(2~3) 자동 숨김이 급한 건을 걷어내 주 1회 확인으로 충분하지만, 높으면 자동 숨김이 사실상 안 걸려 **매일 직접 확인해야 한다**. 글의 노출 수명이 24시간이라 하루를 넘기면 이미 늦는다.
-- 임계값을 낮추면 악용이 쉬워진다 — `device_id`가 재설치 시 재생성되므로 **한 사람이 재설치를 반복해 아무 글이나 내릴 수 있다.** 로그인이 없는 한 근본적으로 막을 수 없고, 복구가 SQL 두 줄이라는 점으로 상쇄한다.
-- 숨김 필터는 RLS가 아니라 쿼리(`.is('hidden_at', null)`)에 있다. RLS SELECT에 걸면 숨겨진 행이 `upsert`의 `ON CONFLICT` → UPDATE RLS에서 막혀 에러가 나고 `deletePublicAnswer`도 조용히 실패한다.
-- **허위신고 복구는 두 단계**: 신고 기록 `delete` + `hidden_at = null`. 숨김만 풀면 `report_count`가 임계값 이상으로 남아 다음 신고 1건에 즉시 재숨김된다. 운영 SQL은 마이그레이션 파일 하단 주석 참고.
+- `author_hash = sha256(device_id || PEPPER)`가 차단 키다. 테이블 간 PEPPER를 바꾸거나 다르게 쓰지 않는다.
+- 차단과 신고 완료 상태는 `moderation.ts`에 로컬 저장한다.
+- 신고는 낙관적으로 숨기되 서버 실패 시 되돌린다.
+- 신고 테이블은 anon INSERT만 허용한다. SELECT를 열어 신고자 `device_id`를 노출하지 않는다.
+- 답변·답글의 자동 숨김 임계값은 각각 4·3이다. 숨김 쿼리는 `hidden_at IS NULL`을 적용한다.
+- 숨김 필터를 RLS SELECT에 넣지 않는다. 숨겨진 기존 행의 upsert UPDATE와 작성자 삭제까지 RLS에 막혀 조용히 실패한다.
+- 임계값을 낮추면 재설치로 `device_id`를 재생성해 신고를 반복할 수 있다. 로그인이 없는 구조에서는 근본 차단이 불가능하다.
+- 허위신고 복구는 신고 레코드를 지운 뒤 `hidden_at`도 null로 바꾼다. 마이그레이션 하단 운영 SQL을 참고한다.
+- `hidden_at`만 풀면 높은 `report_count`가 남아 다음 신고 한 건에 즉시 다시 숨겨진다.
+- `author_hash`가 비어 있으면 차단을 건너뛴다.
+- 빈 hash를 차단 Set에 넣으면 hash가 없는 글이 전부 함께 사라진다.
+- 모더레이션 시트 위에 다른 Modal을 중첩하지 않는다.
+- 공개 작성 화면의 무관용 정책 고지와 신고·차단·차단 해제 수단을 유지한다.
 
-### question_answer_replies / _reply_likes / _reply_reports (답글)
+### 답글
 
-`supabase/migrations/20260814000000_question_answer_replies.sql` 참고. 위 세 테이블의 규칙(RLS `USING(true)` · `device_id` 비노출 · `author_hash` · 자동 숨김 · GRANT 필수)이 그대로 반복된다.
+- 답글은 1단계이며 `(answer_id, device_id)` UNIQUE다.
+- 부모 답변 삭제 시 답글은 cascade 삭제된다.
+- 부모가 자동 숨김되면 부모 id 조회에서 빠져 답글도 자연히 도달 불가가 된다. 별도 숨김 cascade를 만들면 오신고 복구가 불완전해질 수 있다.
+- `reply_count`를 저장하지 않고 하루 답글 배열에서 보이는 개수를 계산한다.
+- 답글 페이지네이션을 도입하면 지연 로딩과 배지용 count 설계를 함께 변경한다.
+- `useAnswerFeed`가 차단 Set을 소유하고 `useAnswerReplies`에 전달한다.
+- 내 답글 소유권은 `fetchMyReplyIds`로 판정한다. 숨겨진 내 답글도 조회 대상이다.
+- 답글 저장은 서버 생성 `id`, `created_at`, `author_hash`가 즉시 필요하므로 낙관적으로 만들지 않고 `.select().single()` 결과를 사용한다.
+- 답글 본문 100자 제한은 SQL CHECK와 `ReplyComposer.MAX_LENGTH`를 함께 변경한다.
+- 읽음 기준은 기기 `now()`가 아니라 서버 `created_at`을 저장한다.
+- 읽음 처리는 펼침 이벤트 한 번이 아니라 펼쳐진 상태 동안 갱신한다. 새로고침으로 답글이 들어오면 이벤트 방식은 이미 보이는 답글에 다시 배지를 붙인다.
+- `replySeen.ts`와 `moderation.ts`를 합치지 않는다. 차단 해제 시 읽음 기록까지 지우면 새 답글 배지가 되살아난다.
+- 답글 푸시 알림은 아직 구현되지 않았다.
 
-- **`unique(answer_id, device_id)`** — 기기당 원글 1개에 답글 1개. 재작성은 `upsert(onConflict: 'answer_id,device_id')`.
-- **부모 답변 삭제 → `on delete cascade`.** 답변 작성자가 자기 글을 지우면 남의 답글도 같이 사라진다(수용한 대가).
-- **부모가 자동 숨김되면 트리거 없이 답글도 도달 불가**가 된다 — 부모 id가 `.in()` 목록에 안 들어가기 때문이다. 숨김 cascade 트리거를 달면 오신고 복구가 3단계가 되고, 빠뜨리면 복구된 답변의 답글이 영영 안 보인다.
-- `author_hash`의 PEPPER(`'ohaasa-author-hash-v1'`)는 `question_answers`와 **바이트 단위로 동일해야 한다.** 한 글자만 달라도 같은 사람이 답변/답글에서 다른 해시를 갖게 되어 사용자의 차단이 절반만 걸린다.
-- `hide_threshold`가 답변(4)보다 낮은 **3**이다 — 답글은 접힌 영역에 있어 노출이 훨씬 적어서, 같은 값이면 자동 숨김이 사실상 안 걸린다.
-- `question_answer_reply_reports`도 anon에게 **INSERT만** 연다(신고자 `device_id` 노출 방지).
+관련 스키마·RLS·복구 SQL은 다음 마이그레이션을 source of truth로 삼는다.
 
-### 백업 (`.github/workflows/backup-db.yml`)
+- `supabase/migrations/*question_answers*.sql`
+- `supabase/migrations/*question_answer_reports*.sql`
+- `supabase/migrations/*question_answer_replies*.sql`
+- `supabase/migrations/*grant_service_role*.sql`
 
-무료 티어는 자동 백업이 없다. 매일 KST 07:30(크롤링이 재시도까지 끝난 뒤)에 전 테이블을 떠서 GitHub Actions 아티팩트로 30일 보관한다.
+## UI 불변조건
 
-- **가장 아픈 손실은 `horoscopes`다.** 아사히 API는 당일치만 주므로 누적분이 날아가면 **복구 수단이 아예 없고** 통계 화면의 추이를 처음부터 다시 모아야 한다. `user_devices`가 날아가면 전 사용자가 앱을 다시 열 때까지 알림이 끊긴다.
-- **`pg_dump`가 아니라 PostgREST로 뜬다**(`.github/scripts/backup-tables.py`). DB 비밀번호가 필요 없고 크롤러가 이미 쓰는 `SUPABASE_SERVICE_ROLE_KEY` 하나로 끝나기 때문이다. pg_dump 경로는 Session pooler 접속·비밀번호 URL 인코딩·클라이언트 버전(서버가 PG17)까지 전부 맞아야 해서 실패 지점이 많았다.
-  - **대신 스키마 DDL은 담기지 않는다 — 데이터만이다.** 테이블이 통째로 사라진 경우엔 `supabase/migrations/`로 스키마를 먼저 세워야 한다. 그런데 `horoscopes` · `user_devices` · `notification_log`는 **마이그레이션 파일 자체가 없다**(대시보드에서 수동 생성). 이 셋의 DDL을 마이그레이션으로 남겨두지 않으면 백업이 있어도 복원이 반쪽이다.
-  - **반드시 `service_role` 키여야 한다.** `anon`은 `notification_log` · `question_answer_reports` · `question_answer_reply_reports`에 SELECT 권한이 없어 `permission denied`로 막힌다(신고자 `device_id` 비노출 정책의 결과 — → "Supabase 설정").
-- **페이지 크기는 `db-max-rows`보다 작아야 한다**(`PAGE = 500`). 같거나 크면 "요청한 만큼 왔는가"로 다음 페이지 유무를 판정할 수 없어 조용히 잘린다. 정렬 키도 필수다 — 정렬 없는 OFFSET은 페이지 간 행 순서를 보장하지 않아 중복·누락이 난다(합성 PK 테이블은 두 컬럼 모두 지정).
-- **조용한 실패를 막는 장치가 셋이다.** ① 응답이 배열이 아니면(에러 JSON) 즉시 중단 — 이걸 빈 결과로 흘리면 "0행짜리 정상 백업"이 된다. ② `horoscopes` · `user_devices`가 0행이면 실패. ③ `manifest.json`에 테이블별 행 수를 남겨 복원 전에 대조할 수 있게 한다.
-- **복원**: 아티팩트를 풀면 테이블별 `.jsonl`이 나온다. `service_role` 키로 PostgREST에 `POST`(`Prefer: resolution=merge-duplicates`)하거나, JSONL을 `INSERT` 문으로 바꿔 SQL Editor에서 실행한다. 전체가 아니라 특정 테이블만 되돌릴 때는 해당 `.jsonl`만 쓰면 된다.
-- 신고 처리용 `delete` SQL을 대시보드에서 손으로 실행하는 구조라(→ "Supabase 설정") `where` 절 사고가 이 백업이 막아주는 주된 시나리오다.
+- 공통 헤더는 `FinalHeader`, 앱 내 이름은 `src/constants/app.ts`의 `APP_TITLE`을 사용한다.
+- `APP_TITLE`을 바꿀 때 `app.config.js`의 `name`도 함께 바꾼다.
+- `slug`와 bundle identifier `ohaasa`는 변경하지 않는다.
+- `FinalHeader`가 상단 안전영역을 처리한다. 부모가 이미 처리하면 `withTopInset={false}`를 사용한다.
+- 본문 좌우 패딩 안에 헤더를 넣으면 `bleed`를 사용한다.
+- `FinalHeader`의 `alignSelf: "stretch"`를 제거하면 `alignItems: "center"`인 홈에서 헤더가 글자 폭으로 줄어든다.
+- 탭바가 레이아웃 공간을 차지하므로 탭 화면에 `useBottomTabBarHeight()`를 더하지 않는다.
+- 탭바 높이를 다시 더하면 화면 하단에 빈 띠가 생긴다. 탭바가 absolute일 때만 별도 보정이 필요하다.
+- `stats.tsx`, `rankings.tsx`는 스택 화면이라 `useBottomTabBarHeight()`를 호출하면 렌더 경로에 따라 throw한다. 하위 컴포넌트까지 확인한다.
+- iOS에서 Modal을 동시에 두 개 present하지 않는다.
 
-### 환경변수
+## 네이티브 설정
 
-| 변수                            | 용도                                   |
-| ------------------------------- | -------------------------------------- |
-| `SUPABASE_URL`                  | backend/Actions 전용                   |
-| `SUPABASE_SERVICE_ROLE_KEY`     | service_role JWT — 앱 절대 노출 금지   |
-| `OPENAI_API_KEY`                | GPT 번역 — backend/Actions 전용        |
-| `EXPO_PUBLIC_SUPABASE_URL`      | 앱용 anon 접속 URL                     |
-| `EXPO_PUBLIC_SUPABASE_ANON_KEY` | 앱용 anon key                          |
+- `android/`, `ios/` 생성물을 직접 고치지 말고 Expo config/plugin에서 관리한다.
+- Android media granular 권한은 `granularPermissions: []`를 유지한다.
+- `SYSTEM_ALERT_WINDOW` 제거는 `plugins/withoutSystemAlertWindow.js`가 담당한다.
+- `SYSTEM_ALERT_WINDOW`에 `tools:node="remove"`를 쓰면 React Native debug manifest까지 제거되어 개발자 메뉴와 레드박스가 깨진다.
+- `expo prebuild --clean`은 생성물을 재작성하므로 명시적 필요 없이 실행하지 않는다.
+- 단, Android 권한 검증 시 기존 생성물에 남은 권한을 배제하려면 깨끗한 prebuild가 필요하다. EAS는 새 clone에서 시작한다.
+- 권한 검증은 소스 Manifest가 아니라 manifest merger를 거친 APK/AAB 최종 산출물로 한다. 소스의 `tools:node` 때문에 정적 검사는 오탐할 수 있다.
+- iOS required-reason API는 코드 실행 여부가 아니라 링크된 바이너리 심볼 기준으로 검사된다.
+- `ExpoFileSystem_privacy.bundle`과 `ExpoMediaLibrary_privacy.bundle`이 IPA에서 빈 껍데기가 되어 DiskSpace 선언이 사라지고 `ITMS-91053`이 발생한 사례가 있다. `app.config.js`의 `ios.privacyManifests` 앱 레벨 선언을 유지한다.
+- privacy manifest는 프레임워크 내부뿐 아니라 앱 루트의 `<Pod>_privacy.bundle`도 합쳐서 확인한다. 프레임워크 폴더만 보는 스캐너는 누락을 오탐한다.
+- IPA 검증 시 실제 심볼(`nm`)과 모든 `PrivacyInfo.xcprivacy` 선언 집합을 대조한다.
 
----
+## Supabase 및 백업
+
+- `user_devices` anon upsert에는 SELECT, INSERT, UPDATE 정책이 모두 필요하다.
+- `question_answers.zodiac_sign`과 `question_answer_replies.zodiac_sign`은 온보딩 건너뛰기를 위해 nullable이다.
+- `author_hash` PEPPER는 답변과 답글 테이블에서 바이트 단위로 같아야 한다.
+- 백업은 `.github/workflows/backup-db.yml`과 `.github/scripts/backup-tables.py`가 service role로 JSONL을 생성한다.
+- 백업은 데이터만 포함한다. DDL은 migrations가 source of truth다.
+- `horoscopes`, `user_devices`, `notification_log` DDL은 아직 migration에 없어 열린 작업이다.
+- 백업 페이지 크기는 Supabase `db-max-rows`보다 작게 유지하고 안정적인 키로 정렬한다.
+- 합성 PK 테이블은 모든 PK 컬럼으로 정렬하지 않으면 OFFSET 페이지 간 중복·누락이 생길 수 있다.
+- 백업 응답이 배열이 아니면 즉시 실패시킨다. 에러 JSON을 빈 결과로 처리하면 0행짜리 정상 백업처럼 보인다.
+- `horoscopes`와 `user_devices`가 0행이면 실패하며, `manifest.json`의 테이블별 행 수를 복원 전 대조한다.
+- 백업은 반드시 service role로 읽는다. anon은 신고·알림 테이블 SELECT 권한이 없어 전체 백업이 되지 않는다.
 
 ## 열린 작업
 
-> 완료된 Phase 이력은 git log에 있다. 여기엔 **아직 안 끝난 것**만 남긴다.
+- Expo SDK 56 업그레이드 검증(위젯 제외).
+- 답글 INSERT → Edge Function → 부모 기기 토큰으로 답글 푸시 알림 구현.
+- 커뮤니티 추가 후 월간 Supabase egress 재측정.
+- 공개 피드와 답글 페이지네이션 설계.
+- `horoscopes`, `user_devices`, `notification_log` DDL migration 작성.
+- 자동 숨김 임계값이 높으므로 신고 큐를 매일 확인.
 
-- **Phase 11** — Expo SDK 56 업그레이드 검증 (위젯 제외)
-- **답글 푸시 알림** — 답글이 달렸는지 알려면 앱을 열어야 한다. 필요한 것은 `question_answer_replies` INSERT 트리거 → Edge Function → 부모 `device_id`의 push token 조회 (→ "오늘의 질문 — 내 답변 고정 카드 · 새 답글 배지").
-- **무료 티어 egress(5GB/월)** — 2026-08-18 실측 약 1GB/월. 지목됐던 운세 화면 중복 조회 세 건은 정리했다(→ "운세 조회 캐시"). **재실측이 남았다** — 커뮤니티가 탭으로 올라와 피드 조회 빈도가 달라졌으므로 다음 병목이 어디인지는 숫자를 다시 봐야 안다.
-- **피드 페이지네이션** — `fetchPublicAnswers`는 `ANSWER_FETCH_LIMIT = 1000`으로 상한만 걸어둔 상태다(도달 시 `console.warn`). 하루 답변이 ~400개를 넘으면 그 전에 `.in()`의 UUID 배열이 URL 길이 한계에 먼저 걸린다. 착수하면 답글이 지연 로딩으로 바뀌고 배지용 `reply_count`가 다시 필요해진다 (→ "오늘의 질문 — 답글").
-- **`horoscopes` · `user_devices` · `notification_log`의 DDL이 마이그레이션에 없다** — 대시보드에서 수동 생성돼 스키마가 코드로 남아 있지 않다. 백업이 데이터만 담으므로 테이블이 통째로 사라지면 복원할 스키마가 없다 (→ "백업").
-- **운영 확인 주기** — `hide_threshold`가 답변 4 · 답글 3으로 높은 편이라 자동 숨김이 잘 안 걸린다. 글의 노출 수명이 24시간이므로 신고 큐를 **매일** 봐야 한다 (→ "Supabase 설정").
+완료 이력과 구현 배경은 git log와 해당 코드 주석을 확인한다. 완료된 Phase를 이 파일에 누적하지 않는다.
 
-> Phase 12·13·14(오늘의 질문 · 신고/차단 · 답글)는 마이그레이션 실행과 실기기 QA까지 끝났다(2026-08-17).
+## 변경 및 검증 원칙
 
-## 고정 정보
-
-- 개인정보처리방침 URL: `https://jeongwon-cho.github.io/Ohaasa/privacy-policy.html`
-- 커뮤니티 가이드라인 URL: `https://jeongwon-cho.github.io/Ohaasa/community-guidelines.html`
-- `google-services.json`: 커밋 대상(앱 수신용) · Firebase service account JSON은 커밋 금지
-- 앱 이름: **하루끄적** (부제 "하루 한 장, 그림일기" — App Store Connect에서 입력, 코드에 없다)
-  - **`slug`·`bundleIdentifier`는 여전히 `ohaasa`다.** slug는 EAS 프로젝트 식별자라 바꾸면 프로젝트가 갈리고, bundleId는 스토어 등록 후 변경 불가다. 이름만 갈린 상태가 정상이다.
-  - 앱 안 표기는 `src/constants/app.ts`의 `APP_TITLE` 하나다(`FinalHeader` · `JournalHeader`가 같이 본다). **`app.config.js`의 `name`과 항상 같이 바꾼다.** 헤더가 둘이라 각자 하드코딩했더니 한쪽만 바뀐 적이 있어 상수로 묶었다.
-  - **운세 계열 push 화면(`horoscope` · `rankings` · `stats`)의 헤더는 영문 워드마크다** — `ohaasa` · `Ranking` · `Trends`/`History`. 오하아사에서 온 화면이라는 결을 유지하되 앱 이름(`하루끄적`)과 섞이지 않게 한다. 한글 설명은 부제가 맡는다.
-    - `FinalHeader`의 `title`을 비우면 `APP_TITLE`이 들어가고, **비우는 건 탭 루트(설정)뿐이다.**
-    - 조판은 하나다(`styles.title`, `NotoSansKR_300Light` + `letterSpacing: 2`). 워드마크용 자간이라 한글 문장을 넣으면 흩어져 보인다 — 그래서 화면 이름은 영문으로 둔다.
-  - **헤더는 `FinalHeader` 하나다.** 홈·보관함·커뮤니티가 각자 헤더를 갖고 있었고, 그래서 글자 크기가 26과 20으로, 좌우 여백이 16과 28로 갈려 **탭을 옮길 때마다 제목만 커졌다 작아지고 좌우로 흔들렸다.** 조판·여백은 `typography.headerTitle` · `typography.headerSubtitle` · `layout.headerPaddingH`(28)에 있다.
-    - **상단 안전영역은 `FinalHeader`가 자기 `paddingTop`으로 먹는다** — 스크롤 컨테이너에서 또 주면 이중 여백이다. 반대로 컨테이너가 이미 인셋을 준 화면(보관함: sticky 월 헤더가 상태바에 붙지 않게 리스트 **바깥**에 인셋을 준다)은 `withTopInset={false}`로 꺼야 한다.
-    - 헤더 여백(28)이 본문(16)보다 크므로, **본문 여백이 걸린 스크롤 컨테이너 안에 들어갈 때는 `bleed`를 켜야** 한다 — 안 켜면 16+28=44가 되어 제목만 안쪽으로 밀린다. 되무는 값을 화면마다 손으로 쓰다가 홈에서 한 번 빠뜨렸기 때문에 헤더가 직접 갖게 했다. 컨테이너에 좌우 여백이 없는 화면(커뮤니티·설정·운세 계열)은 켜지 않는다.
-    - `alignSelf: "stretch"`가 load-bearing이다 — 홈 스크롤 컨테이너가 `alignItems: 'center'`라 없으면 헤더가 글자 폭으로 쪼그라든다.
-  - **`FinalHeader`의 뒤로가기는 `marginLeft: -10`으로 광학 정렬한다.** 헤더 패딩(28)이 본문과 같아도 셰브론은 더 안쪽에서 시작해 보인다 — 30 박스에 22 아이콘이 가운데 정렬돼 +4, Feather `chevron-left`가 24 viewBox에서 x축 9~15만 차지해 +7이라 잉크가 약 39pt에서 시작한다. 터치 영역은 그대로 두고 획만 옮긴다.
-- 현재 버전: v1.8.0 - 통계 14일·월간 · 그림 커스텀 색·스포이드 · 운세 알림 탭 라우팅
-
----
-
-## 앱 구현 원칙
-
-### 공통
-
-- `service_role` 키는 앱에 절대 포함하지 않는다 — `EXPO_PUBLIC_` 접두사는 anon key만 사용
-- `device_id`: `crypto.randomUUID()` 생성 후 AsyncStorage 영속화 (재설치 시 재생성)
-- 네트워크 실패는 운세 조회를 막지 않는다. Supabase upsert 실패 → `console.warn`만 남김
-- 별자리 전역 상태는 `ZodiacContext`로 관리 — 각 화면에서 AsyncStorage 직접 읽기 금지
-
-### Push Notification
-
-- **발송 주체**: Supabase Edge Function (`send-horoscope-notifications`). backend/main.ts는 알림을 직접 발송하지 않는다.
-- **트리거**: horoscopes 테이블 INSERT → Database Webhook `horoscope_notify` → Edge Function. `zodiac_sign = 'aries'` row 1개만 처리해 중복 실행 방지.
-- **dedup**: `notification_log` 테이블 — date 컬럼에 UNIQUE constraint 필수. INSERT 충돌(23505) 시 즉시 리턴.
-- **기기 조회는 반드시 페이지네이션한다**(`fetchActiveDevices`, `DEVICE_PAGE_SIZE = 500`): PostgREST의 `db-max-rows`(기본 1000)는 초과분을 **에러 없이** 자른다. 상한 없이 받으면 발송 대상이 1000을 넘는 순간 1001번째부터 알림이 끊기는데 로그에는 `devices=1000`만 찍혀 정상으로 보인다. **이 상한은 플랜과 무관한 프로젝트 설정**(Settings → API → Max Rows)이라 Pro 전환으로 풀리지 않는다.
-  - 페이지 크기는 `db-max-rows`보다 **작아야** 한다 — 같으면 "요청한 만큼 왔는가"로 다음 페이지 유무를 판정할 수 없다. 반대로 **`db-max-rows`를 `DEVICE_PAGE_SIZE` 이하로 낮추면 첫 페이지부터 500개 미만이 와서 루프가 즉시 끝난다** — 고치려던 조용한 잘림이 그대로 돌아온다. Max Rows를 건드릴 일이 생기면 이 상수도 같이 봐야 한다. (2026-08-18 실측: 이 프로젝트의 `db-max-rows`는 **1000**)
-  - **`.order("device_id")`가 load-bearing이다.** `range`는 LIMIT/OFFSET이고 정렬 없는 OFFSET은 페이지 간 행 순서를 보장하지 않아 중복 발송·누락이 난다. **소규모 테이블에서는 재현되지 않으므로**(seq scan이 우연히 안정적) 테스트 통과를 근거로 빼면 안 된다.
-- **재배포**: Edge Function 변경 시 `supabase functions deploy send-horoscope-notifications --project-ref khszicvinkgtqsyqiecc`
-- **Android Expo Go (SDK 53+)**: remote push 제거됨. `push_token = NULL · platform = NULL · notifications_enabled = false`가 정상.
-- **`expo-notifications` static import 금지**: `ExecutionEnvironment.StoreClient` guard 통과 후 `await import('expo-notifications')`로 동적 import.
-- **`requestPushToken()`은 절대 throw하지 않는다**: 시뮬레이터·권한 거부·토큰 발급 실패 모두 `{ token: null, platform: null }` 반환.
-- **push_token 없는 환경**: 알림 토글 `disabled` + "알림은 개발 빌드에서 사용할 수 있어요" 표시.
-- **FCM V1 발송 자격증명**: `eas credentials` → Android → FCM V1 Google Service Account Key 등록. service account JSON은 절대 커밋 금지.
-
-### 알림 권한 요청 플로우
-
-- **최초 요청**: `hasAskedPushPermission = false` AND `pushToken = null`일 때 `(tabs)/index.tsx`에서 로딩 완료 후 1초 딜레이로 `PushPermissionSheet` 표시
-  - "받을게요" → `requestPushToken()` → 토큰 저장 · `notificationsEnabled = true` · Supabase upsert
-  - "나중에" → `hasAskedPushPermission = true`만 저장, 재표시 없음
-- **설정 화면 토글**: `useFocusEffect` + `AppState` 리스너로 진입·포그라운드 복귀 시 권한 상태 재동기화
-  - `canAskAgain = true` → 네이티브 권한 다이얼로그
-  - `canAskAgain = false` → `NotificationDeniedSheet` → `Linking.openSettings()` → 복귀 시 `pendingActivationRef`로 자동 활성화
-  - 시스템 권한 철회 시 토글 강제 `false` 동기화
-
-### 보관함 탭 (archive)
-
-홈 달력과 역할이 겹치지 않게 나눴다 — 달력은 "이번 달을 채우는" 자리고, 보관함은 "지금까지 그린 걸 훑는" 자리다. 그래서 빈칸을 그리지 않고 기록이 있는 날만 최신순으로 붙인다.
-
-- **칸 폭이 90px을 넘으면 안 된다.** `SketchThumbnail`은 `TEXTURE_ABOVE = 90` 위에서 모눈·질감을 살리려고 Skia `<Canvas>`로 그리는데, Canvas 하나하나가 네이티브 뷰라 스크롤로 칸이 계속 쌓이는 격자에서는 그 비용이 그대로 붙는다. 그래서 **넓은 화면에서 칸을 키우지 않고 열을 늘린다**(`columnsFor()`) — iPhone 4~5열, iPad(`maxContentWidth` 600 상한) 6열, 칸은 항상 88px 이하다. 상한이 90이 아니라 88인 건 반올림으로 경계에 걸치지 않게 하는 여유. **3열로 바꾸면 iPhone에서 칸이 114px이라 이 함정에 곧장 걸린다.**
-- **달 목록과 본문을 분리해서 읽는다**(`useJournalArchive`). `loadJournalDates()`는 AsyncStorage 키만 훑어 파싱이 없고, 본문은 화면에 닿은 달만 `loadMonthJournals()`로 2달씩 붙인다. 한 번에 다 읽으면 1년치 1.9MB를 첫 진입에 역직렬화하게 된다(→ `journal.ts`의 PREFIX 주석).
-- **`refresh()`는 이미 읽은 달도 다시 읽는다.** 일기를 고치고 돌아왔을 때 내용이 바뀌었는지는 키 목록만으로 알 수 없기 때문이다. 달이 쌓일수록 이 재조회가 무거워지므로 expo-file-system으로 옮길 때 같이 손봐야 한다.
-- **아직 본문을 안 읽은 달은 섹션으로 내보내지 않는다.** 넘기면 "0장" 헤더가 먼저 떴다가 그림이 뒤늦게 채워지는 게 보인다.
-- **월 헤더는 sticky + 알약이다.** 배경이 그라데이션(`#FAF6F0`→`#EAD5CE`)이라 불투명 띠를 깔면 스크롤할수록 헤더 색만 제자리에 남아 경계가 드러난다. `stickySectionHeadersEnabled`는 **안드로이드 기본값이 `false`**라 명시해야 한다.
-- **안전영역(`insets.top`)은 `contentContainerStyle`이 아니라 리스트 바깥에 준다.** sticky 헤더는 콘텐츠 패딩을 무시하고 스크롤 뷰포트 맨 위에 붙으므로, 다른 화면들처럼 `paddingTop: insets.top + spacing.md`를 콘텐츠에 주면 **달 알약이 상태바와 겹친다.** 이 화면만 `ResponsiveContainer`가 위쪽 인셋을 갖는 이유다.
-- 칸을 누르면 `/journal-view`로 간다. 상세 시트를 따로 두지 않는다 — 정식 읽기 화면이 이미 있다.
-- **`sketchbook.tsx`는 조회 화면이 아니라 샘플 데이터 도구다**(설정 > DEV > "샘플 데이터"). 달력을 여기서까지 그리면 홈·보관함과 세 벌이 되므로 걷어냈다. 달 스테퍼로 **지난 달을 채울 수 있어야 한다** — 월초에는 "이번 달 채우기"가 며칠치밖에 안 만들어 보관함의 스크롤·달 페이지네이션을 확인할 수 없다.
-
-### 운세 조회 캐시
-
-무료 티어 egress(5GB/월)에서 가장 컸던 낭비가 **같은 하루치를 여러 화면이 각자 받아 가는 것**이었다. 세 곳을 손봤고, 셋 다 "덜 받는" 게 아니라 "같은 걸 두 번 받지 않는" 쪽이다.
-
-- **날짜별 세션 캐시**(`useHoroscope.ts`의 `rowCache`). 같은 날짜의 12행을 홈(`HoroscopeStrip`) · 운세 · 순위 · 별자리상세 · 데일리리뷰가 각자 독립 fetch 했다. **한 번 확정된 하루치는 크롤러가 쓰고 나면 바뀌지 않으므로** 먼저 받은 쪽이 나머지를 먹여준다. 동시 요청은 `inFlight` Map으로 한 번만 나간다.
-  - **빈 결과는 캐시하지 않는다** — 크론이 늦은 날 "그날은 운세가 없다"가 세션 내내 눌러앉는다.
-  - **최신 방송일 조회에는 TTL(5분)을 건다.** 이건 캐시하면 안 되는 값이다 — KST 05:59에 바뀌므로 앱을 켜둔 채 날이 넘어가면 어제 운세에 갇힌다.
-- **`select('*')` → 컬럼 명시**(`HOROSCOPE_COLUMNS`). `id`·`created_at`은 앱이 읽지 않는다(순위 리스트 key도 `zodiac_sign`이다). `types/horoscope.ts`의 인터페이스에서도 뺐으므로 **다시 쓰려면 양쪽을 같이 고쳐야 한다** — 컬럼만 늘리고 타입을 안 고치면 조용히 `undefined`가 온다.
-  - `advice`(장문 일본어 원문)는 못 뺀다. 앱이 `advice_ko ?? advice`로 표시하므로 번역 실패한 행의 유일한 fallback이다.
-- **`HoroscopeDateSheet`는 `visible`을 훅에 넘긴다.** 이 시트는 닫혀 있어도 **항상 마운트**돼 있어서(`BottomSheet`가 `visible`로만 여닫는다) 운세·순위 화면에 들어가기만 해도 열지도 않은 시트 때문에 120행 쿼리가 한 번씩 돌았다. `useAvailableHoroscopeDates(enabled)`의 `enabled`가 그래서 load-bearing이다.
-- **`useHoroscopeTrends`의 조회는 `period`에만 의존한다.** 쿼리에 `zodiac_sign`이 없고 별자리 필터는 전부 클라이언트에서 하는데도 `zodiacSign`·`compareSign`이 deps에 있어서, 비교 별자리를 켜고 끌 때마다 30일치 396행(12별자리 × 33일)을 다시 받았다. 계산은 `computeTrends()`로 빼고 `useMemo`가 파생한다.
-
-### 통계 화면 (stats.tsx)
-
-- **역할 분리**: `stats.tsx`는 orchestration(훅 호출 · state · 카드 조합)만 담당하고, UI 섹션은 `src/components/stats/`의 독립 컴포넌트로 둔다.
-- **데이터 훅**: `useHoroscopeTrends(zodiacSign, period, compareSign?)` — 기간 내 전체 별자리 rank rows를 한 번에 받아 클라이언트에서 가공. `CUTOFF_BUFFER_DAYS = 3`으로 크론 미실행 날 대응.
-- **등수 표시**: 기본은 `roundedRank`(반올림값이 같으면 공동 등수 부여 후 다음 번호 스킵 — 3.4·6.1·6.8 → 1/2/2/4위), 자세히 모드는 `exactRank` + 소수점 1자리. `detailMode`는 저장하지 않아 재진입 시 리셋되고, 공유 카드는 토글과 무관하게 항상 정수.
-- **화살표 트렌드 기준**: 그날의 원본 운세 순위(1~12)가 아니라 **기간 평균 공동 등수(`roundedRank`)의 어제 대비 변화** — 같은 길이의 윈도우를 하루 앞당겨 재계산한다.
-### 탭바 높이
-
-**`useBottomTabBarHeight()`를 쓰는 곳은 이제 하나도 없다.** 두 가지 이유로 계속 사고를 냈다.
-
-- **더하면 빈 띠가 한 겹 생긴다.** `tabBarStyle`에 `position: 'absolute'`가 없어서 탭바는 레이아웃 공간을 차지하고, 탭 화면은 **이미 탭바 위에서 끝난다.** 여기에 탭바 높이를 또 더하면 그만큼 바닥이 비는데, 스크롤 화면에서는 "끝 여백이 좀 넓네" 정도로 보여 오래 안 잡힌다. 커뮤니티의 [완료] 버튼처럼 **고정 배치된 요소에서야 대놓고 뜬다.** 판단 기준은 `absolute` 여부 하나다.
-- **탭 네비게이터 바깥에서 부르면 throw한다.** 탭이던 화면을 스택으로 옮기면 호출이 남아 터진다(→ "통계 화면").
-
-바닥 여백은 그래서 이렇게 정한다: 탭 화면은 원하는 여백만(탭바 몫을 더하지 않음), push된 스택 화면은 `insets.bottom` + 여백.
-
-- **`stats.tsx`·`rankings.tsx`는 탭이 아니라 push된 스택 화면이다.** `useBottomTabBarHeight()`는 탭 네비게이터 바깥에서 **throw**하므로 화면이 `0`을 정해 하위 컴포넌트에 넘긴다(`ReviewHistoryTab`의 `bottomInset`). 통계가 탭이던 시절의 호출이 하위 컴포넌트에 남아 있어 **기록 세그먼트를 눌러야 터지는** 상태로 한동안 숨어 있었다 — 화면을 탭 밖으로 옮길 땐 하위 컴포넌트까지 훑어야 한다.
-
-### 오늘의 질문
-
-이 앱에서 처음으로 서버에 저장되는 공개 UGC. "내 생각을 먼저 남기게" 하는 것이 핵심이라 작성 전에는 커뮤니티 피드를 보여주지 않는다.
-
-- **보안**: 공개 피드 조회는 `device_id` 컬럼을 절대 select하지 않는다 (→ Supabase 설정 섹션). "내 글" 판별은 `fetchMyAnswerId()`로 따로 조회.
-- **로컬 우선 저장**: 공개/비공개 무관하게 `questionAnswers.ts`(AsyncStorage)가 source of truth. 공개일 때만 `question_answers` 테이블에 미러링.
-- **질문 콘텐츠**: `getQuestionByDate(date)` — 반복 주기를 길게 하려고 날짜의 일(day)이 아닌 day-of-year 기준 순환.
-- **수정 가능 기간**: 비공개 답변은 언제든, 공개 답변은 **올린 날에만** 수정 가능하고 이후에는 삭제만 남긴다(`canEditAnswer()`). 남들이 읽고 공감한 글의 내용이 뒤바뀌는 걸 막기 위함. 판단 기준은 `date`(= 방송일)가 아니라 `createdAt` — 방송일은 실제 오늘과 어긋날 수 있다.
-- **자동 욕설 필터 없음**: 사전 검열은 하지 않는다. 사후 대응(신고 → 임계값 자동 숨김 → 수동 검토)만으로 간다.
-
-#### 진입 경로가 둘이다 (커뮤니티 탭 · 스택 라우트)
-
-화면 몸통은 `DailyQuestionView`가 갖고, 라우트는 둘이 공유한다.
-
-| | 커뮤니티 탭 `(tabs)/community.tsx` | 스택 `daily-question.tsx` |
-|---|---|---|
-| 날짜 | `latestDate`(방송일), 파라미터 없음 | `date` 파라미터 |
-| 용도 | 오늘 질문 | 지난 글 수정(`mode=edit`, 기록 탭) |
-
-- **한 라우트로 합치면 안 된다.** 탭은 언마운트되지 않아 `date`·`mode` 파라미터로 다시 진입시켜도 `stepInitialized` 가드에 막혀 수정 화면이 안 열린다.
-- **탭이 넘기는 날짜는 로컬 "오늘"이 아니라 `latestDate`(오하아사 방송일)다.** `question_answers`가 `unique(question_date, device_id)`라, 크롤러가 늦은 날이나 KST 05:59 이전 시간대에 로컬 날짜로 쓰기 시작하면 안드로이드 v1과 **다른 행**에 저장돼 같은 날 피드가 조용히 둘로 쪼개진다. 대가로 커뮤니티 탭이 `horoscopes` 조회(`HoroscopeDateContext`)를 기다린다 — 그림일기 앱인데 커뮤니티가 운세 테이블에 묶여 있는 셈이다.
-- **탭/스택 차이는 `chrome`(`"stack" | "tab"`) 하나로만 갈린다** — 뒤로가기 노출과 바닥 안전영역(스택은 `insets.bottom`, 탭은 탭바가 대신 먹으므로 0). 탭바 높이는 받지 않는다(→ 아래 "탭바 높이").
-- **탭에서는 `useFocusEffect` 자동 재조회를 붙이지 않는다.** 탭이 되면서 마운트가 1회로 줄어 egress는 오히려 좋아졌는데, 습관적으로 붙이면 **탭 전환마다 1000행 쿼리 두 개**(`fetchPublicAnswers` + `fetchRepliesForAnswers`)가 돈다. 당겨서 새로고침이 이미 있다.
-- **방송일 경계에서 단계를 리셋한다.** 탭이 안 죽으니 05:59를 넘겨도 상태가 그대로라, 어제 답을 썼다는 이유로 오늘 질문에서 작성 화면을 건너뛰고 피드가 먼저 열린다. effect가 아니라 렌더 중 조정으로 처리한다(effect면 낡은 단계가 한 프레임 보인다).
-- **탭의 뒤로가기 버튼은 수정 중(`returnToCommunity`)일 때만 보인다.** 탭엔 나갈 곳이 없어 평소엔 감추는데, 그대로 두면 "수정하기"로 작성 화면에 들어간 뒤 저장 말고는 빠져나올 길이 없다. 삭제 후에도 `router.back()` 대신 작성 단계로 되돌린다.
-- **"작성 먼저" 원칙은 탭에서도 유지한다** — 탭을 눌러도 답을 남기기 전에는 피드가 안 열린다. 데이터 계층에도 걸려 있다(`useAnswerFeed(step === "community" ? questionDate : null, ...)`).
-- 진입 경로 정리: `horoscope.tsx`의 오늘의 질문 카드는 **`isLatest`일 때만** 탭으로 보낸다. 과거 날짜를 골라 본 상태면 그 날짜의 질문을 열어야 하므로 스택 진입을 유지한다.
-
-### 오늘의 질문 — 신고 · 차단
-
-로그인이 없어도 `device_id`가 이미 "같은 사람이 100번 신고 못 하게" 막는 식별자 역할을 한다. 진짜 문제는 차단이었다 — 피드에 `device_id`를 절대 내려보내지 않으므로 클라이언트에 "이 사람" 을 가리킬 키가 없었다.
-
-- **`author_hash`가 차단 키**: `sha256(device_id || PEPPER)`를 생성 컬럼으로 두고 피드에 함께 내려보낸다. `device_id`는 v4 UUID(122비트)라 역산이 불가능하고, 해시로는 어떤 RLS도 통과할 수 없다(쓰기 경로는 전부 `device_id` 매칭). **PEPPER를 바꾸면 사용자들의 차단 목록이 전부 무효화되므로 고정 값으로 둔다.**
-- **차단은 기기 로컬 전용**(`moderation.ts`). 서버에 사용자별 차단 목록을 걸 주체가 없다. `author_hash`가 기기별로 안정적이라 차단이 다음 날 올라오는 글에도 계속 적용된다. 재설치 시 초기화되지만 `device_id`도 함께 재생성되므로 감수한다.
-- **신고는 낙관적이되 실패는 되돌린다**: 먼저 숨기고, 서버 전송이 실패하면 숨김을 취소하고 토스트로 알린다. 실패를 삼키면 사용자는 접수됐다고 믿는데 서버엔 아무것도 없어 그 글이 영영 검토되지 않는다. "그냥 안 보고 싶다"는 요구는 차단(로컬 전용이라 항상 성공)이 담당한다.
-- **RLS 정책만으로는 안 된다 — GRANT가 필요하다**: 이 프로젝트는 `public` 스키마 기본 권한이 `anon`에게 DML(SELECT/INSERT/UPDATE/DELETE)을 주지 않는다. `TRUNCATE·REFERENCES·TRIGGER`만 딸려온다. 정책은 GRANT로 허용된 것 중 어떤 행인지를 거르는 층이라, **GRANT 없이 정책만 만들면 `permission denied`로 전부 막힌다.** 새 테이블을 만들 때마다 `grant ... to anon;`을 마이그레이션에 명시할 것. (`question_answer_reports`가 이 함정에 걸려 신고가 한 건도 안 들어갔다.)
-- **GRANT는 `anon`만으로 끝나지 않는다 — `service_role`도 챙겨야 한다.** 기존 마이그레이션이 전부 `to anon`만 줘서 `question_answers` 계열 6개 테이블은 **service_role로도 `permission denied`**가 났다. 앱이 anon으로만 접근하니 그동안 드러나지 않았고, 대시보드에서 만든 `horoscopes`·`user_devices`·`notification_log`는 기본 권한이 붙어 정상이라 대비 때문에 더 헷갈렸다. 백업 워크플로우가 service_role로 전 테이블을 훑다가 처음 걸렸다(`supabase/migrations/20260819000000_grant_service_role_select.sql`). **답글 푸시 알림도 같은 벽에 부딪힌다** — Edge Function이 service_role로 `question_answer_replies`를 읽어야 하기 때문이다.
-- **Modal 중첩 금지**: 차단 확인은 별도 `ConfirmDialog`가 아니라 `AnswerModerationSheet`의 3번째 단계(`confirmBlock`)로 처리한다. `BottomSheet`는 닫기 애니메이션(240ms)이 끝난 뒤에야 내부 Modal을 언마운트하므로, 시트를 내리면서 곧바로 두 번째 Modal을 present하면 iOS가 조용히 무시해 **다이얼로그가 아예 뜨지 않는다**. 시트 위에 뭔가를 더 띄워야 하면 항상 시트 안의 단계로 만들 것.
-- **`author_hash` 방어**: 값이 비어 있으면 차단을 건너뛴다. `Set`에 `undefined`가 들어가면 `author_hash` 없는 글이 전부 한꺼번에 사라진다.
-- **EULA(App Store 심사 지침 1.2)**: 공개 답변 작성 화면(`QuestionAnswerForm`)에 무관용 정책 고지 + `docs/community-guidelines.html` 링크를 노출한다. 기본 visibility가 `public`이라 별도 조작 없이 보인다. 설정 > COMMUNITY에서도 접근 가능하고, 같은 섹션에 "차단한 사용자 N명 · 전체 해제"를 둔다 — **해제 수단이 없으면 심사에서 문제가 된다.** 답글 작성창에는 이 고지를 **두지 않는다** — 커뮤니티 피드는 답변을 남겨야만 들어올 수 있어서 답글을 쓸 수 있는 사람은 전원 `QuestionAnswerForm`의 고지를 이미 거쳤다. 1.2가 실제로 요구하는 신고·차단 수단은 답글의 ⋯ 메뉴에 있다.
-
-### 오늘의 질문 — 답글
-
-`AnswerCard` 안에서 인라인으로 펼쳐지는 1단계 답글(답글의 답글은 없다). 서버 스키마는 위 "Supabase 설정" 참고.
-
-- **`reply_count` 비정규화 컬럼을 두지 않았다.** 배지에 보여야 하는 건 "서버의 답글 수"가 아니라 **"이 기기에 보이는 답글 수"**인데, 차단·로컬 숨김은 서버가 알 수 없고 자동 숨김도 부모 카운트를 줄여주지 않는다. 대신 하루치를 `fetchRepliesForAnswers(answerIds)` 한 번으로 받아 배지와 목록을 **같은 배열**에서 뽑는다 — 둘이 어긋날 수가 없다.
-- **이 설계는 "피드가 무페이지네이션"이라는 전제 위에 있다.** 페이지네이션을 도입하는 순간 답글은 펼칠 때 지연 로딩으로 가야 하고, 그때는 배지용 `reply_count`가 (부정확함을 감수하고) 다시 필요해진다. `REPLY_FETCH_LIMIT = 1000`이 그 한계선이다.
-- **차단 Set은 `useAnswerFeed`가 소유하고 `useAnswerReplies`는 넘겨받는다.** 각자 `getBlockedAuthors()`를 읽으면 답글에서 차단했을 때 그 사람의 답변 카드는 화면에 남고 그 아래 답글만 사라진다.
-- **`upsertPublicAnswer`가 `ON CONFLICT DO UPDATE`여야 답글이 산다.** delete + insert로 바꾸면 답변을 수정할 때마다 달린 답글이 cascade로 전부 날아간다.
-- **소유권 판정은 `fetchMyReplyIds`**(`answer_id → reply_id`). `device_id`가 클라이언트에 없어 피드만으로는 내 글을 알 수 없다. 이 조회는 **`hidden_at`을 필터하지 않는다** — 자동 숨김된 내 답글이 있는데 작성창을 다시 열어주면 숨김을 우회해 새로 쓸 수 있다. 대신 "숨겨졌어요 + 삭제" 안내만 남긴다.
-- **저장은 낙관적이지 않다**(`saveReply`). `id`·`created_at`·`author_hash`가 서버 생성인데 공감·삭제·수정기한 판정에 즉시 필요해서, `.select().single()`로 저장된 행을 받아 목록에 끼워 넣는다. 삭제·공감·신고는 낙관적 + 롤백(답변과 동일).
-- **"올린 날에만 수정"은 답글도 같다**(`canEditByCreatedAt`). 로컬 미러가 없어 서버 `created_at`으로 판단하며, 답변과 마찬가지로 **앱 UI에서만 막는다**(RLS는 `USING(true)`).
-- **본문 100자가 두 곳에 정의돼 있다** — SQL `check`와 `ReplyComposer.MAX_LENGTH`. 어긋나면 앱은 통과시키고 서버가 거절해 `console.warn`만 남고 조용히 실패한다.
-- **`ConfirmDialog`가 두 개(답변 삭제·답글 삭제)다.** 동시에 `visible`이 되면 iOS가 하나를 조용히 무시하므로 `pendingDeleteReplyId !== null && !deleteDialogVisible`로 구조적으로 막아둔다. 모더레이션 시트가 열린 상태에서 다이얼로그를 띄우는 경로는 만들지 않는다.
-- **당겨서 새로고침**은 커뮤니티 단계에만 붙는다(`RefreshControl`). 실시간 구독이 없어 남이 쓴 답글은 재진입해야 보였다. `refreshing`을 내릴 때 `sawBusyRef`를 거치는 이유: `refetch`는 tick만 올리는 동기 함수라 그 렌더의 `feedLoading`이 아직 `false`다 — 그대로 비교하면 로딩이 시작되기도 전에 스피너가 꺼진다.
-- **키보드**: 인라인 작성창이 생기면서 `TouchableWithoutFeedback onPress={Keyboard.dismiss}`를 `step === "answer"` 분기만 감싸도록 옮겼다. 커뮤니티 단계까지 감싸면 작성창 여백·카운터를 눌러도 키보드가 내려간다. iOS는 `behavior="padding"`이 포커스된 입력창을 스크롤해주지 않으므로 포커스 시 `measureInWindow` + `scrollTo`로 직접 올린다(`androidKeyboardHeight`는 안드로이드 전용 패딩이라 별도 `keyboardHeightRef`를 쓴다 — 섞으면 iOS에서 이중 패딩이 된다).
-
-### 오늘의 질문 — 내 답변 고정 카드 · 새 답글 배지
-
-내 글에 달린 답글을 보려면 피드를 스크롤해 내 카드를 찾아야 했다. 사용자가 늘수록 나빠지는 구조라 **내 답변을 목록에서 빼고 상단 고정 카드(`MyAnswerCard`)가 전담**하게 했다. 스크롤 위치를 계산해 이동시키는 대신 자리를 고정한 이유: `ScrollView` + `map` 구조라 카드마다 `onLayout`을 달아야 하고, 그래도 사용자는 "가서 봐야" 한다.
-
-- **`MyAnswerCard`는 로컬·서버 혼합이다.** 본문·공개여부·수정가능 판정은 AsyncStorage(`existingAnswer`)가 source of truth고, 공감 수와 답글만 서버에서 온다. 비공개 답변은 서버에 행이 없어 답글이 달릴 수 없으므로 `replies` prop 자체를 넘기지 않는다 — 전부 있거나 전부 없거나라서 값 하나로 묶어 타입이 강제하게 했다.
-- **`answerIds`는 `feedAnswers`가 아니라 `answers` 기준이어야 한다.** 목록에서 뺀 내 답변의 답글까지 조회에서 빠지면 고정 카드가 빈 채로 남는다. 다른 별자리 필터를 걸면 `answers`에서도 내 답변이 빠지므로 그때는 `myAnswerId`를 따로 얹는다(공감 수는 못 받아오므로 `likeCount = null`로 숫자를 감춘다).
-- **읽음 기준값은 `now()`가 아니라 본 답글의 `created_at`이다**(`lib/replySeen.ts`). `created_at`은 서버 시계라, 기기 시계가 조금이라도 뒤처지면 `now()`로 저장한 순간 방금 읽은 답글이 그 기준보다 미래가 되어 영영 새 답글로 남는다.
-- **읽음 처리는 펼침 이벤트가 아니라 "펼쳐져 있는 동안"의 상태로 잡는다**(`useNewReplyBadge`). 당겨서 새로고침으로 답글이 들어오는 경로가 있어서, 이벤트에만 걸면 이미 화면에 보이는 답글에 배지가 다시 붙는다.
-- `replySeen.ts`를 `moderation.ts`와 나눈 이유: 저쪽은 "안 보기로 한 것"의 목록이고 이쪽은 열람 기록이라 `clearModerationState()`가 같이 지우면 안 된다(차단만 풀었는데 배지가 되살아난다).
-- 피드가 비었을 때 문구가 갈린다 — 내 공개 답변이 있으면 "아직 다른 사람의 생각이 없어요", 없으면 "아직 남겨진 생각이 없어요".
-- **답글 푸시 알림은 아직 없다.** 위치 문제는 이걸로 사라지지만 "반응이 왔는지"를 알려면 앱을 열어야 한다. 하려면 `question_answer_replies` INSERT 트리거 → Edge Function → 부모 `device_id`의 push token 조회가 필요하다(피드에 `device_id`를 안 내려보내므로 발송 판단은 서버에서만 가능).
-
-### 운세 리뷰
-
-- **저장소**: AsyncStorage 로컬 전용(`ohaasa:daily_reviews:v1`, 레코드 id = `{date}:{zodiacSign}`). `syncedAt/remoteId`는 미래 서버 동기화용 예약 필드.
-- **키보드 대응**: Android는 `keyboardDidShow`로 높이를 직접 관리, iOS는 `KeyboardAvoidingView behavior="padding"`.
-- **`date` URL 파라미터**: 기록 탭 "수정하기"로 특정 날짜에 진입할 때 사용. 날짜는 항상 fallback 체인을 거쳐 Supabase 조회가 실패해도 기존 리뷰를 열 수 있게 한다.
-
-### 통계 기록 탭
-
-- **리로드**: `useReviewHistory`는 `useFocusEffect`로 탭 진입·복귀 시 자동 리로드(리뷰 작성 후 돌아와도 즉시 반영). `useQuestionAnswerHistory`는 화면 이동 없이 삭제가 일어나므로 수동 `refetch()`도 노출한다.
-- **오늘의 질문 통합**: 별도 탭 없이 기존 캘린더에 리뷰 마커와 구분되는 보조 마커로 표시.
-- **바 차트 width**: percentage string 타입 에러 회피를 위해 `flex: count` / `flex: maxCount - count` 방식 사용.
-
-### 이미지 저장 / SNS 공유
-
-- **라이브러리**: `expo-media-library` + `expo-sharing` + `react-native-view-shot`
-- **저장**: `saveToLibraryAsync()` + `requestPermissionsAsync(true)` (writeOnly). writeOnly면 granular 권한(READ_MEDIA_*)은 런타임에 아예 요청되지 않는다(`MediaLibraryModule.kt`의 `shouldIncludeGranular = ... && !writeOnly`) — 매니페스트에 남아도 죽은 선언이지만 스토어 권한 목록에는 그대로 노출된다.
-- **공유**: `captureRef()` → `shareAsync(uri, { mimeType: 'image/png' })` — 추가 권한 불필요.
-- **동적 import**: `await import('expo-media-library')` — static import 금지.
-- **구현 위치**: `src/hooks/useShareHoroscope.ts`
-
-#### Android 권한 다이어트
-
-매니페스트는 `expo prebuild`가 생성하고 `android/`는 .gitignore 대상이라, **직접 고친 건 다음 빌드에 전부 날아간다. 반드시 config plugin으로 처리할 것.**
-
-- **granular 권한은 `granularPermissions: []`로 끈다** — `expo-media-library` 플러그인 옵션. 기본값이 `['photo','video','audio']`라 두면 READ_MEDIA_IMAGES/VIDEO/AUDIO 셋이 다 박힌다. 애초에 안 넣는 공식 옵션이 있으므로 넣었다가 빼는 방식보다 낫다.
-- **`SYSTEM_ALERT_WINDOW`는 우리 것도, 라이브러리 것도 아니다** — `@expo/config-plugins`의 bare 템플릿 보일러플레이트(`withAndroidBaseMods.js`, 주석에 "REMOVE WHATEVER YOU DO NOT NEED"라고 적혀 있다). prebuild마다 되살아나므로 `plugins/withoutSystemAlertWindow.js`가 걷어낸다.
-- **이 권한에는 `tools:node="remove"`를 쓰면 안 된다** — main 매니페스트에 넣는 AAR이 없어서 단순 필터로 충분하고, remove를 걸면 `react-native`의 **debug** 매니페스트까지 지워져 개발 빌드의 개발자 메뉴·레드박스 오버레이가 깨진다.
-- **`--clean` 없는 prebuild로는 검증이 안 된다**: 기존 매니페스트에 덧쓰기만 하므로 예전에 추가된 권한은 그대로 남는다. EAS는 레포를 새로 클론해 `android/`가 없는 상태로 시작하니 실제 빌드에는 문제없다.
-- 남아야 정상인 것: `INTERNET · VIBRATE · POST_NOTIFICATIONS · READ/WRITE_EXTERNAL_STORAGE · READ_MEDIA_VISUAL_USER_SELECTED`. 뒤의 셋은 expo-media-library 소스 매니페스트에서 온다.
-- **검증은 반드시 산출물로 한다** — `android/app/src/main/AndroidManifest.xml`은 소스일 뿐이고, `tools:node="remove"` 항목이 그대로 남아 있어 정적 스캐너가 오탐한다. Gradle manifest merger를 거친 최종 결과를 봐야 한다.
-  - APK: `$ANDROID_HOME/build-tools/<ver>/aapt2 dump permissions <파일>.apk`
-  - AAB: aapt2로는 못 읽는다(proto 포맷). `unzip -p <파일>.aab base/manifest/AndroidManifest.xml | strings | grep -o "android\.permission\.[A-Z_]*" | sort -u`
-
-#### iOS privacy manifest (ITMS-91053)
-
-애플은 required reason API를 **바이너리 심볼 기준으로** 검사한다. 코드가 실제로 그 경로를 타는지는 무관하고, 링크된 프레임워크에 심볼이 있으면 선언이 있어야 한다. 선언은 앱 레벨 `PrivacyInfo.xcprivacy`와 각 pod의 `<Pod>_privacy.bundle`을 **합집합**으로 본다.
-
-- **`ExpoFileSystem_privacy.bundle` / `ExpoMediaLibrary_privacy.bundle`은 빈 껍데기로 빌드된다** — podspec에 `resource_bundles`가 선언돼 있고 `node_modules/expo-file-system/ios/PrivacyInfo.xcprivacy` 원본도 있는데, IPA에는 `Info.plist`만 담겨 들어온다. 다른 pod들(`React-Core_privacy` 등)은 정상이라 이 둘만의 문제다.
-- 그 결과 **DiskSpace 선언이 IPA 어디에도 없는데** `ExpoFileSystem.framework`는 `NSFileSystemFreeSize` · `NSURLVolumeAvailableCapacityForImportantUsageKey` · `NSURLVolumeTotalCapacityKey`를 참조한다 → 업로드 시 ITMS-91053. `app.config.js`의 `ios.privacyManifests`로 앱 레벨에 직접 선언해 막았다.
-- **`ios.privacyManifests`는 덮어쓰지 않고 병합한다**(`@expo/config-plugins`의 `PrivacyInfo.js` `mergePrivacyInfo`) — 기본 생성되는 FileTimestamp·UserDefaults·SystemBootTime은 그대로 남으므로 부족한 카테고리만 추가하면 된다.
-- expo/RN 프레임워크가 자체 `PrivacyInfo.xcprivacy`를 안 갖고 있다고 지적하는 스캐너는 **오탐이다.** CocoaPods는 privacy manifest를 프레임워크 안이 아니라 앱 번들 루트의 `<Pod>_privacy.bundle`로 내보낸다. 프레임워크 디렉토리만 뒤지면 전부 "missing"으로 보인다.
-- 검증 (IPA 압축 해제 후 `Payload/*.app` 기준):
-  - 선언 집합: `find . -name "PrivacyInfo.xcprivacy" -exec plutil -p {} \; | grep NSPrivacyAccessedAPIType\"`
-  - 실제 사용: `nm -um Frameworks/<X>.framework/<X> | grep -i "volume\|systemfree\|statfs"`
-  - 이 둘을 대조해 **사용은 있는데 선언이 없는 카테고리**를 찾는다.
-
----
+- 요청 범위 밖 리팩터링이나 파일 정리를 하지 않는다.
+- 기존 사용자 변경사항을 되돌리거나 덮어쓰지 않는다.
+- DB 스키마/API 변경 시 migration, 타입, 호출부, 테스트를 함께 점검한다.
+- 변경 후 영향 범위에 맞는 타입 검사·테스트·빌드를 실행한다.
+- 크롤링 실패는 exit 1로 끝낸다. 알림 발송은 backend에서 대신 처리하지 않는다.
+- Expo 패치 버전은 일부 패키지만 올리지 않는다. 네이티브 모듈 두 벌이 설치될 수 있으므로 `npx expo install --fix`로 세트 전체를 맞추거나 현재 lockfile을 유지한다.
 
 ## 배포 전 체크리스트
 
-> **배포 전 반드시 수기로 확인할 것. 자동으로 올라가지 않는다.**
+- [ ] `app/app.config.js`의 marketing `version`을 올렸는가?
+- [ ] 설정 화면 푸터와 이 문서의 현재 버전을 맞췄는가?
+- [ ] `docs/` 변경을 push해 GitHub Pages 링크를 확인했는가?
+- [ ] 신규 Supabase migration을 실제 프로젝트에 적용했는가?
+- [ ] 새 테이블의 RLS와 `anon`/`service_role` GRANT를 확인했는가?
+- [ ] 답변·답글 `author_hash` PEPPER가 일치하는가?
 
-- [ ] `app/app.config.js`의 `version` 필드를 올렸는가?
-- [ ] 이 파일(`CLAUDE.md`) 하단의 "현재 버전"을 같은 값으로 수정했는가?
-- [ ] `app/app/(tabs)/settings.tsx` 푸터의 버전 텍스트(현재 `v1.6.0`)도 같이 고쳤는가? (하드코딩되어 있다)
-- [ ] `docs/` 변경분을 push해 GitHub Pages에 반영했는가? (앱 내 링크가 404가 되면 심사에서 걸린다)
-- [ ] `supabase/migrations/` 신규 SQL을 실행했는가? (`supabase/`는 .gitignore 대상이라 CI가 대신 해주지 않는다)
-- [ ] **GRANT가 실제로 붙었는지 확인했는가?** 새 테이블마다 필수다 — `question_answer_reports`가 이 함정에 걸려 신고가 한 건도 안 들어간 적이 있다. 검증 SQL은 답글 마이그레이션 하단 `-- (f)` 주석 참고.
-- [ ] **`author_hash` PEPPER가 테이블 간 일치하는가?** 오타 하나면 차단이 절반만 걸린다. 검증 SQL은 같은 파일 `-- (g)` 주석 참고.
-
-버전은 `app.config.js` 한 곳만 고치면 EAS 빌드에 반영된다. CLAUDE.md의 "현재 버전"은 대화 맥락용 메모이므로 같이 맞춰줘야 한다.
-
-- **`versionCode`·`buildNumber`는 손대지 않는다** — `eas.json`이 `appVersionSource: "remote"` + production `autoIncrement: true`라 EAS가 서버에서 관리한다. `app.config.js`에 적으면 원격 값과 두 개의 진실이 된다. 수기로 올릴 것은 마케팅 버전(`version`)뿐이다.
-- **`expo-doctor`의 "Patch version mismatches"는 세트로만 움직인다.** doctor가 말하는 `expected`는 설치된 expo의 `bundledNativeModules`가 아니라 **Expo API의 최신 패치 목록**이다(그래서 expo 자신이 요구하는 버전보다 높게 뜬다). 일부만 올리면 `expo`가 요구하는 예전 버전이 `node_modules/expo/` 아래에 중첩 설치되어 **같은 네이티브 모듈이 두 벌**이 된다 — 오토링킹 사고. `npx expo install --fix`로 전부 같이 올리거나, 전부 두거나 둘 중 하나다. 패치 차이만 남은 상태로 배포하는 건 문제없다(EAS는 lockfile로 설치하고, lockfile은 내부적으로 일관된 한 세대다). 2026-08-17에는 `expo@56.0.20`이 요구하는 `expo-file-system@~56.0.10`이 npm에 없어서(`sdk-56` 태그가 56.0.9에서 멈춤) `--fix` 자체가 불가능했다 — 업스트림 publish 누락이므로 기다렸다가 다시 돌린다.
-
----
-
-## 개발 원칙
-
-- 한 번에 하나의 Phase/Step만 구현한다
-- Secret 키 원문을 로그에 출력하지 않는다
-- 크롤링 실패 → exit 1. 알림은 Edge Function이 독립적으로 처리하므로 backend에서 관여하지 않는다.
-- 스키마/API 구조 변경은 테스트로 먼저 감지한다
+`versionCode`와 `buildNumber`는 EAS remote autoIncrement가 관리하므로 로컬에 추가하지 않는다. Play Console, EAS, Supabase Function 등 외부 배포는 명시적으로 요청받았을 때만 수행한다.

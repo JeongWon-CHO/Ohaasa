@@ -59,7 +59,9 @@ export function useAnswerReplies(
   // 글자 그대로 같은 setReplies(prev => prev.map(...)) 형태가 되기 때문이다.
   const [replies, setReplies] = useState<PublicReply[]>([]);
   const [likedReplyIds, setLikedReplyIds] = useState<Set<string>>(new Set());
-  const [myReplyIdByAnswer, setMyReplyIdByAnswer] = useState<Map<string, string>>(new Map());
+  const [myReplyIdByAnswer, setMyReplyIdByAnswer] = useState<
+    Map<string, string>
+  >(new Map());
   const [hiddenReplyIds, setHiddenReplyIds] = useState<Set<string>>(new Set());
   const [loaded, setLoaded] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -133,9 +135,14 @@ export function useAnswerReplies(
   const saveReply = useCallback(
     async (answerId: string, body: string): Promise<boolean> => {
       const trimmed = body.trim();
-      if (!deviceId || !zodiacSign || trimmed.length === 0) return false;
+      if (!deviceId || trimmed.length === 0) return false;
 
-      const saved = await upsertPublicReply(answerId, deviceId, zodiacSign, trimmed);
+      const saved = await upsertPublicReply(
+        answerId,
+        deviceId,
+        zodiacSign,
+        trimmed,
+      );
       if (!saved) return false;
 
       setReplies((prev) => {
@@ -170,9 +177,13 @@ export function useAnswerReplies(
       if (ok) return true;
 
       setReplies((prev) =>
-        [...prev, removed].sort((a, b) => a.created_at.localeCompare(b.created_at)),
+        [...prev, removed].sort((a, b) =>
+          a.created_at.localeCompare(b.created_at),
+        ),
       );
-      setMyReplyIdByAnswer((prev) => new Map(prev).set(removed.answer_id, removed.id));
+      setMyReplyIdByAnswer((prev) =>
+        new Map(prev).set(removed.answer_id, removed.id),
+      );
       return false;
     },
     [deviceId, replies],
@@ -193,7 +204,9 @@ export function useAnswerReplies(
       });
       setReplies((prev) =>
         prev.map((r) =>
-          r.id === replyId ? { ...r, like_count: r.like_count + (nextLiked ? 1 : -1) } : r,
+          r.id === replyId
+            ? { ...r, like_count: r.like_count + (nextLiked ? 1 : -1) }
+            : r,
         ),
       );
 
@@ -208,7 +221,9 @@ export function useAnswerReplies(
         });
         setReplies((prev) =>
           prev.map((r) =>
-            r.id === replyId ? { ...r, like_count: r.like_count + (nextLiked ? -1 : 1) } : r,
+            r.id === replyId
+              ? { ...r, like_count: r.like_count + (nextLiked ? -1 : 1) }
+              : r,
           ),
         );
       });
@@ -229,7 +244,10 @@ export function useAnswerReplies(
 
       const result: ReportResult = deviceId
         ? await reportReplyRemote(replyId, deviceId, reason)
-        : { ok: false, error: 'device_id 없음 — 신고 요청을 보내지 않았습니다' };
+        : {
+            ok: false,
+            error: 'device_id 없음 — 신고 요청을 보내지 않았습니다',
+          };
 
       if (result.ok) return result;
 
