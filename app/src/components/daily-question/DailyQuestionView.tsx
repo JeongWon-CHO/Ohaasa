@@ -187,6 +187,10 @@ export function DailyQuestionView({
     filterSign ?? (tab === 'mine' && zodiacSign ? zodiacSign : 'all');
 
   function handleChangeTab(next: AnswerFeedTab) {
+    if (next === 'mine' && !zodiacSign) {
+      showToast('내 별자리를 보려면 별자리를 먼저 설정해 주세요');
+      return;
+    }
     setTab(next);
     setFilterSign(null);
   }
@@ -520,7 +524,6 @@ export function DailyQuestionView({
                   <View style={styles.communitySection}>
                     <AnswerFeedTabs
                       tab={tab}
-                      mySign={zodiacSign}
                       onChangeTab={handleChangeTab}
                     />
 
