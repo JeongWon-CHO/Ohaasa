@@ -14,7 +14,7 @@ module.exports = {
   expo: {
     name: appName,
     slug: 'ohaasa',
-    version: '1.8.0',
+    version: '1.8.1',
     orientation: 'portrait',
     icon: './assets/images/icon.png',
     scheme: 'ohaasa',
@@ -64,6 +64,15 @@ module.exports = {
     },
     plugins: [
       'expo-router',
+      [
+        'expo-build-properties',
+        {
+          ios: {
+            // Xcode 27로 빌드한 앱은 UIScene 생명주기가 필수다.
+            enableSceneSupport: true,
+          },
+        },
+      ],
       'expo-notifications',
       'expo-dev-client',
       'expo-font',
@@ -86,6 +95,7 @@ module.exports = {
       './plugins/withWriteOnlyMediaLibrary',
       './plugins/withoutSystemAlertWindow',
       './plugins/withGradleJvmArgs',
+      './plugins/withIosDeploymentTarget',
     ],
     experiments: {
       typedRoutes: true,
