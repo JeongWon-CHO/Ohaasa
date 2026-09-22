@@ -2,7 +2,10 @@ import { useCallback, useEffect, useState } from 'react';
 
 import type { ZodiacSign } from '@ohaasa/shared/constants/zodiac';
 import { getOrCreateDeviceId } from '@ohaasa/shared/lib/storage';
-import { deletePublicAnswer, upsertPublicAnswer } from '@ohaasa/shared/lib/supabase';
+import {
+  deletePublicAnswer,
+  upsertPublicAnswer,
+} from '@ohaasa/shared/lib/supabase';
 import {
   deleteQuestionAnswer,
   getQuestionAnswer,
@@ -77,16 +80,20 @@ export function useQuestionAnswerForm({
     setIsSaving(true);
     try {
       const deviceId = await getOrCreateDeviceId();
+      // UI 상태와 무관하게 저장 경계에서도 별자리 미등록 사용자는 비공개로 강제한다.
+      const visibility: AnswerVisibility = zodiacSign
+        ? form.visibility
+        : 'private';
 
       const saved = await upsertQuestionAnswer({
         date,
         zodiacSign,
         questionText,
         body: form.body.trim(),
-        visibility: form.visibility,
+        visibility,
       });
 
-      if (form.visibility === 'public') {
+      if (visibility === 'public' && zodiacSign) {
         await upsertPublicAnswer(date, deviceId, zodiacSign, saved.body);
       } else if (existingAnswer?.visibility === 'public') {
         await deletePublicAnswer(date, deviceId);

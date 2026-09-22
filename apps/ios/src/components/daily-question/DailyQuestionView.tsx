@@ -509,7 +509,10 @@ export function DailyQuestionView({
                           onChangeBody={(body) =>
                             setForm((f) => ({ ...f, body }))
                           }
-                          isPublic={form.visibility === 'public'}
+                          isPublic={
+                            zodiacSign !== null && form.visibility === 'public'
+                          }
+                          canPostPublic={zodiacSign !== null}
                           onChangeIsPublic={(isPublic) =>
                             setForm((f) => ({
                               ...f,
@@ -522,10 +525,7 @@ export function DailyQuestionView({
                   </TouchableWithoutFeedback>
                 ) : (
                   <View style={styles.communitySection}>
-                    <AnswerFeedTabs
-                      tab={tab}
-                      onChangeTab={handleChangeTab}
-                    />
+                    <AnswerFeedTabs tab={tab} onChangeTab={handleChangeTab} />
 
                     <View style={styles.sortRow}>
                       <AnswerSortToggle

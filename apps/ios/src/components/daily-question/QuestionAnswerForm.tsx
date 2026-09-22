@@ -1,4 +1,11 @@
-import { Linking, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import {
+  Linking,
+  Pressable,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
 
 import { colors, radius, spacing, typography } from '@/src/constants/design';
 import { COMMUNITY_GUIDELINES_URL } from '@ohaasa/shared/constants/links';
@@ -10,6 +17,7 @@ interface QuestionAnswerFormProps {
   body: string;
   onChangeBody: (body: string) => void;
   isPublic: boolean;
+  canPostPublic: boolean;
   onChangeIsPublic: (isPublic: boolean) => void;
 }
 
@@ -18,6 +26,7 @@ export function QuestionAnswerForm({
   body,
   onChangeBody,
   isPublic,
+  canPostPublic,
   onChangeIsPublic,
 }: QuestionAnswerFormProps) {
   return (
@@ -37,10 +46,18 @@ export function QuestionAnswerForm({
         <View style={styles.inputFooter}>
           <Pressable
             onPress={() => onChangeIsPublic(!isPublic)}
-            style={({ pressed }) => [styles.visibilityRow, pressed && { opacity: 0.6 }]}
+            disabled={!canPostPublic}
+            style={({ pressed }) => [
+              styles.visibilityRow,
+              !canPostPublic && styles.visibilityRowDisabled,
+              pressed && canPostPublic && { opacity: 0.6 },
+            ]}
             hitSlop={8}
             accessibilityRole="radio"
-            accessibilityState={{ checked: !isPublic }}
+            accessibilityState={{
+              checked: !isPublic,
+              disabled: !canPostPublic,
+            }}
           >
             <View style={[styles.radio, !isPublic && styles.radioSelected]}>
               {!isPublic && <View style={styles.radioDot} />}
@@ -54,6 +71,12 @@ export function QuestionAnswerForm({
         </View>
       </View>
 
+      {!canPostPublic && (
+        <Text style={styles.privateOnlyNotice}>
+          별자리가 없으면 나만 보기로만 게시할 수 있어요.
+        </Text>
+      )}
+
       {/*
         App Store 심사 지침 1.2(UGC)는 공개 게시 전에 불쾌한 콘텐츠 무관용 정책에 대한
         동의 절차를 요구한다. 기본값이 '공개'이므로 이 고지는 별도 조작 없이 노출된다.
@@ -66,8 +89,9 @@ export function QuestionAnswerForm({
         >
           <Text style={styles.notice}>
             공개한 답변은 다른 사용자에게 보여요. 공개하면{' '}
-            <Text style={styles.noticeLink}>커뮤니티 가이드라인</Text>에 동의하는 것으로
-            간주되며, 욕설·괴롭힘 등 불쾌한 콘텐츠는 무관용 정책에 따라 24시간 이내에 삭제돼요.
+            <Text style={styles.noticeLink}>커뮤니티 가이드라인</Text>에
+            동의하는 것으로 간주되며, 욕설·괴롭힘 등 불쾌한 콘텐츠는 무관용
+            정책에 따라 24시간 이내에 삭제돼요.
           </Text>
         </Pressable>
       )}
@@ -119,6 +143,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 6,
   },
+  visibilityRowDisabled: {
+    opacity: 0.64,
+  },
   radio: {
     width: 14,
     height: 14,
@@ -143,12 +170,19 @@ const styles = StyleSheet.create({
     color: colors.textSoft,
     lineHeight: 18,
   },
+  privateOnlyNotice: {
+    fontSize: 11,
+    fontFamily: 'NotoSansKR_400Regular',
+    color: colors.apricotDark,
+    lineHeight: 17,
+    paddingLeft: spacing.xs,
+  },
   notice: {
     fontSize: 11,
     fontFamily: 'NotoSansKR_300Light',
     color: colors.textSoft,
     lineHeight: 17,
-    marginTop: -spacing.sm,
+    paddingLeft: spacing.xs,
   },
   noticeLink: {
     fontFamily: 'NotoSansKR_500Medium',
