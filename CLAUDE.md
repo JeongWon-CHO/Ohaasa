@@ -24,8 +24,10 @@ GitHub Actions (cron: UTC 20:59 = KST 05:59, 매일 1회)
                       ├─ user_devices 조회
                       └─ Expo Push API 발송 → FCM → 단말기
 
-React Native Expo (app/)
-  └─ Supabase horoscopes SELECT → advice_ko ?? advice 표시
+React Native Expo
+  ├─ apps/android/ (Android 앱)
+  └─ apps/ios/     (iOS 앱)
+       └─ Supabase horoscopes SELECT → advice_ko ?? advice 표시
 ```
 
 ---
@@ -35,13 +37,14 @@ React Native Expo (app/)
 > 파일 목록은 디렉토리를 직접 읽는다. 여기엔 **새 코드를 어디에 둘지**만 적는다.
 
 ```
-app/app/                        expo-router 화면. (tabs)/ 안이 탭, 밖은 router.push 진입
-app/src/context/                전역 상태 (ZodiacContext)
-app/src/constants/              질문 목록 · 외부 URL 등 정적 데이터
-app/src/lib/                    플랫폼·서버 경계 — supabase · AsyncStorage CRUD · notifications
-app/src/hooks/                  화면 간 재사용 로직 (use<도메인>)
-app/src/components/common/      화면 무관 공통 (BottomSheet 등)
-app/src/components/<화면명>/     화면 전용 컴포넌트 (daily-question · daily-review · stats)
+apps/android/                   Android Expo 앱 (main 브랜치 계열)
+apps/ios/                       iOS Expo 앱 (ios-main 브랜치 계열)
+apps/<플랫폼>/app/              expo-router 화면. (tabs)/ 안이 탭, 밖은 router.push 진입
+apps/<플랫폼>/src/context/      전역 상태 (ZodiacContext)
+apps/<플랫폼>/src/constants/    질문 목록 · 외부 URL 등 정적 데이터
+apps/<플랫폼>/src/lib/          플랫폼·서버 경계 — supabase · AsyncStorage CRUD · notifications
+apps/<플랫폼>/src/hooks/        화면 간 재사용 로직 (use<도메인>)
+apps/<플랫폼>/src/components/   공통 및 화면 전용 컴포넌트
 backend/src/                    crawler(fetcher · parser, 31 tests) · translator · main.ts
 supabase/                       Edge Function + migrations — .gitignore 대상이라 git에 없다
 ```
@@ -304,9 +307,9 @@ CREATE POLICY "user_devices_anon_select" ON public.user_devices FOR SELECT  TO a
 
 > **배포 전 반드시 수기로 확인할 것. 자동으로 올라가지 않는다.**
 
-- [ ] `app/app.config.js`의 `version` 필드를 올렸는가?
+- [ ] 배포 대상 앱의 `apps/<플랫폼>/app.config.js`에서 `version` 필드를 올렸는가?
 - [ ] 이 파일(`CLAUDE.md`) 하단의 "현재 버전"을 같은 값으로 수정했는가?
-- [ ] `app/app/(tabs)/settings.tsx` 푸터의 버전 텍스트(현재 `v1.7.0`)도 같이 고쳤는가? (하드코딩되어 있다)
+- [ ] 배포 대상 앱의 `apps/<플랫폼>/app/(tabs)/settings.tsx` 푸터 버전도 같이 고쳤는가? (하드코딩되어 있다)
 - [ ] `docs/` 변경분을 push해 GitHub Pages에 반영했는가? (앱 내 링크가 404가 되면 심사에서 걸린다)
 - [ ] `supabase/migrations/` 신규 SQL을 실행했는가? (`supabase/`는 .gitignore 대상이라 CI가 대신 해주지 않는다)
 - [ ] **GRANT가 실제로 붙었는지 확인했는가?** 새 테이블마다 필수다 — `question_answer_reports`가 이 함정에 걸려 신고가 한 건도 안 들어간 적이 있다. 검증 SQL은 답글 마이그레이션 하단 `-- (f)` 주석 참고.
