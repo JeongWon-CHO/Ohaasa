@@ -8,7 +8,7 @@ import {
 import { Feather } from "@expo/vector-icons";
 
 import { BottomSheet } from "@/src/components/common/BottomSheet";
-import { useAvailableHoroscopeDates } from "@/src/hooks/useAvailableHoroscopeDates";
+import { useAvailableHoroscopeDates } from "@ohaasa/shared/hooks/useAvailableHoroscopeDates";
 import { colors, radius } from "@/src/constants/design";
 
 interface HoroscopeDateSheetProps {

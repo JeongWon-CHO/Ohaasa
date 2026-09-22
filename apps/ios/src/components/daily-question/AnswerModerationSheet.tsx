@@ -4,8 +4,8 @@ import { Feather } from '@expo/vector-icons';
 
 import { BottomSheet } from '@/src/components/common/BottomSheet';
 import { colors, radius, spacing } from '@/src/constants/design';
-import { COMMUNITY_GUIDELINES_URL } from '@/src/constants/links';
-import { REPORT_REASONS, type ReportReason } from '@/src/lib/moderation';
+import { COMMUNITY_GUIDELINES_URL } from '@ohaasa/shared/constants/links';
+import { REPORT_REASONS, type ReportReason } from '@ohaasa/shared/lib/moderation';
 
 interface AnswerModerationSheetProps {
   visible: boolean;

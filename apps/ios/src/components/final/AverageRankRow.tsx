@@ -2,8 +2,8 @@ import { StyleSheet, Text, View } from 'react-native';
 
 import { ConstellationBadge } from '@/src/components/final/ConstellationBadge';
 import { colors, zodiacColors } from '@/src/constants/design';
-import { ZODIAC_MAP } from '@/src/constants/zodiac';
-import type { ZodiacSign } from '@/src/constants/zodiac';
+import { ZODIAC_MAP } from '@ohaasa/shared/constants/zodiac';
+import type { ZodiacSign } from '@ohaasa/shared/constants/zodiac';
 import type { Trend } from '@/src/hooks/useHoroscopeTrends';
 
 interface AverageRankRowProps {

@@ -1,4 +1,4 @@
-import { DRAWING_QUESTIONS } from './daily-questions';
+import { DRAWING_QUESTIONS } from './daily-questions/drawing';
 
 /**
  * 빈 캔버스 앞에서 "오늘 뭘 그리지"로 막히는 걸 덜어주는 하루 한 줄.

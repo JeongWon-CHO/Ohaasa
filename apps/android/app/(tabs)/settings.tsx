@@ -22,8 +22,8 @@ import { SettingsRow } from "@/src/components/final/SettingsRow";
 import { SettingsSection } from "@/src/components/final/SettingsSection";
 import { Toggle } from "@/src/components/final/Toggle";
 import { colors, gradients, zodiacColors } from "@/src/constants/design";
-import { ZODIAC_MAP } from "@/src/constants/zodiac";
-import { useZodiac } from "@/src/hooks/useZodiac";
+import { ZODIAC_MAP } from "@ohaasa/shared/constants/zodiac";
+import { useZodiac } from "@ohaasa/shared/hooks/useZodiac";
 import {
   checkPermissionStatus,
   requestPushToken,
@@ -39,16 +39,16 @@ import {
   setPushToken,
   setPlatform,
   clearZodiacSign,
-} from "@/src/lib/storage";
+} from "@ohaasa/shared/lib/storage";
 import { ConfirmDialog } from "@/src/components/common/ConfirmDialog";
-import { COMMUNITY_GUIDELINES_URL, PRIVACY_POLICY_URL } from "@/src/constants/links";
+import { COMMUNITY_GUIDELINES_URL, PRIVACY_POLICY_URL } from "@ohaasa/shared/constants/links";
 import {
   clearBlockedAuthors,
   clearModerationState,
   getBlockedAuthorCount,
-} from "@/src/lib/moderation";
-import { upsertDevice } from "@/src/lib/supabase";
-import { deleteDailyReview } from "@/src/lib/dailyReviews";
+} from "@ohaasa/shared/lib/moderation";
+import { upsertDevice } from "@ohaasa/shared/lib/supabase";
+import { deleteDailyReview } from "@ohaasa/shared/lib/dailyReviews";
 
 // ─── Screen ───────────────────────────────────────────────────
 

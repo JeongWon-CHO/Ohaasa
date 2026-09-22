@@ -14,8 +14,8 @@ import { useEffect } from 'react';
 import 'react-native-reanimated';
 
 import { useColorScheme } from '@/components/useColorScheme';
-import { HoroscopeDateProvider } from '@/src/context/HoroscopeDateContext';
-import { ZodiacProvider } from '@/src/context/ZodiacContext';
+import { HoroscopeDateProvider } from '@ohaasa/shared/context/HoroscopeDateContext';
+import { ZodiacProvider } from '@ohaasa/shared/context/ZodiacContext';
 import { usePushNavigation } from '@/src/hooks/usePushNavigation';
 import { setupForegroundHandler } from '@/src/lib/notifications';
 

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 
-import { getReplySeenAt, setReplySeenAt } from '@/src/lib/replySeen';
-import type { PublicReply } from '@/src/lib/supabase';
+import { getReplySeenAt, setReplySeenAt } from '@ohaasa/shared/lib/replySeen';
+import type { PublicReply } from '@ohaasa/shared/lib/supabase';
 
 type UseNewReplyBadgeParams = {
   /** 배지를 붙일 답변. 비공개 답변(서버 행 없음)이면 null. */

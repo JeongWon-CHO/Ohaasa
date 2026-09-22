@@ -2,8 +2,8 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { ConstellationBadge } from '@/src/components/final/ConstellationBadge';
 import { colors, zodiacColors } from '@/src/constants/design';
-import { ZODIAC_MAP } from '@/src/constants/zodiac';
-import type { Horoscope } from '@/src/types/horoscope';
+import { ZODIAC_MAP } from '@ohaasa/shared/constants/zodiac';
+import type { Horoscope } from '@ohaasa/shared/types/horoscope';
 
 interface RankingRowProps {
   horoscope: Horoscope;

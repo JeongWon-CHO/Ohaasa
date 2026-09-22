@@ -9,7 +9,7 @@ import {
 import FontAwesome from "@expo/vector-icons/FontAwesome";
 
 import { colors } from "@/src/constants/design";
-import type { Horoscope } from "@/src/types/horoscope";
+import type { Horoscope } from "@ohaasa/shared/types/horoscope";
 import { FinalCard } from "./FinalCard";
 
 interface GogoInfoGridProps {

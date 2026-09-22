@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
-import type { ZodiacSign } from '@/src/constants/zodiac';
+import type { ZodiacSign } from '@ohaasa/shared/constants/zodiac';
 import {
   addHiddenReplyId,
   getHiddenReplyIds,
   removeHiddenReplyId,
   type ReportReason,
-} from '@/src/lib/moderation';
+} from '@ohaasa/shared/lib/moderation';
 import {
   deletePublicReply,
   fetchMyLikedReplyIds,
@@ -17,7 +17,7 @@ import {
   upsertPublicReply,
   type PublicReply,
   type ReportResult,
-} from '@/src/lib/supabase';
+} from '@ohaasa/shared/lib/supabase';
 
 type UseAnswerRepliesResult = {
   /** answer_id → 이 기기에 보이는 답글, 오래된 순. 차단·숨김 필터를 거친 결과다. */

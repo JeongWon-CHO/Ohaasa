@@ -1,7 +1,7 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { colors, shadows } from '@/src/constants/design';
-import type { AnswerFeedTab } from '@/src/hooks/useAnswerFeed';
+import type { AnswerFeedTab } from '@ohaasa/shared/hooks/useAnswerFeed';
 
 interface AnswerFeedTabsProps {
   tab: AnswerFeedTab;

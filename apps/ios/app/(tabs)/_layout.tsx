@@ -11,8 +11,8 @@ import {
   getNotificationsEnabled,
   getPushToken,
   getPlatform,
-} from "@/src/lib/storage";
-import { upsertDevice } from "@/src/lib/supabase";
+} from "@ohaasa/shared/lib/storage";
+import { upsertDevice } from "@ohaasa/shared/lib/supabase";
 
 /**
  * 앱의 나머지가 전부 Feather를 쓰는데 탭바만 FontAwesome이라 획 두께가 튀었다.

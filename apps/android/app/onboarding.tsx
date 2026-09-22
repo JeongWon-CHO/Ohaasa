@@ -33,16 +33,16 @@ import {
   ZODIAC_MAP,
   type ZodiacInfo,
   type ZodiacSign,
-} from "@/src/constants/zodiac";
+} from "@ohaasa/shared/constants/zodiac";
 import { colors, gradients, layout } from "@/src/constants/design";
-import { useZodiac } from "@/src/hooks/useZodiac";
+import { useZodiac } from "@ohaasa/shared/hooks/useZodiac";
 import {
   getOrCreateDeviceId,
   getPushToken,
   getPlatform,
   getNotificationsEnabled,
-} from "@/src/lib/storage";
-import { upsertDevice } from "@/src/lib/supabase";
+} from "@ohaasa/shared/lib/storage";
+import { upsertDevice } from "@ohaasa/shared/lib/supabase";
 
 type OnboardingStep = "intro" | "selection";
 

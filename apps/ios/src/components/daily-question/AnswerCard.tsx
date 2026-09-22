@@ -10,8 +10,8 @@ import {
   spacing,
   zodiacColors,
 } from '@/src/constants/design';
-import { ZODIAC_MAP } from '@/src/constants/zodiac';
-import type { PublicAnswer } from '@/src/lib/supabase';
+import { ZODIAC_MAP } from '@ohaasa/shared/constants/zodiac';
+import type { PublicAnswer } from '@ohaasa/shared/lib/supabase';
 
 interface AnswerCardProps {
   answer: PublicAnswer;

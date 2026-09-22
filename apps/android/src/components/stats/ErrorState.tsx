@@ -3,7 +3,7 @@ import { Feather } from "@expo/vector-icons";
 
 import { ConstellationBadge } from "@/src/components/final/ConstellationBadge";
 import { colors } from "@/src/constants/design";
-import type { ZodiacSign } from "@/src/constants/zodiac";
+import type { ZodiacSign } from "@ohaasa/shared/constants/zodiac";
 
 interface ErrorStateProps {
   zodiacSign: ZodiacSign | null;

@@ -3,7 +3,7 @@ import { ActivityIndicator, StyleSheet } from "react-native";
 
 import { DailyQuestionView } from "@/src/components/daily-question/DailyQuestionView";
 import { colors, gradients } from "@/src/constants/design";
-import { useHoroscopeDateContext } from "@/src/context/HoroscopeDateContext";
+import { useHoroscopeDateContext } from "@ohaasa/shared/context/HoroscopeDateContext";
 
 /**
  * 커뮤니티 탭 — 오늘(방송일)의 질문.

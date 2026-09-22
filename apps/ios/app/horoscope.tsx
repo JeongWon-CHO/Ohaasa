@@ -12,7 +12,7 @@ import {
 import { Feather } from "@expo/vector-icons";
 import { TodayQuestionSection } from "@/src/components/daily-question/TodayQuestionSection";
 import { DailyReviewEntryCard } from "@/src/components/daily-review/DailyReviewEntryCard";
-import { useDailyQuestion } from "@/src/hooks/useDailyQuestion";
+import { useDailyQuestion } from "@ohaasa/shared/hooks/useDailyQuestion";
 import { LinearGradient } from "expo-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -27,7 +27,7 @@ import { MediaDeniedSheet } from "@/src/components/MediaDeniedSheet";
 import { PushPermissionSheet } from "@/src/components/PushPermissionSheet";
 import { ShareCard } from "@/src/components/share/ShareCard";
 import { Toast } from "@/src/components/common/Toast";
-import { useHoroscopeDateContext } from "@/src/context/HoroscopeDateContext";
+import { useHoroscopeDateContext } from "@ohaasa/shared/context/HoroscopeDateContext";
 import {
   colors,
   gradients,
@@ -35,13 +35,13 @@ import {
   radius,
   spacing,
 } from "@/src/constants/design";
-import { ZODIAC_MAP } from "@/src/constants/zodiac";
-import { useAllHoroscopes } from "@/src/hooks/useHoroscope";
-import { getDailyReview, type DailyReview } from "@/src/lib/dailyReviews";
+import { ZODIAC_MAP } from "@ohaasa/shared/constants/zodiac";
+import { useAllHoroscopes } from "@ohaasa/shared/hooks/useHoroscope";
+import { getDailyReview, type DailyReview } from "@ohaasa/shared/lib/dailyReviews";
 import { usePushPermissionPrompt } from "@/src/hooks/usePushPermissionPrompt";
-import { useShareHoroscope } from "@/src/hooks/useShareHoroscope";
-import { useToast } from "@/src/hooks/useToast";
-import { useZodiac } from "@/src/hooks/useZodiac";
+import { useShareHoroscope } from "@ohaasa/shared/hooks/useShareHoroscope";
+import { useToast } from "@ohaasa/shared/hooks/useToast";
+import { useZodiac } from "@ohaasa/shared/hooks/useZodiac";
 
 const COPY = {
   headerToday: "오늘도 좋은 하루 되세요 ☀️",

@@ -2,7 +2,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 
 import { ConstellationBadge } from '@/src/components/final/ConstellationBadge';
-import { ZODIAC_LIST, type ZodiacSign } from '@/src/constants/zodiac';
+import { ZODIAC_LIST, type ZodiacSign } from '@ohaasa/shared/constants/zodiac';
 import { colors } from '@/src/constants/design';
 
 interface ZodiacPickerProps {

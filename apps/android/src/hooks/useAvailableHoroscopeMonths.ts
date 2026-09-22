@@ -1,7 +1,7 @@
 import { format } from 'date-fns';
 import { useEffect, useState } from 'react';
 
-import { supabase } from '@/src/lib/supabase';
+import { supabase } from '@ohaasa/shared/lib/supabase';
 
 export interface AvailableMonth {
   month: string;    // "YYYY-MM"

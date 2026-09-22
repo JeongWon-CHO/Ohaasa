@@ -5,8 +5,8 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { ConstellationBadge } from '@/src/components/final/ConstellationBadge';
 import { ZODIAC_SIGN_COLORS } from '@/src/components/ZodiacPicker';
 import { colors, radius, spacing } from '@/src/constants/design';
-import { useAllHoroscopes } from '@/src/hooks/useHoroscope';
-import { useZodiac } from '@/src/hooks/useZodiac';
+import { useAllHoroscopes } from '@ohaasa/shared/hooks/useHoroscope';
+import { useZodiac } from '@ohaasa/shared/hooks/useZodiac';
 
 /**
  * 홈 맨 위에 날씨처럼 얹는 한 줄짜리 운세.

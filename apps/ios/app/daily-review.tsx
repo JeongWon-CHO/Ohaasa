@@ -19,11 +19,11 @@ import { BoardingPassNoteInput } from "@/src/components/daily-review/BoardingPas
 import { MemorableItemChips } from "@/src/components/daily-review/MemorableItemChips";
 import { StarRatingInput } from "@/src/components/daily-review/StarRatingInput";
 import { ResponsiveContainer } from "@/src/components/common/ResponsiveContainer";
-import { ZODIAC_MAP } from "@/src/constants/zodiac";
-import { useHoroscopeDateContext } from "@/src/context/HoroscopeDateContext";
-import { useAllHoroscopes } from "@/src/hooks/useHoroscope";
-import { useDailyReview } from "@/src/hooks/useDailyReview";
-import { useZodiac } from "@/src/hooks/useZodiac";
+import { ZODIAC_MAP } from "@ohaasa/shared/constants/zodiac";
+import { useHoroscopeDateContext } from "@ohaasa/shared/context/HoroscopeDateContext";
+import { useAllHoroscopes } from "@ohaasa/shared/hooks/useHoroscope";
+import { useDailyReview } from "@ohaasa/shared/hooks/useDailyReview";
+import { useZodiac } from "@ohaasa/shared/hooks/useZodiac";
 import { colors, gradients, spacing } from "@/src/constants/design";
 
 function formatKoreanDate(dateStr: string | null): string {

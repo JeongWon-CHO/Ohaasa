@@ -11,8 +11,8 @@ import {
   getNotificationsEnabled,
   getPushToken,
   getPlatform,
-} from "@/src/lib/storage";
-import { upsertDevice } from "@/src/lib/supabase";
+} from "@ohaasa/shared/lib/storage";
+import { upsertDevice } from "@ohaasa/shared/lib/supabase";
 
 function TabBarIcon(props: {
   name: React.ComponentProps<typeof FontAwesome>["name"];

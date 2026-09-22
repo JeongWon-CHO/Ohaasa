@@ -1,7 +1,7 @@
 import { router, useRootNavigationState, useSegments } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-import { useHoroscopeDateContext } from '@/src/context/HoroscopeDateContext';
+import { useHoroscopeDateContext } from '@ohaasa/shared/context/HoroscopeDateContext';
 import {
   claimNotificationTap,
   subscribeToNotificationTaps,

@@ -8,6 +8,7 @@
 
 - `apps/android/app/`, `apps/android/src/`: Android Expo 앱
 - `apps/ios/app/`, `apps/ios/src/`: iOS Expo 앱
+- `packages/shared/src/`: 두 앱이 함께 사용하는 운세·별자리·커뮤니티 로직
 - `backend/src/`: 크롤러, 번역, Supabase 저장 파이프라인
 - `supabase/functions/`: Supabase Edge Functions
 

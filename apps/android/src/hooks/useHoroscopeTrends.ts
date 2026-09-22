@@ -1,8 +1,8 @@
 import { addMonths, format, parseISO, subDays } from 'date-fns';
 import { useEffect, useState } from 'react';
 
-import { supabase } from '@/src/lib/supabase';
-import type { ZodiacSign } from '@/src/constants/zodiac';
+import { supabase } from '@ohaasa/shared/lib/supabase';
+import type { ZodiacSign } from '@ohaasa/shared/constants/zodiac';
 
 // 월간 기간은 "m:2026-08" 형태의 문자열이다 — 객체가 아니라 문자열이라
 // state 비교 · useEffect deps · Map 키를 그대로 쓸 수 있다.

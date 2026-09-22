@@ -16,10 +16,10 @@ import { HoroscopeDateSheet } from "@/src/components/HoroscopeDateSheet";
 import { RankingRow } from "@/src/components/final/RankingRow";
 import { CircleDeco, MoonDeco, StarDeco } from "@/src/components/final/ScreenDeco";
 import { ResponsiveContainer } from "@/src/components/common/ResponsiveContainer";
-import { useHoroscopeDateContext } from "@/src/context/HoroscopeDateContext";
+import { useHoroscopeDateContext } from "@ohaasa/shared/context/HoroscopeDateContext";
 import { colors, gradients } from "@/src/constants/design";
-import { useAllHoroscopes } from "@/src/hooks/useHoroscope";
-import { useZodiac } from "@/src/hooks/useZodiac";
+import { useAllHoroscopes } from "@ohaasa/shared/hooks/useHoroscope";
+import { useZodiac } from "@ohaasa/shared/hooks/useZodiac";
 
 // ─── Screen ───────────────────────────────────────────────────
 

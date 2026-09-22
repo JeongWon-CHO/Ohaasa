@@ -6,7 +6,7 @@ import {
   claimNotificationTap,
   getInitialNotificationTap,
 } from '@/src/lib/notifications';
-import { getHasSeenOnboarding, getZodiacSign } from '@/src/lib/storage';
+import { getHasSeenOnboarding, getZodiacSign } from '@ohaasa/shared/lib/storage';
 
 export default function IndexScreen() {
   const router = useRouter();

@@ -5,7 +5,7 @@ import { Feather } from "@expo/vector-icons";
 import { FloatingBadge } from "@/src/components/stats/FloatingBadge";
 import { RankTrendChart } from "@/src/components/stats/RankTrendChart";
 import { colors } from "@/src/constants/design";
-import type { ZodiacInfo } from "@/src/constants/zodiac";
+import type { ZodiacInfo } from "@ohaasa/shared/constants/zodiac";
 import type { RankPoint } from "@/src/hooks/useHoroscopeTrends";
 
 interface ChartCardProps {

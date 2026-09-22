@@ -4,8 +4,8 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { ReplyComposer } from '@/src/components/daily-question/ReplyComposer';
 import { ReplyItem } from '@/src/components/daily-question/ReplyItem';
 import { colors, spacing } from '@/src/constants/design';
-import { canEditByCreatedAt } from '@/src/lib/questionAnswers';
-import type { PublicReply } from '@/src/lib/supabase';
+import { canEditByCreatedAt } from '@ohaasa/shared/lib/questionAnswers';
+import type { PublicReply } from '@ohaasa/shared/lib/supabase';
 
 interface ReplyThreadProps {
   replies: PublicReply[];

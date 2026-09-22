@@ -1,7 +1,7 @@
 import { StyleSheet, Text, View } from 'react-native';
 
 import { colors, radius, spacing } from '@/src/constants/design';
-import type { ItemCount } from '@/src/hooks/useReviewHistory';
+import type { ItemCount } from '@ohaasa/shared/hooks/useReviewHistory';
 
 interface TopMemorableItemsCardProps {
   items: ItemCount[];

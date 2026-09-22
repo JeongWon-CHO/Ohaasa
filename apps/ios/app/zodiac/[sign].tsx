@@ -7,7 +7,7 @@ import {
   View,
 } from "react-native";
 import { ShareCard } from "@/src/components/share/ShareCard";
-import { useShareHoroscope } from "@/src/hooks/useShareHoroscope";
+import { useShareHoroscope } from "@ohaasa/shared/hooks/useShareHoroscope";
 import { LinearGradient } from "expo-linear-gradient";
 import FontAwesome from "@expo/vector-icons/FontAwesome";
 import { Feather } from "@expo/vector-icons";
@@ -26,10 +26,10 @@ import { DatePill } from "@/src/components/final/DatePill";
 import { GogoInfoGrid } from "@/src/components/final/GogoInfoGrid";
 import { HoroscopeCard } from "@/src/components/HoroscopeCard";
 import { ResponsiveContainer } from "@/src/components/common/ResponsiveContainer";
-import { useHoroscopeDateContext } from "@/src/context/HoroscopeDateContext";
+import { useHoroscopeDateContext } from "@ohaasa/shared/context/HoroscopeDateContext";
 import { colors, gradients } from "@/src/constants/design";
-import { ZODIAC_MAP, type ZodiacSign } from "@/src/constants/zodiac";
-import { useAllHoroscopes } from "@/src/hooks/useHoroscope";
+import { ZODIAC_MAP, type ZodiacSign } from "@ohaasa/shared/constants/zodiac";
+import { useAllHoroscopes } from "@ohaasa/shared/hooks/useHoroscope";
 
 // ─── Screen ───────────────────────────────────────────────────
 

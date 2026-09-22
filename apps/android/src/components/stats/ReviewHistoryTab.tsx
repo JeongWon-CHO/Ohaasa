@@ -3,8 +3,8 @@ import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useBottomTabBarHeight } from 'expo-router/js-tabs';
 
 import { colors, spacing } from '@/src/constants/design';
-import { useReviewHistory } from '@/src/hooks/useReviewHistory';
-import { useQuestionAnswerHistory } from '@/src/hooks/useQuestionAnswerHistory';
+import { useReviewHistory } from '@ohaasa/shared/hooks/useReviewHistory';
+import { useQuestionAnswerHistory } from '@ohaasa/shared/hooks/useQuestionAnswerHistory';
 import { NoteArchiveCard } from './NoteArchiveCard';
 import { RatingDistributionCard } from './RatingDistributionCard';
 import { ReviewCalendar } from './ReviewCalendar';

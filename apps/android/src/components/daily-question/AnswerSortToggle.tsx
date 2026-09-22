@@ -2,7 +2,7 @@ import { Feather } from '@expo/vector-icons';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { colors, shadows, spacing } from '@/src/constants/design';
-import type { AnswerFeedSort } from '@/src/hooks/useAnswerFeed';
+import type { AnswerFeedSort } from '@ohaasa/shared/hooks/useAnswerFeed';
 
 const OPTIONS: { value: AnswerFeedSort; label: string }[] = [
   { value: 'latest', label: '최신순' },

@@ -2,8 +2,8 @@ import { Feather } from '@expo/vector-icons';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { colors, radius, spacing } from '@/src/constants/design';
-import type { DailyReview } from '@/src/lib/dailyReviews';
-import type { QuestionAnswer } from '@/src/lib/questionAnswers';
+import type { DailyReview } from '@ohaasa/shared/lib/dailyReviews';
+import type { QuestionAnswer } from '@ohaasa/shared/lib/questionAnswers';
 
 const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토'] as const;
 

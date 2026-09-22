@@ -2,7 +2,7 @@ import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { colors, radius, spacing } from '@/src/constants/design';
-import type { RatingDist } from '@/src/hooks/useReviewHistory';
+import type { RatingDist } from '@ohaasa/shared/hooks/useReviewHistory';
 
 interface RatingDistributionCardProps {
   dist: RatingDist;

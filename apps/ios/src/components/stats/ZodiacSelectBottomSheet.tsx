@@ -4,8 +4,8 @@ import { Feather } from "@expo/vector-icons";
 import { BottomSheet } from "@/src/components/common/BottomSheet";
 import { ConstellationBadge } from "@/src/components/final/ConstellationBadge";
 import { colors, radius, zodiacColors } from "@/src/constants/design";
-import { ZODIAC_LIST } from "@/src/constants/zodiac";
-import type { ZodiacSign } from "@/src/constants/zodiac";
+import { ZODIAC_LIST } from "@ohaasa/shared/constants/zodiac";
+import type { ZodiacSign } from "@ohaasa/shared/constants/zodiac";
 
 interface ZodiacSelectBottomSheetProps {
   visible: boolean;

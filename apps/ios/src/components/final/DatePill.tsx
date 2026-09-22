@@ -3,7 +3,7 @@ import { Feather } from "@expo/vector-icons";
 import Svg, { Circle, Line } from "react-native-svg";
 
 import { colors } from "@/src/constants/design";
-import { useScreenSize } from "@/src/hooks/useScreenSize";
+import { useScreenSize } from "@ohaasa/shared/hooks/useScreenSize";
 
 const PILL_CONFIG = {
   android: { fontSize: 10 },

@@ -8,7 +8,7 @@ import Animated, {
 } from "react-native-reanimated";
 
 import { ConstellationBadge } from "@/src/components/final/ConstellationBadge";
-import type { ZodiacSign } from "@/src/constants/zodiac";
+import type { ZodiacSign } from "@ohaasa/shared/constants/zodiac";
 
 interface FloatingBadgeProps {
   sign?: ZodiacSign;

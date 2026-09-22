@@ -5,8 +5,8 @@ import FontAwesome from "@expo/vector-icons/FontAwesome";
 import Svg, { Circle, Defs, RadialGradient, Stop } from "react-native-svg";
 import { ConstellationBadge } from "@/src/components/final/ConstellationBadge";
 import { colors, gradients } from "@/src/constants/design";
-import type { ZodiacInfo } from "@/src/constants/zodiac";
-import type { Horoscope } from "@/src/types/horoscope";
+import type { ZodiacInfo } from "@ohaasa/shared/constants/zodiac";
+import type { Horoscope } from "@ohaasa/shared/types/horoscope";
 
 export const CARD_WIDTH = 360;
 export const CARD_HEIGHT = 640;

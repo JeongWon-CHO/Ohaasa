@@ -19,17 +19,17 @@ import { MonthSelectSheet } from "@/src/components/stats/MonthSelectSheet";
 import { ZodiacSelectBottomSheet } from "@/src/components/stats/ZodiacSelectBottomSheet";
 import { colors, shadows } from "@/src/constants/design";
 import { gradients } from "@/src/constants/design";
-import { ZODIAC_MAP } from "@/src/constants/zodiac";
-import type { ZodiacSign } from "@/src/constants/zodiac";
+import { ZODIAC_MAP } from "@ohaasa/shared/constants/zodiac";
+import type { ZodiacSign } from "@ohaasa/shared/constants/zodiac";
 import {
   getPeriodMonth,
   monthPeriod,
   useHoroscopeTrends,
   type TrendsPeriod,
 } from "@/src/hooks/useHoroscopeTrends";
-import { useShareHoroscope } from "@/src/hooks/useShareHoroscope";
-import { useToast } from "@/src/hooks/useToast";
-import { useZodiac } from "@/src/hooks/useZodiac";
+import { useShareHoroscope } from "@ohaasa/shared/hooks/useShareHoroscope";
+import { useToast } from "@ohaasa/shared/hooks/useToast";
+import { useZodiac } from "@ohaasa/shared/hooks/useZodiac";
 
 type StatsTab = "trend" | "history";
 

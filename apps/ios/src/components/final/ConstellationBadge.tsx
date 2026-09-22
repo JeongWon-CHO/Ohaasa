@@ -1,6 +1,6 @@
 import { Image, StyleSheet, View, type ImageSourcePropType } from "react-native";
 
-import type { ZodiacSign } from "@/src/constants/zodiac";
+import type { ZodiacSign } from "@ohaasa/shared/constants/zodiac";
 import { radius } from "@/src/constants/design";
 
 interface ConstellationBadgeProps {

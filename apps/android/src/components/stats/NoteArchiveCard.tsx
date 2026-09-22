@@ -2,8 +2,8 @@ import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { colors, radius, spacing } from '@/src/constants/design';
-import { ZODIAC_MAP } from '@/src/constants/zodiac';
-import type { DailyReview } from '@/src/lib/dailyReviews';
+import { ZODIAC_MAP } from '@ohaasa/shared/constants/zodiac';
+import type { DailyReview } from '@ohaasa/shared/lib/dailyReviews';
 
 interface NoteArchiveCardProps {
   notes: DailyReview[];

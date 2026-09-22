@@ -3,7 +3,7 @@ import type { ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { colors, radius, shadows, spacing } from '@/src/constants/design';
-import { canEditAnswer, type QuestionAnswer } from '@/src/lib/questionAnswers';
+import { canEditAnswer, type QuestionAnswer } from '@ohaasa/shared/lib/questionAnswers';
 
 interface MyAnswerCardProps {
   answer: QuestionAnswer;

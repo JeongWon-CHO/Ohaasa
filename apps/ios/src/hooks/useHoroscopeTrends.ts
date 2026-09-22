@@ -1,8 +1,8 @@
 import { endOfMonth, format, getDaysInMonth, parseISO, subDays, subMonths } from 'date-fns';
 import { useEffect, useMemo, useState } from 'react';
 
-import { supabase } from '@/src/lib/supabase';
-import type { ZodiacSign } from '@/src/constants/zodiac';
+import { supabase } from '@ohaasa/shared/lib/supabase';
+import type { ZodiacSign } from '@ohaasa/shared/constants/zodiac';
 
 /**
  * 최근 N일 두 가지와, 특정 달 하나.

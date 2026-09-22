@@ -3,7 +3,7 @@ import { Feather } from "@expo/vector-icons";
 
 import { ConstellationBadge } from "@/src/components/final/ConstellationBadge";
 import { colors } from "@/src/constants/design";
-import type { ZodiacInfo } from "@/src/constants/zodiac";
+import type { ZodiacInfo } from "@ohaasa/shared/constants/zodiac";
 import {
   getSummaryComment,
   periodLabel,

@@ -8,7 +8,7 @@ import {
 } from 'react-native';
 
 import { colors, radius, spacing, typography } from '@/src/constants/design';
-import { COMMUNITY_GUIDELINES_URL } from '@/src/constants/links';
+import { COMMUNITY_GUIDELINES_URL } from '@ohaasa/shared/constants/links';
 
 const MAX_LENGTH = 120;
 

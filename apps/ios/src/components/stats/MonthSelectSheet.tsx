@@ -12,7 +12,7 @@ import { format, getDaysInMonth, parseISO } from "date-fns";
 
 import { BottomSheet } from "@/src/components/common/BottomSheet";
 import { colors, radius } from "@/src/constants/design";
-import { fetchHoroscopeDates } from "@/src/lib/supabase";
+import { fetchHoroscopeDates } from "@ohaasa/shared/lib/supabase";
 import type { MonthKey } from "@/src/hooks/useHoroscopeTrends";
 
 interface MonthSelectSheetProps {

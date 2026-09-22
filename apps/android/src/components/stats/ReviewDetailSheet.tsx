@@ -6,15 +6,15 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { BottomSheet } from '@/src/components/common/BottomSheet';
 import { ConfirmDialog } from '@/src/components/common/ConfirmDialog';
 import { colors, radius, spacing } from '@/src/constants/design';
-import { ZODIAC_MAP } from '@/src/constants/zodiac';
-import type { DailyReview } from '@/src/lib/dailyReviews';
+import { ZODIAC_MAP } from '@ohaasa/shared/constants/zodiac';
+import type { DailyReview } from '@ohaasa/shared/lib/dailyReviews';
 import {
   canEditAnswer,
   deleteQuestionAnswer,
   type QuestionAnswer,
-} from '@/src/lib/questionAnswers';
-import { getOrCreateDeviceId } from '@/src/lib/storage';
-import { deletePublicAnswer } from '@/src/lib/supabase';
+} from '@ohaasa/shared/lib/questionAnswers';
+import { getOrCreateDeviceId } from '@ohaasa/shared/lib/storage';
+import { deletePublicAnswer } from '@ohaasa/shared/lib/supabase';
 
 interface ReviewDetailSheetProps {
   visible: boolean;

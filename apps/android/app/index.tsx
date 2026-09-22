@@ -2,8 +2,8 @@ import { useEffect } from 'react';
 import { Image, StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
 
-import type { ZodiacSign } from '@/src/constants/zodiac';
-import { getZodiacSign } from '@/src/lib/storage';
+import type { ZodiacSign } from '@ohaasa/shared/constants/zodiac';
+import { getZodiacSign } from '@ohaasa/shared/lib/storage';
 
 export default function IndexScreen() {
   const router = useRouter();

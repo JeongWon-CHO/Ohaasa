@@ -1,7 +1,7 @@
 import { StyleSheet, Text, View } from 'react-native';
 
 import { colors, radius, spacing } from '@/src/constants/design';
-import type { ReviewSummary } from '@/src/hooks/useReviewHistory';
+import type { ReviewSummary } from '@ohaasa/shared/hooks/useReviewHistory';
 
 interface ReviewSummaryCardProps {
   summary: ReviewSummary;

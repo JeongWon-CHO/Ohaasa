@@ -3,8 +3,8 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { ConstellationBadge } from '@/src/components/final/ConstellationBadge';
 import { colors, spacing, zodiacColors } from '@/src/constants/design';
-import { ZODIAC_MAP } from '@/src/constants/zodiac';
-import type { PublicReply } from '@/src/lib/supabase';
+import { ZODIAC_MAP } from '@ohaasa/shared/constants/zodiac';
+import type { PublicReply } from '@ohaasa/shared/lib/supabase';
 
 interface ReplyItemProps {
   reply: PublicReply;

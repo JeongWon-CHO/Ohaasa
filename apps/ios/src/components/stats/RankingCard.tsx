@@ -2,7 +2,7 @@ import { StyleSheet, Text, View } from "react-native";
 
 import { AverageRankRow } from "@/src/components/final/AverageRankRow";
 import { colors } from "@/src/constants/design";
-import type { ZodiacSign } from "@/src/constants/zodiac";
+import type { ZodiacSign } from "@ohaasa/shared/constants/zodiac";
 import {
   getPeriodMonth,
   periodLabel,

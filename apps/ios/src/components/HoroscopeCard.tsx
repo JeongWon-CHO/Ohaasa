@@ -2,7 +2,7 @@ import { StyleSheet, Text, type StyleProp, type ViewStyle } from "react-native";
 
 import { FinalCard } from "@/src/components/final/FinalCard";
 import { typography } from "@/src/constants/design";
-import { useScreenSize } from "@/src/hooks/useScreenSize";
+import { useScreenSize } from "@ohaasa/shared/hooks/useScreenSize";
 
 const ADVICE_CONFIG = {
   android: {

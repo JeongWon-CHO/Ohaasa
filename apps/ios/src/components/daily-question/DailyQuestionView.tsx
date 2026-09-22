@@ -29,23 +29,23 @@ import { ZodiacFilterSheet } from '@/src/components/daily-question/ZodiacFilterS
 import { ConfirmDialog } from '@/src/components/common/ConfirmDialog';
 import { ResponsiveContainer } from '@/src/components/common/ResponsiveContainer';
 import { Toast } from '@/src/components/common/Toast';
-import { getQuestionByDate } from '@/src/constants/dailyQuestions';
+import { getQuestionByDate } from '@ohaasa/shared/constants/dailyQuestions';
 import { colors, gradients, spacing } from '@/src/constants/design';
-import type { ZodiacSign } from '@/src/constants/zodiac';
+import type { ZodiacSign } from '@ohaasa/shared/constants/zodiac';
 import {
   useAnswerFeed,
   type AnswerFeedScope,
   type AnswerFeedSort,
   type AnswerFeedTab,
-} from '@/src/hooks/useAnswerFeed';
+} from '@ohaasa/shared/hooks/useAnswerFeed';
 import { useAnswerReplies } from '@/src/hooks/useAnswerReplies';
 import { useNewReplyBadge } from '@/src/hooks/useNewReplyBadge';
 import { useQuestionAnswerForm } from '@/src/hooks/useQuestionAnswerForm';
-import { useToast } from '@/src/hooks/useToast';
-import { useZodiac } from '@/src/hooks/useZodiac';
-import type { ReportReason } from '@/src/lib/moderation';
-import { getOrCreateDeviceId } from '@/src/lib/storage';
-import type { PublicReply } from '@/src/lib/supabase';
+import { useToast } from '@ohaasa/shared/hooks/useToast';
+import { useZodiac } from '@ohaasa/shared/hooks/useZodiac';
+import type { ReportReason } from '@ohaasa/shared/lib/moderation';
+import { getOrCreateDeviceId } from '@ohaasa/shared/lib/storage';
+import type { PublicReply } from '@ohaasa/shared/lib/supabase';
 
 type Step = 'answer' | 'community';
 

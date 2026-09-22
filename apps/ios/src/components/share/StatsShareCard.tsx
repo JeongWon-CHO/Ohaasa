@@ -6,7 +6,7 @@ import { format, parseISO } from "date-fns";
 import { ConstellationBadge } from "@/src/components/final/ConstellationBadge";
 import { RankTrendChart } from "@/src/components/stats/RankTrendChart";
 import { colors, gradients } from "@/src/constants/design";
-import type { ZodiacInfo } from "@/src/constants/zodiac";
+import type { ZodiacInfo } from "@ohaasa/shared/constants/zodiac";
 import {
   getSummaryComment,
   periodLabel,

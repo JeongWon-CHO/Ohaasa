@@ -39,6 +39,7 @@ React Native Expo
 ```
 apps/android/                   Android Expo 앱 (main 브랜치 계열)
 apps/ios/                       iOS Expo 앱 (ios-main 브랜치 계열)
+packages/shared/src/             두 앱 공통 운세 · 별자리 · 커뮤니티 로직
 apps/<플랫폼>/app/              expo-router 화면. (tabs)/ 안이 탭, 밖은 router.push 진입
 apps/<플랫폼>/src/context/      전역 상태 (ZodiacContext)
 apps/<플랫폼>/src/constants/    질문 목록 · 외부 URL 등 정적 데이터

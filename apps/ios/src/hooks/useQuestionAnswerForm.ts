@@ -1,15 +1,15 @@
 import { useCallback, useEffect, useState } from 'react';
 
-import type { ZodiacSign } from '@/src/constants/zodiac';
-import { getOrCreateDeviceId } from '@/src/lib/storage';
-import { deletePublicAnswer, upsertPublicAnswer } from '@/src/lib/supabase';
+import type { ZodiacSign } from '@ohaasa/shared/constants/zodiac';
+import { getOrCreateDeviceId } from '@ohaasa/shared/lib/storage';
+import { deletePublicAnswer, upsertPublicAnswer } from '@ohaasa/shared/lib/supabase';
 import {
   deleteQuestionAnswer,
   getQuestionAnswer,
   upsertQuestionAnswer,
   type AnswerVisibility,
   type QuestionAnswer,
-} from '@/src/lib/questionAnswers';
+} from '@ohaasa/shared/lib/questionAnswers';
 
 export type QuestionAnswerDraft = {
   body: string;

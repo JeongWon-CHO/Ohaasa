@@ -9,9 +9,9 @@ import {
   setPlatform,
   setNotificationsEnabled,
   getOrCreateDeviceId,
-} from "@/src/lib/storage";
-import { upsertDevice } from "@/src/lib/supabase";
-import type { ZodiacSign } from "@/src/constants/zodiac";
+} from "@ohaasa/shared/lib/storage";
+import { upsertDevice } from "@ohaasa/shared/lib/supabase";
+import type { ZodiacSign } from "@ohaasa/shared/constants/zodiac";
 
 interface Options {
   loading: boolean;

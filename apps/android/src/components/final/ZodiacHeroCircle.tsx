@@ -4,8 +4,8 @@ import Svg, { Circle, Defs, RadialGradient, Stop } from "react-native-svg";
 
 import { ConstellationBadge } from "@/src/components/final/ConstellationBadge";
 import { colors } from "@/src/constants/design";
-import type { ZodiacInfo } from "@/src/constants/zodiac";
-import { useScreenSize } from "@/src/hooks/useScreenSize";
+import type { ZodiacInfo } from "@ohaasa/shared/constants/zodiac";
+import { useScreenSize } from "@ohaasa/shared/hooks/useScreenSize";
 
 const SCREEN_CONFIG = {
   android: {
