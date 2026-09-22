@@ -116,7 +116,7 @@ export async function fetchPublicAnswers(
 export async function upsertPublicAnswer(
   date: string,
   deviceId: string,
-  zodiacSign: ZodiacSign | null,
+  zodiacSign: ZodiacSign,
   body: string,
 ): Promise<boolean> {
   const { error } = await supabase.from('question_answers').upsert(
@@ -331,7 +331,7 @@ export async function fetchRepliesForAnswers(
 export async function upsertPublicReply(
   answerId: string,
   deviceId: string,
-  zodiacSign: ZodiacSign | null,
+  zodiacSign: ZodiacSign,
   body: string,
 ): Promise<PublicReply | null> {
   const { data, error } = await supabase

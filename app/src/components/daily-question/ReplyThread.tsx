@@ -12,6 +12,8 @@ interface ReplyThreadProps {
   likedReplyIds: Set<string>;
   /** 이 답변에 남긴 내 답글 id. 자동 숨김돼 replies에 없을 수도 있다. */
   myReplyId: string | null;
+  /** 답글은 공개 데이터라 별자리가 설정돼 있어야 작성할 수 있다. */
+  canWrite: boolean;
   onToggleLike: (replyId: string) => void;
   onOpenModeration: (reply: PublicReply) => void;
   onSave: (body: string) => Promise<boolean>;
@@ -24,6 +26,7 @@ export function ReplyThread({
   replies,
   likedReplyIds,
   myReplyId,
+  canWrite,
   onToggleLike,
   onOpenModeration,
   onSave,
@@ -103,6 +106,7 @@ export function ReplyThread({
           initialBody={editingReply?.body ?? ''}
           editing={editingReplyId !== null}
           submitting={submitting}
+          disabled={!canWrite}
           onSubmit={handleSubmit}
           onCancelEdit={() => setEditingReplyId(null)}
           onFocusBottom={onComposerFocusBottom}

@@ -21,7 +21,7 @@ interface ReplyComposerProps {
   initialBody?: string;
   editing: boolean;
   submitting: boolean;
-  /** 서버 준비 중처럼 작성 자체가 불가능한 상태 */
+  /** 별자리 미설정 등으로 작성 자체가 불가능한 상태 */
   disabled?: boolean;
   onSubmit: (body: string) => void;
   onCancelEdit?: () => void;
@@ -69,7 +69,11 @@ export function ReplyComposer({
         value={body}
         onChangeText={(text) => setBody(text.slice(0, MAX_LENGTH))}
         onFocus={handleFocus}
-        placeholder="답글을 남겨보세요"
+        placeholder={
+          disabled
+            ? '별자리를 설정하면 답글을 남길 수 있어요'
+            : '답글을 남겨보세요'
+        }
         placeholderTextColor={colors.textSoft}
         style={styles.input}
         multiline

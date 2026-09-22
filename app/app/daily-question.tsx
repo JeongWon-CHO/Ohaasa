@@ -465,7 +465,10 @@ export default function DailyQuestionScreen() {
                           onChangeBody={(body) =>
                             setForm((f) => ({ ...f, body }))
                           }
-                          isPublic={form.visibility === 'public'}
+                          isPublic={
+                            zodiacSign !== null && form.visibility === 'public'
+                          }
+                          canPostPublic={zodiacSign !== null}
                           onChangeIsPublic={(isPublic) =>
                             setForm((f) => ({
                               ...f,
@@ -520,6 +523,7 @@ export default function DailyQuestionScreen() {
                                     replies={myReplies}
                                     likedReplyIds={likedReplyIds}
                                     myReplyId={myReplyToMyAnswer}
+                                    canWrite={zodiacSign !== null}
                                     onToggleLike={toggleReplyLike}
                                     onOpenModeration={(reply) =>
                                       setModerationTarget({
@@ -584,6 +588,7 @@ export default function DailyQuestionScreen() {
                                 myReplyId={
                                   myReplyIdByAnswer.get(answer.id) ?? null
                                 }
+                                canWrite={zodiacSign !== null}
                                 onToggleLike={toggleReplyLike}
                                 onOpenModeration={(reply) =>
                                   setModerationTarget({
