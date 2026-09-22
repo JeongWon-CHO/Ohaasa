@@ -1,0 +1,69 @@
+import { StyleSheet, Text, View } from 'react-native';
+
+import { colors, radius, spacing } from '@/src/constants/design';
+import type { ReviewSummary } from '@ohaasa/shared/hooks/useReviewHistory';
+
+interface ReviewSummaryCardProps {
+  summary: ReviewSummary;
+  questionAnswerDays: number;
+}
+
+export function ReviewSummaryCard({ summary, questionAnswerDays }: ReviewSummaryCardProps) {
+  const items = [
+    { value: summary.totalDays, label: '리뷰 남긴 날' },
+    { value: questionAnswerDays, label: '질문 답변한 날' },
+    { value: summary.averageRating?.toFixed(1) ?? '-', label: '평균 별점' },
+  ];
+
+  return (
+    <View style={styles.card}>
+      <Text style={styles.title}>이달의 기록 요약</Text>
+      <View style={styles.grid}>
+        {items.map(({ value, label }) => (
+          <View key={label} style={styles.item}>
+            <Text style={styles.value}>{value}</Text>
+            <Text style={styles.label}>{label}</Text>
+          </View>
+        ))}
+      </View>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  card: {
+    backgroundColor: colors.card,
+    borderRadius: radius.lg,
+    borderWidth: 1.5,
+    borderColor: colors.border,
+    padding: spacing.lg,
+    gap: spacing.lg,
+  },
+  title: {
+    fontSize: 13,
+    fontFamily: 'NotoSansKR_500Medium',
+    color: colors.text,
+    lineHeight: 19,
+  },
+  grid: {
+    flexDirection: 'row',
+  },
+  item: {
+    flex: 1,
+    gap: 4,
+    paddingVertical: spacing.sm,
+  },
+  value: {
+    fontSize: 22,
+    fontFamily: 'NotoSansKR_300Light',
+    color: colors.apricotDark,
+    lineHeight: 30,
+    includeFontPadding: false,
+  },
+  label: {
+    fontSize: 11,
+    fontFamily: 'NotoSansKR_400Regular',
+    color: colors.textSoft,
+    lineHeight: 17,
+  },
+});

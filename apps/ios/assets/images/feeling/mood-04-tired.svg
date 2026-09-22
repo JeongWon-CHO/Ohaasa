@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <defs>
+    <filter id="crayon"><feTurbulence type="fractalNoise" baseFrequency="0.09" numOctaves="2" seed="21" result="n"></feTurbulence><feDisplacementMap in="SourceGraphic" in2="n" scale="1.9" xChannelSelector="R" yChannelSelector="G"></feDisplacementMap></filter>
+    <filter id="grain"><feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="4" stitchTiles="stitch"></feTurbulence><feColorMatrix type="saturate" values="0"></feColorMatrix></filter>
+    <clipPath id="blobClip"><path d="M32 4C48 4 60 16 60 31C60 47 46 60 31 60C16 60 4 47 4 32C4 16 17 4 32 4Z"></path></clipPath>
+  </defs>
+  <g filter="url(#crayon)">
+    <path d="M32 4C48 4 60 16 60 31C60 47 46 60 31 60C16 60 4 47 4 32C4 16 17 4 32 4Z" fill="#A6C4E4"></path>
+    <g clip-path="url(#blobClip)"><rect width="64" height="64" filter="url(#grain)" opacity="0.4" style="mix-blend-mode:multiply"></rect></g>
+    <path d="M18 25q5 6 10 0" fill="none" stroke="#5A4636" stroke-width="3" stroke-linecap="round"></path>
+    <path d="M36 25q5 6 10 0" fill="none" stroke="#5A4636" stroke-width="3" stroke-linecap="round"></path>
+    <path d="M26 43q6-6 12 0" fill="none" stroke="#5A4636" stroke-width="3" stroke-linecap="round"></path>
+  </g>
+</svg>

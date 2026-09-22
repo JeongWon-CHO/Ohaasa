@@ -6,8 +6,9 @@
 
 ## 디렉터리 안내
 
-- `app/app/`: Expo Router 화면
-- `app/src/`: 컴포넌트, 훅, 컨텍스트, 라이브러리
+- `apps/android/app/`, `apps/android/src/`: Android Expo 앱
+- `apps/ios/app/`, `apps/ios/src/`: iOS Expo 앱
+- `packages/shared/src/`: 두 앱이 함께 사용하는 운세·별자리·커뮤니티 로직
 - `backend/src/`: 크롤러, 번역, Supabase 저장 파이프라인
 - `supabase/functions/`: Supabase Edge Functions
 
@@ -31,6 +32,6 @@
 
 ## 배포 규칙
 
-- 배포 전 `app/app.config.js`의 `version`을 올린다.
+- 배포 전 대상 앱(`apps/android` 또는 `apps/ios`)의 `app.config.js`에서 `version`을 올린다.
 - Play Console 업로드, EAS 배포, Supabase Function 배포처럼 외부 상태를 바꾸는 작업은 명시적으로 요청받았을 때만 수행한다.
 - `google-services.json`은 앱 수신 설정 파일로 커밋할 수 있지만, Firebase 서비스 계정 JSON은 절대 커밋하지 않는다.
