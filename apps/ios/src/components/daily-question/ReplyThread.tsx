@@ -3,7 +3,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { ReplyComposer } from '@/src/components/daily-question/ReplyComposer';
 import { ReplyItem } from '@/src/components/daily-question/ReplyItem';
-import { colors, spacing } from '@/src/constants/design';
+import { colors, radius, spacing } from '@/src/constants/design';
 import { canEditByCreatedAt } from '@ohaasa/shared/lib/questionAnswers';
 import type { PublicReply } from '@ohaasa/shared/lib/supabase';
 
@@ -12,6 +12,8 @@ interface ReplyThreadProps {
   likedReplyIds: Set<string>;
   /** 이 답변에 남긴 내 답글 id. 자동 숨김돼 replies에 없을 수도 있다. */
   myReplyId: string | null;
+  /** 답글은 공개 데이터라 별자리가 설정돼 있어야 작성할 수 있다. */
+  canWrite: boolean;
   onToggleLike: (replyId: string) => void;
   onOpenModeration: (reply: PublicReply) => void;
   onSave: (body: string) => Promise<boolean>;
@@ -24,6 +26,7 @@ export function ReplyThread({
   replies,
   likedReplyIds,
   myReplyId,
+  canWrite,
   onToggleLike,
   onOpenModeration,
   onSave,
@@ -63,7 +66,9 @@ export function ReplyThread({
               isMine={reply.id === myReplyId}
               liked={likedReplyIds.has(reply.id)}
               editable={
-                reply.id === myReplyId && canEditByCreatedAt(reply.created_at)
+                canWrite &&
+                reply.id === myReplyId &&
+                canEditByCreatedAt(reply.created_at)
               }
               onToggleLike={() => onToggleLike(reply.id)}
               onOpenModeration={() => onOpenModeration(reply)}
@@ -90,23 +95,25 @@ export function ReplyThread({
         </View>
       )}
 
-      {/*
-        여기에 커뮤니티 가이드라인 고지를 따로 두지 않는다 (App Store 1.2).
-        이 화면은 답변을 남긴 뒤에만 들어올 수 있어서, 답글을 쓸 수 있는 사람은 전원
-        QuestionAnswerForm의 무관용 정책 고지를 이미 거쳤다. 1.2가 실제로 요구하는
-        신고·차단 수단은 각 답글의 ⋯ 메뉴에 있고, 가이드라인 링크는 설정 > COMMUNITY에 있다.
-      */}
-      {showComposer && (
-        <ReplyComposer
-          // 신규 작성 ↔ 수정을 오갈 때 초기값을 다시 넣으려면 리마운트가 필요하다.
-          key={editingReplyId ?? 'new'}
-          initialBody={editingReply?.body ?? ''}
-          editing={editingReplyId !== null}
-          submitting={submitting}
-          onSubmit={handleSubmit}
-          onCancelEdit={() => setEditingReplyId(null)}
-          onFocusBottom={onComposerFocusBottom}
-        />
+      {!canWrite ? (
+        <View style={styles.zodiacRequiredNotice}>
+          <Text style={styles.zodiacRequiredText}>
+            답글을 달려면 별자리를 설정해 주세요.
+          </Text>
+        </View>
+      ) : (
+        showComposer && (
+          <ReplyComposer
+            // 신규 작성 ↔ 수정을 오갈 때 초기값을 다시 넣으려면 리마운트가 필요하다.
+            key={editingReplyId ?? 'new'}
+            initialBody={editingReply?.body ?? ''}
+            editing={editingReplyId !== null}
+            submitting={submitting}
+            onSubmit={handleSubmit}
+            onCancelEdit={() => setEditingReplyId(null)}
+            onFocusBottom={onComposerFocusBottom}
+          />
+        )
       )}
     </View>
   );
@@ -124,6 +131,21 @@ const styles = StyleSheet.create({
     fontFamily: 'NotoSansKR_300Light',
     color: colors.textSoft,
     lineHeight: 17,
+  },
+  zodiacRequiredNotice: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.sm,
+    backgroundColor: colors.cream,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.md,
+  },
+  zodiacRequiredText: {
+    fontSize: 12,
+    fontFamily: 'NotoSansKR_400Regular',
+    color: colors.textSoft,
+    lineHeight: 18,
+    textAlign: 'center',
   },
   hiddenNotice: {
     flexDirection: 'row',

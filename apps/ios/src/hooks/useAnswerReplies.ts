@@ -135,7 +135,9 @@ export function useAnswerReplies(
   const saveReply = useCallback(
     async (answerId: string, body: string): Promise<boolean> => {
       const trimmed = body.trim();
-      if (!deviceId || trimmed.length === 0) return false;
+      // 답글은 공개 데이터라 별자리 미등록 사용자는 작성할 수 없다.
+      // UI가 우회되더라도 null 공개 행이 생기지 않게 저장 경계에서도 차단한다.
+      if (!deviceId || !zodiacSign || trimmed.length === 0) return false;
 
       const saved = await upsertPublicReply(
         answerId,

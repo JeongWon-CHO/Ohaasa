@@ -567,6 +567,7 @@ export function DailyQuestionView({
                                     replies={myReplies}
                                     likedReplyIds={likedReplyIds}
                                     myReplyId={myReplyToMyAnswer}
+                                    canWrite={zodiacSign !== null}
                                     onToggleLike={toggleReplyLike}
                                     onOpenModeration={(reply) =>
                                       setModerationTarget({
@@ -631,6 +632,7 @@ export function DailyQuestionView({
                                 myReplyId={
                                   myReplyIdByAnswer.get(answer.id) ?? null
                                 }
+                                canWrite={zodiacSign !== null}
                                 onToggleLike={toggleReplyLike}
                                 onOpenModeration={(reply) =>
                                   setModerationTarget({
