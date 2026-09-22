@@ -135,8 +135,10 @@ export function useAnswerReplies(
   const saveReply = useCallback(
     async (answerId: string, body: string): Promise<boolean> => {
       const trimmed = body.trim();
-      // 답글은 공개 데이터라 별자리 미등록 사용자는 작성할 수 없다.
-      // UI가 우회되더라도 null 공개 행이 생기지 않게 저장 경계에서도 차단한다.
+      // 임시 호환 정책: null 별자리를 처리하지 못하는 구버전 Android 사용자를 보호하기 위해
+      // 별자리 미등록 사용자의 답글을 막는다. Android 1.8.0+ 보급 후 허용할 때 제거한다.
+      // DB와 공용 타입의 zodiac_sign null 허용은 iOS 심사 대응 요구사항이므로 유지해야 한다.
+      // UI가 우회되더라도 null 공개 행이 생기지 않게 저장 경계에서도 한 번 더 차단한다.
       if (!deviceId || !zodiacSign || trimmed.length === 0) return false;
 
       const saved = await upsertPublicReply(

@@ -80,7 +80,9 @@ export function useQuestionAnswerForm({
     setIsSaving(true);
     try {
       const deviceId = await getOrCreateDeviceId();
-      // UI 상태와 무관하게 저장 경계에서도 별자리 미등록 사용자는 비공개로 강제한다.
+      // 임시 호환 정책: null 별자리를 처리하지 못하는 구버전 Android 사용자를 보호하기 위해
+      // 별자리 미등록 사용자의 공개 글을 막는다. Android 1.8.0+ 보급 후 공개를 허용할 때 제거한다.
+      // DB와 공용 타입의 zodiac_sign null 허용은 iOS 심사 대응 요구사항이므로 유지해야 한다.
       const visibility: AnswerVisibility = zodiacSign
         ? form.visibility
         : 'private';

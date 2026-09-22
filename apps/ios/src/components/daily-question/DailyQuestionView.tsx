@@ -512,7 +512,10 @@ export function DailyQuestionView({
                           isPublic={
                             zodiacSign !== null && form.visibility === 'public'
                           }
-                          canPostPublic={zodiacSign !== null}
+                          canPostPublic={
+                            // 구버전 Android의 null 렌더링 크래시를 피하기 위한 임시 제한.
+                            zodiacSign !== null
+                          }
                           onChangeIsPublic={(isPublic) =>
                             setForm((f) => ({
                               ...f,
@@ -567,7 +570,10 @@ export function DailyQuestionView({
                                     replies={myReplies}
                                     likedReplyIds={likedReplyIds}
                                     myReplyId={myReplyToMyAnswer}
-                                    canWrite={zodiacSign !== null}
+                                    canWrite={
+                                      // Android 1.8.0+ 보급 후 null 답글을 허용할 때 제거한다.
+                                      zodiacSign !== null
+                                    }
                                     onToggleLike={toggleReplyLike}
                                     onOpenModeration={(reply) =>
                                       setModerationTarget({
@@ -632,7 +638,10 @@ export function DailyQuestionView({
                                 myReplyId={
                                   myReplyIdByAnswer.get(answer.id) ?? null
                                 }
-                                canWrite={zodiacSign !== null}
+                                canWrite={
+                                  // Android 1.8.0+ 보급 후 null 답글을 허용할 때 제거한다.
+                                  zodiacSign !== null
+                                }
                                 onToggleLike={toggleReplyLike}
                                 onOpenModeration={(reply) =>
                                   setModerationTarget({

@@ -12,7 +12,7 @@ interface ReplyThreadProps {
   likedReplyIds: Set<string>;
   /** 이 답변에 남긴 내 답글 id. 자동 숨김돼 replies에 없을 수도 있다. */
   myReplyId: string | null;
-  /** 답글은 공개 데이터라 별자리가 설정돼 있어야 작성할 수 있다. */
+  /** 구버전 Android의 null 렌더링 크래시를 피하기 위한 임시 작성 제한. */
   canWrite: boolean;
   onToggleLike: (replyId: string) => void;
   onOpenModeration: (reply: PublicReply) => void;
@@ -95,6 +95,7 @@ export function ReplyThread({
         </View>
       )}
 
+      {/* Android 1.8.0+ 보급 후 null 답글을 다시 허용할 때 이 분기를 제거한다. */}
       {!canWrite ? (
         <View style={styles.zodiacRequiredNotice}>
           <Text style={styles.zodiacRequiredText}>
