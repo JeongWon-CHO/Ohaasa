@@ -7,7 +7,7 @@ export type AnswerVisibility = 'public' | 'private';
 export type QuestionAnswer = {
   id: string; // = date (하루 1개)
   date: string; // YYYY-MM-DD
-  zodiacSign: ZodiacSign;
+  zodiacSign: ZodiacSign | null;
   questionText: string; // 질문 뱅크가 바뀌어도 과거 기록이 불변하도록 스냅샷 저장
   body: string;
   visibility: AnswerVisibility;
@@ -59,7 +59,9 @@ async function loadAll(): Promise<Record<string, QuestionAnswer>> {
   }
 }
 
-export async function getQuestionAnswer(date: string): Promise<QuestionAnswer | null> {
+export async function getQuestionAnswer(
+  date: string,
+): Promise<QuestionAnswer | null> {
   const all = await loadAll();
   return all[date] ?? null;
 }
@@ -71,7 +73,7 @@ export async function getAllQuestionAnswers(): Promise<QuestionAnswer[]> {
 
 type UpsertParams = {
   date: string;
-  zodiacSign: ZodiacSign;
+  zodiacSign: ZodiacSign | null;
   questionText: string;
   body: string;
   visibility: AnswerVisibility;
@@ -99,7 +101,10 @@ export async function upsertQuestionAnswer({
     updatedAt: now,
   };
 
-  await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify({ ...all, [date]: answer }));
+  await AsyncStorage.setItem(
+    STORAGE_KEY,
+    JSON.stringify({ ...all, [date]: answer }),
+  );
   return answer;
 }
 

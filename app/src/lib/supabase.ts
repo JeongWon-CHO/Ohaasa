@@ -40,7 +40,7 @@ export async function upsertDevice(params: UpsertDeviceParams): Promise<void> {
 export interface PublicAnswer {
   id: string;
   question_date: string;
-  zodiac_sign: ZodiacSign;
+  zodiac_sign: ZodiacSign | null;
   body: string;
   like_count: number;
   created_at: string;
@@ -81,7 +81,9 @@ export async function fetchPublicAnswers(
 
   query =
     sort === 'likes'
-      ? query.order('like_count', { ascending: false }).order('created_at', { ascending: false })
+      ? query
+          .order('like_count', { ascending: false })
+          .order('created_at', { ascending: false })
       : query.order('created_at', { ascending: false });
 
   const { data, error } = await query.limit(ANSWER_FETCH_LIMIT);
@@ -135,7 +137,10 @@ export async function upsertPublicAnswer(
   return true;
 }
 
-export async function deletePublicAnswer(date: string, deviceId: string): Promise<void> {
+export async function deletePublicAnswer(
+  date: string,
+  deviceId: string,
+): Promise<void> {
   const { error } = await supabase
     .from('question_answers')
     .delete()
@@ -147,7 +152,10 @@ export async function deletePublicAnswer(date: string, deviceId: string): Promis
   }
 }
 
-export async function fetchMyAnswerId(date: string, deviceId: string): Promise<string | null> {
+export async function fetchMyAnswerId(
+  date: string,
+  deviceId: string,
+): Promise<string | null> {
   const { data, error } = await supabase
     .from('question_answers')
     .select('id')
@@ -239,7 +247,11 @@ export async function reportAnswer(
   // 23505 = 이미 신고한 글(기기당 1회 제한). 사용자 입장에서는 성공과 같다.
   if (error && error.code !== '23505') {
     console.warn('[supabase] reportAnswer failed:', error.code, error.message);
-    return { ok: false, error: `${error.code ?? '?'} ${error.message}`, offline: !error.code };
+    return {
+      ok: false,
+      error: `${error.code ?? '?'} ${error.message}`,
+      offline: !error.code,
+    };
   }
 
   return { ok: true };
@@ -252,7 +264,7 @@ export async function reportAnswer(
 export interface PublicReply {
   id: string;
   answer_id: string;
-  zodiac_sign: ZodiacSign;
+  zodiac_sign: ZodiacSign | null;
   body: string;
   like_count: number;
   created_at: string;
@@ -277,7 +289,9 @@ const REPLY_FETCH_LIMIT = 1000;
  * 정렬은 항상 오래된 순이다 — 스레드는 대화 순서로 읽히므로 피드의 최신순/공감순 토글을
  * 답글에 적용하지 않는다.
  */
-export async function fetchRepliesForAnswers(answerIds: string[]): Promise<PublicReply[]> {
+export async function fetchRepliesForAnswers(
+  answerIds: string[],
+): Promise<PublicReply[]> {
   if (answerIds.length === 0) return [];
 
   const { data, error } = await supabase
@@ -343,7 +357,10 @@ export async function upsertPublicReply(
 }
 
 /** id만으로 지우지 않는다. RLS가 USING(true)라 device_id 매칭이 유일한 소유권 검사다. */
-export async function deletePublicReply(replyId: string, deviceId: string): Promise<boolean> {
+export async function deletePublicReply(
+  replyId: string,
+  deviceId: string,
+): Promise<boolean> {
   const { error } = await supabase
     .from('question_answer_replies')
     .delete()
@@ -381,7 +398,9 @@ export async function fetchMyReplyIds(
     return new Map();
   }
 
-  return new Map((data ?? []).map((row) => [row.answer_id as string, row.id as string]));
+  return new Map(
+    (data ?? []).map((row) => [row.answer_id as string, row.id as string]),
+  );
 }
 
 export async function fetchMyLikedReplyIds(
@@ -444,7 +463,11 @@ export async function reportReply(
   // 23505 = 이미 신고한 답글(기기당 1회 제한). 사용자 입장에서는 성공과 같다.
   if (error && error.code !== '23505') {
     console.warn('[supabase] reportReply failed:', error.code, error.message);
-    return { ok: false, error: `${error.code ?? '?'} ${error.message}`, offline: !error.code };
+    return {
+      ok: false,
+      error: `${error.code ?? '?'} ${error.message}`,
+      offline: !error.code,
+    };
   }
 
   return { ok: true };

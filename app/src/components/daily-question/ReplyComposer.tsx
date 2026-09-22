@@ -1,5 +1,12 @@
 import { useRef, useState } from 'react';
-import { Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import {
+  Platform,
+  Pressable,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
 
 import { colors, radius, spacing } from '@/src/constants/design';
 
@@ -41,7 +48,9 @@ export function ReplyComposer({
     // 키보드 애니메이션이 끝난 뒤에 재야 화면 좌표가 최종값이다.
     setTimeout(
       () => {
-        inputRef.current?.measureInWindow((_x, y, _w, h) => onFocusBottom(y + h));
+        inputRef.current?.measureInWindow((_x, y, _w, h) =>
+          onFocusBottom(y + h),
+        );
       },
       Platform.OS === 'ios' ? 300 : 100,
     );
@@ -60,7 +69,11 @@ export function ReplyComposer({
         value={body}
         onChangeText={(text) => setBody(text.slice(0, MAX_LENGTH))}
         onFocus={handleFocus}
-        placeholder={disabled ? '별자리를 먼저 설정해 주세요' : '답글을 남겨보세요'}
+        placeholder={
+          disabled
+            ? '별자리를 설정하면 답글을 남길 수 있어요'
+            : '답글을 남겨보세요'
+        }
         placeholderTextColor={colors.textSoft}
         style={styles.input}
         multiline

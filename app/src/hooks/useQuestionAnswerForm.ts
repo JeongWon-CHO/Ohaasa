@@ -44,8 +44,19 @@ export function useQuestionAnswerForm({
 }: Params): UseQuestionAnswerFormResult {
   const [form, setForm] = useState<QuestionAnswerDraft>(EMPTY_DRAFT);
   const [isSaving, setIsSaving] = useState(false);
-  const [existingAnswer, setExistingAnswer] = useState<QuestionAnswer | null>(null);
+  const [existingAnswer, setExistingAnswer] = useState<QuestionAnswer | null>(
+    null,
+  );
   const [isLoaded, setIsLoaded] = useState(false);
+
+  useEffect(() => {
+    if (!isLoaded || zodiacSign) return;
+    setForm((current) =>
+      current.visibility === 'private'
+        ? current
+        : { ...current, visibility: 'private' },
+    );
+  }, [isLoaded, zodiacSign]);
 
   useEffect(() => {
     if (!date) {
@@ -69,21 +80,26 @@ export function useQuestionAnswerForm({
   }, [date]);
 
   const save = useCallback(async (): Promise<QuestionAnswer | null> => {
-    if (!date || !zodiacSign || !questionText || form.body.trim().length === 0) return null;
+    if (!date || !questionText || form.body.trim().length === 0) return null;
 
     setIsSaving(true);
     try {
       const deviceId = await getOrCreateDeviceId();
+      // 별자리 없는 사용자의 공개 행은 구버전 Android에서 렌더링할 수 없다.
+      // UI 잠금과 별개로 저장 경계에서도 비공개를 강제한다.
+      const visibility: AnswerVisibility = zodiacSign
+        ? form.visibility
+        : 'private';
 
       const saved = await upsertQuestionAnswer({
         date,
         zodiacSign,
         questionText,
         body: form.body.trim(),
-        visibility: form.visibility,
+        visibility,
       });
 
-      if (form.visibility === 'public') {
+      if (visibility === 'public' && zodiacSign) {
         await upsertPublicAnswer(date, deviceId, zodiacSign, saved.body);
       } else if (existingAnswer?.visibility === 'public') {
         await deletePublicAnswer(date, deviceId);
