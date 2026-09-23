@@ -1,8 +1,6 @@
 name: Crawl horoscopes and save
 
 on:
-  schedule:
-    - cron: "59 20 * * *" # UTC 기준. JST/KST 매일 05:59 실행.
   workflow_dispatch:
     inputs:
       dry_run:
@@ -14,7 +12,7 @@ on:
         type: boolean
         default: false
 
-# 수동 실행과 cron이 겹쳐 중복 발송되는 것을 방지한다.
+# 수동 실행끼리 겹쳐 중복 저장되는 것을 방지한다.
 # cancel-in-progress: false — 실행 중인 job은 취소하지 않고 직렬 대기한다.
 concurrency:
   group: ohaasa-crawl-and-notify

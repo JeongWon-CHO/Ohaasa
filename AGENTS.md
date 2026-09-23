@@ -18,7 +18,8 @@
 - 앱에서는 `EXPO_PUBLIC_SUPABASE_URL`과 `EXPO_PUBLIC_SUPABASE_ANON_KEY`만 사용한다.
 - `device_id`는 로그인 없는 사용자를 식별하는 AsyncStorage 영속 UUID다.
 - 푸시 알림은 `send-horoscope-notifications` Edge Function이 발송한다. `backend/src/main.ts`에서 직접 발송하지 않는다.
-- 알림 중복 방지는 `notification_log.date`의 UNIQUE 제약을 기준으로 한다.
+- 알림 배치 중복 방지는 `notification_log`의
+  `(notification_type, date, scheduled_time)` 복합 Primary Key를 기준으로 한다.
 - `expo-notifications`와 `expo-media-library`는 정적 import하지 않는다. 필요한 환경에서만 동적 import한다.
 - 네트워크 또는 기기 등록 실패가 운세 조회 화면을 막아서는 안 된다.
 

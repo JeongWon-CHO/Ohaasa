@@ -58,10 +58,11 @@ const COLOR_MAP: Record<string, string> = {
 // ============================================================
 
 let _client: OpenAI | null = null;
+const OPENAI_TIMEOUT_MS = 20_000;
 
 function getClient(): OpenAI | null {
   if (!process.env.OPENAI_API_KEY) return null;
-  if (!_client) _client = new OpenAI();
+  if (!_client) _client = new OpenAI({ timeout: OPENAI_TIMEOUT_MS, maxRetries: 0 });
   return _client;
 }
 

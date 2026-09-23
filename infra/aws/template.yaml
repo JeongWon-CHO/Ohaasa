@@ -1,0 +1,298 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
+Description: Ohaasa scheduled horoscope crawler and notification dispatcher
+
+Parameters:
+  ApplicationSecretsArn:
+    Type: String
+    Description: Secrets Manager JSON secret containing SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY and OPENAI_API_KEY
+  OpenAIModel:
+    Type: String
+    Default: gpt-4o
+  CrawlScheduleState:
+    Type: String
+    Default: DISABLED
+    AllowedValues:
+      - DISABLED
+      - ENABLED
+  NotificationScheduleState:
+    Type: String
+    Default: DISABLED
+    AllowedValues:
+      - DISABLED
+      - ENABLED
+
+Globals:
+  Function:
+    Runtime: nodejs22.x
+    Architectures:
+      - arm64
+    Tracing: Active
+    Environment:
+      Variables:
+        SUPABASE_URL: !Sub "{{resolve:secretsmanager:${ApplicationSecretsArn}:SecretString:SUPABASE_URL}}"
+        SUPABASE_SERVICE_ROLE_KEY: !Sub "{{resolve:secretsmanager:${ApplicationSecretsArn}:SecretString:SUPABASE_SERVICE_ROLE_KEY}}"
+
+Resources:
+  CrawlerFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ../../backend
+      Handler: src/lambda/crawl-handler.handler
+      Timeout: 840
+      MemorySize: 1024
+      Policies:
+        - AWSLambdaBasicExecutionRole
+        - AWSXRayDaemonWriteAccess
+      Environment:
+        Variables:
+          OPENAI_API_KEY: !Sub "{{resolve:secretsmanager:${ApplicationSecretsArn}:SecretString:OPENAI_API_KEY}}"
+          OPENAI_MODEL: !Ref OpenAIModel
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        EntryPoints:
+          - src/lambda/crawl-handler.ts
+        Minify: true
+        Sourcemap: true
+        Target: es2022
+
+  NotificationDispatcherFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ../../backend
+      Handler: src/lambda/notification-dispatcher.handler
+      Timeout: 300
+      MemorySize: 256
+      Policies:
+        - AWSLambdaBasicExecutionRole
+        - AWSXRayDaemonWriteAccess
+        # Lambda의 비동기 on-failure destination은 함수 실행 역할로 SQS에 쓴다.
+        - Statement:
+            - Effect: Allow
+              Action: sqs:SendMessage
+              Resource: !GetAtt ScheduleDeadLetterQueue.Arn
+      EventInvokeConfig:
+        MaximumEventAgeInSeconds: 1800
+        MaximumRetryAttempts: 2
+        DestinationConfig:
+          OnFailure:
+            Type: SQS
+            Destination: !GetAtt ScheduleDeadLetterQueue.Arn
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        EntryPoints:
+          - src/lambda/notification-dispatcher.ts
+        Minify: true
+        Sourcemap: true
+        Target: es2022
+
+  CrawlStateMachineLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      RetentionInDays: 30
+
+  CrawlStateMachineRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: states.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: InvokeCrawlerAndWriteLogs
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action: lambda:InvokeFunction
+                Resource:
+                  - !GetAtt CrawlerFunction.Arn
+                  - !GetAtt NotificationDispatcherFunction.Arn
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogDelivery
+                  - logs:GetLogDelivery
+                  - logs:UpdateLogDelivery
+                  - logs:DeleteLogDelivery
+                  - logs:ListLogDeliveries
+                  - logs:PutResourcePolicy
+                  - logs:DescribeResourcePolicies
+                  - logs:DescribeLogGroups
+                Resource: "*"
+
+  CrawlStateMachine:
+    Type: AWS::Serverless::StateMachine
+    Properties:
+      Role: !GetAtt CrawlStateMachineRole.Arn
+      Type: STANDARD
+      DefinitionUri: state-machine.asl.json
+      DefinitionSubstitutions:
+        CrawlerFunctionArn: !GetAtt CrawlerFunction.Arn
+        NotificationDispatcherFunctionArn: !GetAtt NotificationDispatcherFunction.Arn
+      Logging:
+        Destinations:
+          - CloudWatchLogsLogGroup:
+              LogGroupArn: !GetAtt CrawlStateMachineLogGroup.Arn
+        IncludeExecutionData: true
+        Level: ERROR
+
+  SchedulerRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: scheduler.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: StartOhaasaSchedules
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action: states:StartExecution
+                Resource: !Ref CrawlStateMachine
+              - Effect: Allow
+                Action: lambda:InvokeFunction
+                Resource: !GetAtt NotificationDispatcherFunction.Arn
+              - Effect: Allow
+                Action: sqs:SendMessage
+                Resource: !GetAtt ScheduleDeadLetterQueue.Arn
+
+  ScheduleDeadLetterQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      MessageRetentionPeriod: 1209600
+
+  AlertTopic:
+    Type: AWS::SNS::Topic
+
+  CrawlSchedule:
+    Type: AWS::Scheduler::Schedule
+    Properties:
+      Description: Start the daily horoscope crawl at 05:30 KST
+      ScheduleExpression: cron(30 5 * * ? *)
+      ScheduleExpressionTimezone: Asia/Seoul
+      FlexibleTimeWindow:
+        Mode: "OFF"
+      State: !Ref CrawlScheduleState
+      Target:
+        Arn: !Ref CrawlStateMachine
+        RoleArn: !GetAtt SchedulerRole.Arn
+        Input: '{"force":false,"dryRun":false}'
+        DeadLetterConfig:
+          Arn: !GetAtt ScheduleDeadLetterQueue.Arn
+        RetryPolicy:
+          MaximumEventAgeInSeconds: 3600
+          MaximumRetryAttempts: 2
+
+  NotificationHalfHourSchedule:
+    Type: AWS::Scheduler::Schedule
+    Properties:
+      Description: Dispatch morning notifications every 30 minutes from 06:00 through 09:30 KST
+      ScheduleExpression: cron(0/30 6-9 * * ? *)
+      ScheduleExpressionTimezone: Asia/Seoul
+      FlexibleTimeWindow:
+        Mode: "OFF"
+      State: !Ref NotificationScheduleState
+      Target:
+        Arn: !GetAtt NotificationDispatcherFunction.Arn
+        RoleArn: !GetAtt SchedulerRole.Arn
+        Input: '{"dryRun":false}'
+        DeadLetterConfig:
+          Arn: !GetAtt ScheduleDeadLetterQueue.Arn
+        RetryPolicy:
+          MaximumEventAgeInSeconds: 1800
+          MaximumRetryAttempts: 2
+
+  NotificationTenOClockSchedule:
+    Type: AWS::Scheduler::Schedule
+    Properties:
+      Description: Dispatch the final morning notification slot at 10:00 KST
+      ScheduleExpression: cron(0 10 * * ? *)
+      ScheduleExpressionTimezone: Asia/Seoul
+      FlexibleTimeWindow:
+        Mode: "OFF"
+      State: !Ref NotificationScheduleState
+      Target:
+        Arn: !GetAtt NotificationDispatcherFunction.Arn
+        RoleArn: !GetAtt SchedulerRole.Arn
+        Input: '{"dryRun":false}'
+        DeadLetterConfig:
+          Arn: !GetAtt ScheduleDeadLetterQueue.Arn
+        RetryPolicy:
+          MaximumEventAgeInSeconds: 1800
+          MaximumRetryAttempts: 2
+
+  CrawlFailureAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmDescription: Ohaasa crawl state machine failed
+      Namespace: AWS/States
+      MetricName: ExecutionsFailed
+      Dimensions:
+        - Name: StateMachineArn
+          Value: !Ref CrawlStateMachine
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 1
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: notBreaching
+      AlarmActions:
+        - !Ref AlertTopic
+
+  DispatcherErrorAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmDescription: Ohaasa notification dispatcher failed
+      Namespace: AWS/Lambda
+      MetricName: Errors
+      Dimensions:
+        - Name: FunctionName
+          Value: !Ref NotificationDispatcherFunction
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 1
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: notBreaching
+      AlarmActions:
+        - !Ref AlertTopic
+
+  DeadLetterQueueAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmDescription: Ohaasa scheduler dead-letter queue is not empty
+      Namespace: AWS/SQS
+      MetricName: ApproximateNumberOfMessagesVisible
+      Dimensions:
+        - Name: QueueName
+          Value: !GetAtt ScheduleDeadLetterQueue.QueueName
+      Statistic: Maximum
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 1
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: notBreaching
+      AlarmActions:
+        - !Ref AlertTopic
+
+Outputs:
+  CrawlerFunctionName:
+    Value: !Ref CrawlerFunction
+  NotificationDispatcherFunctionName:
+    Value: !Ref NotificationDispatcherFunction
+  CrawlStateMachineArn:
+    Value: !Ref CrawlStateMachine
+  CrawlScheduleName:
+    Value: !Ref CrawlSchedule
+  AlertTopicArn:
+    Value: !Ref AlertTopic

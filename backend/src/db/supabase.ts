@@ -5,11 +5,6 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 // ============================================================
 
 function debugKeyInfo(key: string): void {
-  // prefix + length 출력 (원문 노출 없이 어떤 키인지 구분)
-  const prefix = key.slice(0, 12);
-  console.log(`[supabase] key prefix : ${prefix}...`);
-  console.log(`[supabase] key length : ${key.length} chars`);
-
   // JWT 여부 판별 (eyJ... 형식은 header.payload.signature 구조)
   const parts = key.split(".");
   if (parts.length === 3) {
@@ -23,14 +18,14 @@ function debugKeyInfo(key: string): void {
       ) as Record<string, unknown>;
 
       // "role" 클레임: "anon" vs "service_role" 중 어떤 키인지 확인
-      console.log(`[supabase] key format : JWT`);
-      console.log(`[supabase] key role   : ${payload["role"] ?? "(not found)"}`);
+      console.log(`[supabase] credential format: JWT`);
+      console.log(`[supabase] credential role  : ${payload["role"] ?? "(not found)"}`);
     } catch {
-      console.log("[supabase] key format : JWT (payload decode failed)");
+      console.log("[supabase] credential format: JWT (payload decode failed)");
     }
   } else {
     // 새 Supabase 키 형식 (sb_publishable_... / sb_secret_...)
-    console.log("[supabase] key format : non-JWT (new Supabase key format?)");
+    console.log("[supabase] credential format: non-JWT");
   }
 }
 
