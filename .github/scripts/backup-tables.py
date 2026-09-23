@@ -22,10 +22,9 @@ PAGE = 500
 
 # (테이블, 정렬키). 정렬 없는 OFFSET은 페이지 간 행 순서를 보장하지 않아
 # 중복·누락이 난다. 합성 PK인 테이블은 두 컬럼을 모두 준다.
-TABLES = [
+BASE_TABLES = [
     ("horoscopes", "id"),
     ("user_devices", "id"),
-    ("notification_log", "date,notification_type,scheduled_time"),
     ("question_answers", "id"),
     ("question_answer_likes", "answer_id,device_id"),
     ("question_answer_reports", "answer_id,device_id"),
@@ -63,6 +62,24 @@ def fetch_page(base: str, key: str, table: str, order: str, offset: int) -> list
     return body
 
 
+def fetch_table_columns(base: str, key: str, table: str) -> set[str]:
+    """PostgREST OpenAPI에서 값이 아닌 컬럼 이름만 읽는다."""
+    req = urllib.request.Request(f"{base}/rest/v1/")
+    req.add_header("apikey", key)
+    req.add_header("Authorization", f"Bearer {key}")
+
+    try:
+        with urllib.request.urlopen(req, timeout=60) as resp:
+            document = json.load(resp)
+    except Exception as e:  # noqa: BLE001 - 사전 스키마 확인 실패도 백업 실패다
+        raise SystemExit(f"::error::PostgREST 스키마 조회 실패: {e}")
+
+    properties = document.get("definitions", {}).get(table, {}).get("properties", {})
+    if not properties:
+        raise SystemExit(f"::error::{table} 스키마를 PostgREST에서 찾지 못했습니다.")
+    return set(properties)
+
+
 def dump_table(base: str, key: str, table: str, order: str, outdir: str) -> int:
     path = os.path.join(outdir, f"{table}.jsonl")
     total = 0
@@ -90,7 +107,20 @@ def main() -> None:
     os.makedirs(outdir, exist_ok=True)
     counts = {}
 
-    for table, order in TABLES:
+    notification_columns = fetch_table_columns(base, key, "notification_log")
+    notification_order = (
+        "date,notification_type,scheduled_time"
+        if {"notification_type", "scheduled_time"}.issubset(notification_columns)
+        else "date"
+    )
+    tables = [
+        BASE_TABLES[0],
+        BASE_TABLES[1],
+        ("notification_log", notification_order),
+        *BASE_TABLES[2:],
+    ]
+
+    for table, order in tables:
         n = dump_table(base, key, table, order, outdir)
         counts[table] = n
         print(f"  {table:<32} {n:>6} rows")
@@ -99,7 +129,7 @@ def main() -> None:
     if empty:
         raise SystemExit(f"::error::비어 있으면 안 되는 테이블이 0행입니다: {', '.join(empty)}")
 
-    manifest = {"counts": counts, "page_size": PAGE, "tables": [t for t, _ in TABLES]}
+    manifest = {"counts": counts, "page_size": PAGE, "tables": [t for t, _ in tables]}
     with open(os.path.join(outdir, "manifest.json"), "w", encoding="utf-8") as f:
         json.dump(manifest, f, ensure_ascii=False, indent=2)
 
