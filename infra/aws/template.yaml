@@ -57,6 +57,11 @@ Resources:
       Policies:
         - AWSLambdaBasicExecutionRole
         - AWSXRayDaemonWriteAccess
+        # Lambda의 비동기 on-failure destination은 함수 실행 역할로 SQS에 쓴다.
+        - Statement:
+            - Effect: Allow
+              Action: sqs:SendMessage
+              Resource: !GetAtt ScheduleDeadLetterQueue.Arn
       EventInvokeConfig:
         MaximumEventAgeInSeconds: 1800
         MaximumRetryAttempts: 2

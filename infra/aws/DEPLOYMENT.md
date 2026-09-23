@@ -25,7 +25,8 @@ node infra/aws/scripts/preflight-supabase.mjs before
 
 ## 2. Backup before any write
 
-1. 기존 `send-horoscope-notifications` 함수 소스를 별도 보관한다.
+1. 기존 `send-horoscope-notifications` 함수 소스를 저장소 밖의 접근 제한된 위치에
+   별도 보관하고, 복원에 사용할 수 있는지 확인한다.
 2. `horoscopes`, `user_devices`, `notification_log`를 백업한다.
 3. Supabase Dashboard에서 `horoscope_notify` Database Webhook 설정을 캡처한다.
 4. Webhook은 아직 비활성화하지 않는다.
@@ -58,6 +59,24 @@ rollback;
 DDL은 짧은 잠금을 잡을 수 있으므로 트래픽이 적고 오전 알림이 끝난 시간에 실행한다.
 
 ## 4. Apply migration
+
+운영 DB에는 `20260919000000_optional_question_zodiac.sql`의 스키마 변경이 이미
+반영되어 있지만 migration history만 비어 있다. 먼저 해당 버전을 `applied`로
+보정한다. 이 명령과 이후 `db push`는 모두 운영 DB 쓰기 작업이다.
+
+```sh
+npx --yes supabase@latest migration repair 20260919000000 --status applied
+npx --yes supabase@latest migration list
+```
+
+목록에서 `20260919000000`의 Local/Remote 버전이 일치하는지 확인한다. 그 다음
+dry-run에서 `20260922000000_notification_scheduling.sql` 하나만 표시되는지 확인하고
+실제 적용한다.
+
+```sh
+npx --yes supabase@latest db push --dry-run
+npx --yes supabase@latest db push
+```
 
 리허설이 성공하면 migration을 한 번 실제 적용한 후 read-only 검사를 실행한다.
 
