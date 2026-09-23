@@ -1,12 +1,29 @@
 #!/usr/bin/env node
 
+import fs from "node:fs";
+import path from "node:path";
+import { createRequire } from "node:module";
+import { fileURLToPath } from "node:url";
+
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../..");
+const require = createRequire(import.meta.url);
+const dotenv = require(path.join(root, "backend/node_modules/dotenv"));
+const fileEnvironment = {};
+for (const relativePath of ["backend/.env", ".env.local"]) {
+  const environmentPath = path.join(root, relativePath);
+  if (fs.existsSync(environmentPath)) {
+    Object.assign(fileEnvironment, dotenv.parse(fs.readFileSync(environmentPath)));
+  }
+}
+
 const stage = process.argv[2] ?? "before";
 if (!new Set(["before", "after"]).has(stage)) {
   throw new Error("Usage: node preflight-supabase.mjs [before|after]");
 }
 
-const baseUrl = process.env.SUPABASE_URL?.replace(/\/$/, "");
-const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const baseUrl = (process.env.SUPABASE_URL ?? fileEnvironment.SUPABASE_URL)?.replace(/\/$/, "");
+const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+  ?? fileEnvironment.SUPABASE_SERVICE_ROLE_KEY;
 if (!baseUrl || !serviceRoleKey) {
   throw new Error("SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are required");
 }

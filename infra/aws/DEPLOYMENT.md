@@ -34,8 +34,13 @@ node infra/aws/scripts/preflight-supabase.mjs before
 
 ## 3. Migration transaction rehearsal
 
-Supabase SQL Editor에서 migration SQL 전체를 `begin`과 `rollback` 사이에 넣어 먼저
-검증한다. 성공 메시지를 확인해도 이 단계에서는 반드시 rollback한다.
+Supabase SQL Editor에서 migration SQL 전체를 `begin`과 `rollback` 사이에 넣거나,
+아래 스크립트로 먼저 검증한다. 성공 메시지를 확인해도 이 단계에서는 반드시
+rollback한다.
+
+```sh
+node infra/aws/scripts/rehearse-notification-migration.mjs
+```
 
 ```sql
 begin;
