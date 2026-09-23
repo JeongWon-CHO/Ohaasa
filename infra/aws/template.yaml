@@ -119,12 +119,12 @@ Resources:
     Type: AWS::Serverless::StateMachine
     Properties:
       Role: !GetAtt CrawlStateMachineRole.Arn
-      StateMachineType: STANDARD
+      Type: STANDARD
       DefinitionUri: state-machine.asl.json
       DefinitionSubstitutions:
         CrawlerFunctionArn: !GetAtt CrawlerFunction.Arn
         NotificationDispatcherFunctionArn: !GetAtt NotificationDispatcherFunction.Arn
-      LoggingConfiguration:
+      Logging:
         Destinations:
           - CloudWatchLogsLogGroup:
               LogGroupArn: !GetAtt CrawlStateMachineLogGroup.Arn
@@ -171,7 +171,7 @@ Resources:
       ScheduleExpression: cron(30 5 * * ? *)
       ScheduleExpressionTimezone: Asia/Seoul
       FlexibleTimeWindow:
-        Mode: OFF
+        Mode: "OFF"
       State: DISABLED
       Target:
         Arn: !Ref CrawlStateMachine
@@ -190,7 +190,7 @@ Resources:
       ScheduleExpression: cron(0/30 6-9 * * ? *)
       ScheduleExpressionTimezone: Asia/Seoul
       FlexibleTimeWindow:
-        Mode: OFF
+        Mode: "OFF"
       State: DISABLED
       Target:
         Arn: !GetAtt NotificationDispatcherFunction.Arn
@@ -209,7 +209,7 @@ Resources:
       ScheduleExpression: cron(0 10 * * ? *)
       ScheduleExpressionTimezone: Asia/Seoul
       FlexibleTimeWindow:
-        Mode: OFF
+        Mode: "OFF"
       State: DISABLED
       Target:
         Arn: !GetAtt NotificationDispatcherFunction.Arn
