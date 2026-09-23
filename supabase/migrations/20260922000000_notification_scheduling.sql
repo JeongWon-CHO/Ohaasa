@@ -83,6 +83,32 @@ begin
 end
 $$;
 
+-- 운영 DB의 notification_log.date는 현재 단일 Primary Key다. 시간 슬롯을
+-- 여러 개 저장할 수 있도록 date 단독 PK도 제약 이름과 무관하게 제거한다.
+do $$
+declare
+  constraint_name text;
+begin
+  for constraint_name in
+    select con.conname
+    from pg_constraint con
+    where con.conrelid = 'public.notification_log'::regclass
+      and con.contype = 'p'
+      and (
+        select array_agg(att.attname::text order by key_position.ordinality)
+        from unnest(con.conkey) with ordinality as key_position(attnum, ordinality)
+        join pg_attribute att
+          on att.attrelid = con.conrelid and att.attnum = key_position.attnum
+      ) = array['date']::text[]
+  loop
+    execute format(
+      'alter table public.notification_log drop constraint %I',
+      constraint_name
+    );
+  end loop;
+end
+$$;
+
 -- UNIQUE가 constraint가 아니라 단독 index로 생성된 환경도 처리한다.
 do $$
 declare
@@ -112,6 +138,22 @@ $$;
 
 create unique index if not exists notification_log_batch_unique_idx
   on public.notification_log (notification_type, date, scheduled_time);
+
+-- notification_log에는 별도 id가 없으므로 논리 배치 키를 그대로 복합 PK로 쓴다.
+do $$
+begin
+  if not exists (
+    select 1
+    from pg_constraint
+    where conrelid = 'public.notification_log'::regclass
+      and contype = 'p'
+  ) then
+    alter table public.notification_log
+      add constraint notification_log_pkey
+      primary key using index notification_log_batch_unique_idx;
+  end if;
+end
+$$;
 
 -- 한 논리 배치당 한 실행만 running 상태를 선점한다.
 create or replace function public.claim_notification_batch(

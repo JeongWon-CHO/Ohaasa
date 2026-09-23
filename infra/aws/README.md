@@ -38,3 +38,6 @@ sam deploy --guided
 7. GitHub Actions의 `crawl-and-notify` cron만 비활성화한다.
 
 GitHub workflow 파일은 즉시 삭제하지 않고 수동 복구용으로 남긴다.
+
+개발 앱과 배포 앱이 같은 Supabase DB를 사용하므로 실제 전환 전에는
+[`DEPLOYMENT.md`](./DEPLOYMENT.md)의 production-only 절차를 따른다.
