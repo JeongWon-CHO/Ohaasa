@@ -25,7 +25,7 @@ PAGE = 500
 TABLES = [
     ("horoscopes", "id"),
     ("user_devices", "id"),
-    ("notification_log", "date"),
+    ("notification_log", "date,notification_type,scheduled_time"),
     ("question_answers", "id"),
     ("question_answer_likes", "answer_id,device_id"),
     ("question_answer_reports", "answer_id,device_id"),

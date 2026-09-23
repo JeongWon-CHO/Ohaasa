@@ -3,7 +3,14 @@ Thumbs.db
 *.log
 .env
 .env.local
-supabase/
+# Supabase 함수와 마이그레이션은 운영 코드이므로 버전 관리한다.
+# CLI가 만드는 로컬 상태와 비밀값만 제외한다.
+supabase/.branches/
+supabase/.temp/
+supabase/.env
+supabase/.env.*
+infra/aws/.aws-sam/
+infra/aws/samconfig.toml
 
 # Firebase service account keys (push 발송용 — 절대 커밋 금지)
 # google-services.json은 APK 번들용이므로 커밋 대상 (별도 처리)

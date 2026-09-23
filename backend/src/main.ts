@@ -60,7 +60,7 @@ const ZODIAC_NAME_MAP: Record<string, string> = {
 // ============================================================
 
 /** UTC+9 (JST/KST) 기준 오늘 날짜를 "YYYY-MM-DD" 형식으로 반환한다. */
-function getTodayJST(): string {
+export function getTodayJST(): string {
   const jst = new Date(Date.now() + 9 * 60 * 60 * 1000);
   return jst.toISOString().slice(0, 10);
 }
@@ -69,7 +69,7 @@ function getTodayJST(): string {
  * "YYYY-MM-DD" 형식의 JST 날짜가 토요일(6) 또는 일요일(0)인지 반환한다.
  * 평일/주말 판단은 오하아사 업데이트 여부가 아닌 JST 요일 기준으로 한다.
  */
-function isWeekendJST(today: string): boolean {
+export function isWeekendJST(today: string): boolean {
   const [y, m, d] = today.split("-").map(Number);
   const day = new Date(Date.UTC(y, m - 1, d)).getUTCDay(); // 0=일, 6=토
   return day === 0 || day === 6;
@@ -446,7 +446,7 @@ function printWeekendPreview(
  *   평일(월~금): 오하아사 메인. ohaasaDate !== today이면 스킵.
  *   주말(토~일): 고고 메인.   gogoDate  !== today이면 스킵.
  */
-async function crawlAndSave(
+export async function crawlAndSave(
   supabase: SupabaseClient,
   isDryRun: boolean,
   isForce: boolean,
@@ -570,7 +570,7 @@ async function crawlAndSave(
 // Main
 // ============================================================
 
-async function main(): Promise<void> {
+export async function main(): Promise<void> {
   const isDryRun = process.argv.includes("--dry-run");
   const isForce  = process.argv.includes("--force");
 
@@ -595,7 +595,9 @@ async function main(): Promise<void> {
 // Entry point
 // ============================================================
 
-main().catch((err: Error) => {
-  console.error("[main] Unexpected error:", err.message);
-  process.exit(1);
-});
+if (require.main === module) {
+  main().catch((err: Error) => {
+    console.error("[main] Unexpected error:", err.message);
+    process.exit(1);
+  });
+}

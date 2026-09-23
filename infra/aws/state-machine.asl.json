@@ -1,0 +1,146 @@
+{
+  "Comment": "Crawl today's horoscope and retry stale source data twice at 20-minute intervals",
+  "StartAt": "FirstCrawl",
+  "States": {
+    "FirstCrawl": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Parameters": {
+        "FunctionName": "${CrawlerFunctionArn}",
+        "Payload.$": "$"
+      },
+      "Retry": [
+        {
+          "ErrorEquals": ["Lambda.ServiceException", "Lambda.AWSLambdaException", "Lambda.SdkClientException", "States.TaskFailed"],
+          "IntervalSeconds": 10,
+          "BackoffRate": 2,
+          "MaxAttempts": 3
+        }
+      ],
+      "Next": "FirstResult"
+    },
+    "FirstResult": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Variable": "$.Payload.status",
+          "StringEquals": "stale",
+          "Next": "WaitBeforeSecondCrawl"
+        },
+        {
+          "Variable": "$.Payload.status",
+          "StringEquals": "partial",
+          "Next": "WaitBeforeSecondCrawl"
+        }
+      ],
+      "Default": "DispatchDueNotifications"
+    },
+    "WaitBeforeSecondCrawl": {
+      "Type": "Wait",
+      "Seconds": 1200,
+      "Next": "SecondCrawl"
+    },
+    "SecondCrawl": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Parameters": {
+        "FunctionName": "${CrawlerFunctionArn}",
+        "Payload.$": "$"
+      },
+      "Retry": [
+        {
+          "ErrorEquals": ["Lambda.ServiceException", "Lambda.AWSLambdaException", "Lambda.SdkClientException", "States.TaskFailed"],
+          "IntervalSeconds": 10,
+          "BackoffRate": 2,
+          "MaxAttempts": 3
+        }
+      ],
+      "Next": "SecondResult"
+    },
+    "SecondResult": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Variable": "$.Payload.status",
+          "StringEquals": "stale",
+          "Next": "WaitBeforeThirdCrawl"
+        },
+        {
+          "Variable": "$.Payload.status",
+          "StringEquals": "partial",
+          "Next": "WaitBeforeThirdCrawl"
+        }
+      ],
+      "Default": "DispatchDueNotifications"
+    },
+    "WaitBeforeThirdCrawl": {
+      "Type": "Wait",
+      "Seconds": 1200,
+      "Next": "ThirdCrawl"
+    },
+    "ThirdCrawl": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Parameters": {
+        "FunctionName": "${CrawlerFunctionArn}",
+        "Payload.$": "$"
+      },
+      "Retry": [
+        {
+          "ErrorEquals": ["Lambda.ServiceException", "Lambda.AWSLambdaException", "Lambda.SdkClientException", "States.TaskFailed"],
+          "IntervalSeconds": 10,
+          "BackoffRate": 2,
+          "MaxAttempts": 3
+        }
+      ],
+      "Next": "ThirdResult"
+    },
+    "ThirdResult": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Variable": "$.Payload.status",
+          "StringEquals": "stale",
+          "Next": "NoFreshData"
+        },
+        {
+          "Variable": "$.Payload.status",
+          "StringEquals": "partial",
+          "Next": "NoFreshData"
+        }
+      ],
+      "Default": "DispatchDueNotifications"
+    },
+    "NoFreshData": {
+      "Type": "Fail",
+      "Error": "NoFreshHoroscopeData",
+      "Cause": "The source was still stale after three crawl attempts"
+    },
+    "DispatchDueNotifications": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Parameters": {
+        "FunctionName": "${NotificationDispatcherFunctionArn}",
+        "Payload": {}
+      },
+      "Retry": [
+        {
+          "ErrorEquals": ["Lambda.ServiceException", "Lambda.AWSLambdaException", "Lambda.SdkClientException"],
+          "IntervalSeconds": 10,
+          "BackoffRate": 2,
+          "MaxAttempts": 2
+        }
+      ],
+      "Catch": [
+        {
+          "ErrorEquals": ["States.ALL"],
+          "Next": "Succeeded"
+        }
+      ],
+      "Next": "Succeeded"
+    },
+    "Succeeded": {
+      "Type": "Succeed"
+    }
+  }
+}

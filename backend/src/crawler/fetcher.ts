@@ -3,6 +3,7 @@ export const SOURCE_URL = "https://www.asahi.co.jp/ohaasa/week/horoscope/";
 
 // 실제 데이터 취득 대상: main.min.js가 호출하는 내부 JSON API
 const JSON_API_URL = "https://www.asahi.co.jp/data/ohaasa2020/horoscope.json";
+const FETCH_TIMEOUT_MS = 15_000;
 
 const HEADERS = {
   "User-Agent":
@@ -45,7 +46,10 @@ export async function fetchJson(): Promise<HoroscopeApiResponse> {
 
   let res: Response;
   try {
-    res = await fetch(JSON_API_URL, { headers: HEADERS });
+    res = await fetch(JSON_API_URL, {
+      headers: HEADERS,
+      signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+    });
   } catch (err) {
     throw new Error(`[fetcher] Network error: ${(err as Error).message}`);
   }

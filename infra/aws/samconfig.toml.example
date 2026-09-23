@@ -1,0 +1,9 @@
+version = 0.1
+
+[default.deploy.parameters]
+stack_name = "ohaasa-scheduler"
+resolve_s3 = true
+capabilities = "CAPABILITY_IAM"
+confirm_changeset = true
+region = "ap-northeast-2"
+parameter_overrides = "ApplicationSecretsArn=REPLACE_WITH_SECRET_ARN OpenAIModel=gpt-4o"

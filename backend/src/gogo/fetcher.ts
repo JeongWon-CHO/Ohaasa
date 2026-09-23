@@ -1,4 +1,5 @@
 export const SOURCE_URL = "https://www.tv-asahi.co.jp/goodmorning/uranai/";
+const FETCH_TIMEOUT_MS = 15_000;
 
 const HEADERS = {
   "User-Agent":
@@ -18,7 +19,10 @@ export async function fetchHtml(): Promise<string> {
 
   let res: Response;
   try {
-    res = await fetch(SOURCE_URL, { headers: HEADERS });
+    res = await fetch(SOURCE_URL, {
+      headers: HEADERS,
+      signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+    });
   } catch (err) {
     throw new Error(`[gogo-fetcher] Network error: ${(err as Error).message}`);
   }
