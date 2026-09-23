@@ -1,7 +1,24 @@
 {
   "Comment": "Crawl today's horoscope and retry stale source data twice at 20-minute intervals",
-  "StartAt": "FirstCrawl",
+  "StartAt": "CheckDryRun",
   "States": {
+    "CheckDryRun": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Variable": "$.dryRun",
+          "BooleanEquals": true,
+          "Next": "FirstCrawl"
+        }
+      ],
+      "Default": "SetDryRunFalse"
+    },
+    "SetDryRunFalse": {
+      "Type": "Pass",
+      "Result": false,
+      "ResultPath": "$.dryRun",
+      "Next": "FirstCrawl"
+    },
     "FirstCrawl": {
       "Type": "Task",
       "Resource": "arn:aws:states:::lambda:invoke",
@@ -9,6 +26,7 @@
         "FunctionName": "${CrawlerFunctionArn}",
         "Payload.$": "$"
       },
+      "ResultPath": "$.crawlResult",
       "Retry": [
         {
           "ErrorEquals": ["Lambda.ServiceException", "Lambda.AWSLambdaException", "Lambda.SdkClientException", "States.TaskFailed"],
@@ -23,12 +41,12 @@
       "Type": "Choice",
       "Choices": [
         {
-          "Variable": "$.Payload.status",
+          "Variable": "$.crawlResult.Payload.status",
           "StringEquals": "stale",
           "Next": "WaitBeforeSecondCrawl"
         },
         {
-          "Variable": "$.Payload.status",
+          "Variable": "$.crawlResult.Payload.status",
           "StringEquals": "partial",
           "Next": "WaitBeforeSecondCrawl"
         }
@@ -47,6 +65,7 @@
         "FunctionName": "${CrawlerFunctionArn}",
         "Payload.$": "$"
       },
+      "ResultPath": "$.crawlResult",
       "Retry": [
         {
           "ErrorEquals": ["Lambda.ServiceException", "Lambda.AWSLambdaException", "Lambda.SdkClientException", "States.TaskFailed"],
@@ -61,12 +80,12 @@
       "Type": "Choice",
       "Choices": [
         {
-          "Variable": "$.Payload.status",
+          "Variable": "$.crawlResult.Payload.status",
           "StringEquals": "stale",
           "Next": "WaitBeforeThirdCrawl"
         },
         {
-          "Variable": "$.Payload.status",
+          "Variable": "$.crawlResult.Payload.status",
           "StringEquals": "partial",
           "Next": "WaitBeforeThirdCrawl"
         }
@@ -85,6 +104,7 @@
         "FunctionName": "${CrawlerFunctionArn}",
         "Payload.$": "$"
       },
+      "ResultPath": "$.crawlResult",
       "Retry": [
         {
           "ErrorEquals": ["Lambda.ServiceException", "Lambda.AWSLambdaException", "Lambda.SdkClientException", "States.TaskFailed"],
@@ -99,12 +119,12 @@
       "Type": "Choice",
       "Choices": [
         {
-          "Variable": "$.Payload.status",
+          "Variable": "$.crawlResult.Payload.status",
           "StringEquals": "stale",
           "Next": "NoFreshData"
         },
         {
-          "Variable": "$.Payload.status",
+          "Variable": "$.crawlResult.Payload.status",
           "StringEquals": "partial",
           "Next": "NoFreshData"
         }
@@ -121,7 +141,9 @@
       "Resource": "arn:aws:states:::lambda:invoke",
       "Parameters": {
         "FunctionName": "${NotificationDispatcherFunctionArn}",
-        "Payload": {}
+        "Payload": {
+          "dryRun.$": "$.dryRun"
+        }
       },
       "Retry": [
         {
