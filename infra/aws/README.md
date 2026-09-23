@@ -37,8 +37,8 @@ sam deploy --guided
 4. Edge Function, notification dispatcher, Step Functions를 차례로 dry-run으로 확인한다.
 5. SNS 알람 수신자를 설정하고 알림 Scheduler를 활성화한다.
 6. 실제 알림 한 슬롯과 `notification_log`를 확인한다.
-7. Crawl Scheduler를 활성화하고 다음 05:30 실행을 확인한다.
-8. GitHub Actions의 `crawl-and-notify` cron만 비활성화한다.
+7. GitHub 기본 브랜치에서 `crawl-and-notify` cron만 제거하고 수동 실행은 유지한다.
+8. Crawl Scheduler를 활성화하고 다음 05:30 실행을 확인한다.
 
 GitHub workflow 파일은 즉시 삭제하지 않고 수동 복구용으로 남긴다.
 

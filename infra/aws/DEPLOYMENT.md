@@ -122,10 +122,10 @@ Webhook을 다시 활성화한다.
 
 ## 7. Switch the crawler
 
-1. CloudFormation의 `CrawlScheduleState=ENABLED`로 AWS Crawl Scheduler를 활성화한다.
-2. 수동 실행으로 당일 데이터 12개와 번역 12개를 확인한다.
-3. GitHub Actions `crawl-and-notify`의 schedule 실행을 비활성화한다.
-4. workflow 파일과 `workflow_dispatch`는 비상 수동 실행용으로 남긴다.
+1. GitHub 기본 브랜치에서 `crawl-and-notify`의 schedule 실행을 제거한다.
+2. workflow 파일과 `workflow_dispatch`는 비상 수동 실행용으로 남긴다.
+3. CloudFormation의 `CrawlScheduleState=ENABLED`로 AWS Crawl Scheduler를 활성화한다.
+4. 다음 05:30 실행에서 당일 데이터 12개와 번역 12개를 확인한다.
 
 두 크롤러를 동시에 예약 실행하지 않는다. 데이터 upsert는 멱등적이지만 OpenAI 호출과
 운영 로그가 중복되고, 전환 상태를 판단하기 어려워진다.
