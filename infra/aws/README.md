@@ -30,12 +30,13 @@ sam deploy --guided
 배포 후 순서는 다음과 같다.
 
 1. Crawler Lambda를 dry-run으로 수동 호출한다.
-2. Step Functions를 수동 실행해 Supabase upsert를 확인한다.
-3. notification dispatcher와 Edge Function을 dry-run으로 확인한다.
-4. 기존 `horoscope_notify` Database Webhook을 비활성화한다.
-5. 알림 Scheduler를 활성화한다.
-6. Crawl Scheduler를 활성화한다.
-7. GitHub Actions의 `crawl-and-notify` cron만 비활성화한다.
+2. 기존 Edge Function 소스와 `horoscope_notify` Webhook 설정을 백업한다.
+3. Webhook을 비활성화하고 새 Edge Function을 배포한다. 함수의 `OHAASA_SERVICE_ROLE_KEY` secret에는 AWS dispatcher와 같은 운영 service role key를 설정한다.
+4. Edge Function, notification dispatcher, Step Functions를 차례로 dry-run으로 확인한다.
+5. SNS 알람 수신자를 설정하고 알림 Scheduler를 활성화한다.
+6. 실제 알림 한 슬롯과 `notification_log`를 확인한다.
+7. Crawl Scheduler를 활성화하고 다음 05:30 실행을 확인한다.
+8. GitHub Actions의 `crawl-and-notify` cron만 비활성화한다.
 
 GitHub workflow 파일은 즉시 삭제하지 않고 수동 복구용으로 남긴다.
 

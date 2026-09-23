@@ -46,7 +46,8 @@ function firstLine(text: string): string {
 
 Deno.serve(async (request) => {
   const supabaseUrl = Deno.env.get("SUPABASE_URL");
-  const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  const serviceRoleKey = Deno.env.get("OHAASA_SERVICE_ROLE_KEY")
+    ?? Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
   if (!supabaseUrl || !serviceRoleKey) {
     return json({ error: "Server configuration is incomplete" }, 500);
   }
