@@ -3,6 +3,8 @@
 정기 크롤링과 오전 알림 dispatcher를 GitHub Actions cron에서 분리한다.
 모든 Scheduler는 첫 배포 시 `DISABLED` 상태다. 수동 검증과 기존 Supabase
 Database Webhook 비활성화를 마친 뒤 명시적으로 활성화한다.
+운영 전환 시 CloudFormation의 `NotificationScheduleState`와
+`CrawlScheduleState` 파라미터를 각각 `ENABLED`로 변경한다.
 
 ## Secret
 

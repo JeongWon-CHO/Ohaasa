@@ -114,7 +114,7 @@ node infra/aws/scripts/preflight-supabase.mjs after
 4. AWS dispatcher를 `dryRun=true`로 호출한다.
 5. Step Functions 전체를 `dryRun=true`로 실행하고 모든 슬롯이 `dry_run`인지 확인한다.
 6. SNS topic에 운영자가 확인하는 이메일 또는 알림 채널을 구독시킨다.
-7. 알림 Scheduler 두 개만 활성화하고 실제 한 슬롯의 `notification_log`를 확인한다.
+7. CloudFormation의 `NotificationScheduleState=ENABLED`로 알림 Scheduler 두 개만 활성화하고 실제 한 슬롯의 `notification_log`를 확인한다.
 8. Database Webhook은 다시 활성화하지 않는다.
 
 Edge Function 검증이 실패하면 새 Scheduler를 켜지 않고 기존 함수 소스를 복원한 뒤
@@ -122,7 +122,7 @@ Webhook을 다시 활성화한다.
 
 ## 7. Switch the crawler
 
-1. AWS Crawl Scheduler를 활성화한다.
+1. CloudFormation의 `CrawlScheduleState=ENABLED`로 AWS Crawl Scheduler를 활성화한다.
 2. 수동 실행으로 당일 데이터 12개와 번역 12개를 확인한다.
 3. GitHub Actions `crawl-and-notify`의 schedule 실행을 비활성화한다.
 4. workflow 파일과 `workflow_dispatch`는 비상 수동 실행용으로 남긴다.

@@ -9,6 +9,18 @@ Parameters:
   OpenAIModel:
     Type: String
     Default: gpt-4o
+  CrawlScheduleState:
+    Type: String
+    Default: DISABLED
+    AllowedValues:
+      - DISABLED
+      - ENABLED
+  NotificationScheduleState:
+    Type: String
+    Default: DISABLED
+    AllowedValues:
+      - DISABLED
+      - ENABLED
 
 Globals:
   Function:
@@ -170,7 +182,7 @@ Resources:
       ScheduleExpressionTimezone: Asia/Seoul
       FlexibleTimeWindow:
         Mode: "OFF"
-      State: DISABLED
+      State: !Ref CrawlScheduleState
       Target:
         Arn: !Ref CrawlStateMachine
         RoleArn: !GetAtt SchedulerRole.Arn
@@ -189,7 +201,7 @@ Resources:
       ScheduleExpressionTimezone: Asia/Seoul
       FlexibleTimeWindow:
         Mode: "OFF"
-      State: DISABLED
+      State: !Ref NotificationScheduleState
       Target:
         Arn: !GetAtt NotificationDispatcherFunction.Arn
         RoleArn: !GetAtt SchedulerRole.Arn
@@ -208,7 +220,7 @@ Resources:
       ScheduleExpressionTimezone: Asia/Seoul
       FlexibleTimeWindow:
         Mode: "OFF"
-      State: DISABLED
+      State: !Ref NotificationScheduleState
       Target:
         Arn: !GetAtt NotificationDispatcherFunction.Arn
         RoleArn: !GetAtt SchedulerRole.Arn
