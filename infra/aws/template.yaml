@@ -29,7 +29,6 @@ Resources:
       Handler: src/lambda/crawl-handler.handler
       Timeout: 840
       MemorySize: 1024
-      ReservedConcurrentExecutions: 1
       Policies:
         - AWSLambdaBasicExecutionRole
         - AWSXRayDaemonWriteAccess
@@ -53,7 +52,6 @@ Resources:
       Handler: src/lambda/notification-dispatcher.handler
       Timeout: 300
       MemorySize: 256
-      ReservedConcurrentExecutions: 1
       Policies:
         - AWSLambdaBasicExecutionRole
         - AWSXRayDaemonWriteAccess
