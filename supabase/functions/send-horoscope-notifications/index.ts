@@ -176,6 +176,7 @@ Deno.serve(async (request) => {
           }
           messages.push({
             to: device.push_token,
+            priority: "high",
             sound: "default",
             title: `${ZODIAC_NAME[device.zodiac_sign] ?? device.zodiac_sign} 오늘의 운세`,
             body: firstLine(advice),
