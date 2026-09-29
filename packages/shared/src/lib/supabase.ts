@@ -3,12 +3,21 @@ import { createClient } from '@supabase/supabase-js';
 import type { ZodiacSign } from '../constants/zodiac';
 import type { NotificationTime } from '../constants/notificationTime';
 import type { ReportReason } from '../lib/moderation';
-import { getNotificationTime } from './storage';
+import { getNotificationTime, getZodiacSign } from './storage';
 
 const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL!;
 const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY!;
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+
+// 앱 시작 등록과 설정 변경이 겹쳐도 이전 요청이 새 알림 시간을 덮어쓰지 않게 한다.
+let deviceWriteTail: Promise<void> = Promise.resolve();
+
+function queueDeviceWrite<T>(write: () => Promise<T>): Promise<T> {
+  const result = deviceWriteTail.then(write);
+  deviceWriteTail = result.then(() => {}, () => {});
+  return result;
+}
 
 export interface UpsertDeviceParams {
   deviceId: string;
@@ -19,49 +28,56 @@ export interface UpsertDeviceParams {
   notificationTime?: NotificationTime;
 }
 
-export async function upsertDevice(params: UpsertDeviceParams): Promise<boolean> {
-  try {
-    const notificationTime = params.notificationTime ?? await getNotificationTime();
-    const { error } = await supabase.from('user_devices').upsert(
-      {
-        device_id: params.deviceId,
-        zodiac_sign: params.zodiacSign,
-        push_token: params.pushToken,
-        platform: params.platform,
-        notifications_enabled: params.notificationsEnabled,
-        notification_time: notificationTime,
-      },
-      { onConflict: 'device_id' },
-    );
+export function upsertDevice(params: UpsertDeviceParams): Promise<boolean> {
+  return queueDeviceWrite(async () => {
+    try {
+      const [notificationTime, zodiac] = await Promise.all([
+        params.notificationTime ?? getNotificationTime(),
+        getZodiacSign(),
+      ]);
+      const { error } = await supabase.from('user_devices').upsert(
+        {
+          device_id: params.deviceId,
+          zodiac_sign: zodiac ?? params.zodiacSign,
+          push_token: params.pushToken,
+          platform: params.platform,
+          notifications_enabled: params.notificationsEnabled && zodiac !== null,
+          notification_time: notificationTime,
+        },
+        { onConflict: 'device_id' },
+      );
 
-    if (error) {
-      console.warn('[supabase] upsertDevice failed:', error.message);
+      if (error) {
+        console.warn('[supabase] upsertDevice failed:', error.message);
+        return false;
+      }
+
+      return true;
+    } catch (error) {
+      console.warn('[supabase] upsertDevice failed:', error instanceof Error ? error.message : String(error));
       return false;
     }
-
-    return true;
-  } catch (error) {
-    console.warn('[supabase] upsertDevice failed:', error instanceof Error ? error.message : String(error));
-    return false;
-  }
+  });
 }
 
 /** 별자리가 없는 기기는 기존 서버 행에 별자리가 남아 있어도 알림을 받지 않게 한다. */
-export async function disableDeviceNotifications(deviceId: string): Promise<boolean> {
-  try {
-    const { error } = await supabase
-      .from('user_devices')
-      .update({ notifications_enabled: false })
-      .eq('device_id', deviceId);
-    if (error) {
-      console.warn('[supabase] disableDeviceNotifications failed:', error.message);
+export function disableDeviceNotifications(deviceId: string): Promise<boolean> {
+  return queueDeviceWrite(async () => {
+    try {
+      const { error } = await supabase
+        .from('user_devices')
+        .update({ notifications_enabled: false })
+        .eq('device_id', deviceId);
+      if (error) {
+        console.warn('[supabase] disableDeviceNotifications failed:', error.message);
+        return false;
+      }
+      return true;
+    } catch (error) {
+      console.warn('[supabase] disableDeviceNotifications failed:', error instanceof Error ? error.message : String(error));
       return false;
     }
-    return true;
-  } catch (error) {
-    console.warn('[supabase] disableDeviceNotifications failed:', error instanceof Error ? error.message : String(error));
-    return false;
-  }
+  });
 }
 
 // ─── 오늘의 질문 — 공개 답변 ───────────────────────────────────
