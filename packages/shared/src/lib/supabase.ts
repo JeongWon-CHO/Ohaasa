@@ -1,7 +1,9 @@
 import { createClient } from '@supabase/supabase-js';
 
 import type { ZodiacSign } from '../constants/zodiac';
+import type { NotificationTime } from '../constants/notificationTime';
 import type { ReportReason } from '../lib/moderation';
+import { getNotificationTime } from './storage';
 
 const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL!;
 const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY!;
@@ -14,22 +16,33 @@ export interface UpsertDeviceParams {
   pushToken: string | null;
   platform: 'ios' | 'android' | null;
   notificationsEnabled: boolean;
+  notificationTime?: NotificationTime;
 }
 
-export async function upsertDevice(params: UpsertDeviceParams): Promise<void> {
-  const { error } = await supabase.from('user_devices').upsert(
-    {
-      device_id: params.deviceId,
-      zodiac_sign: params.zodiacSign,
-      push_token: params.pushToken,
-      platform: params.platform,
-      notifications_enabled: params.notificationsEnabled,
-    },
-    { onConflict: 'device_id' },
-  );
+export async function upsertDevice(params: UpsertDeviceParams): Promise<boolean> {
+  try {
+    const notificationTime = params.notificationTime ?? await getNotificationTime();
+    const { error } = await supabase.from('user_devices').upsert(
+      {
+        device_id: params.deviceId,
+        zodiac_sign: params.zodiacSign,
+        push_token: params.pushToken,
+        platform: params.platform,
+        notifications_enabled: params.notificationsEnabled,
+        notification_time: notificationTime,
+      },
+      { onConflict: 'device_id' },
+    );
 
-  if (error) {
-    console.warn('[supabase] upsertDevice failed:', error.message);
+    if (error) {
+      console.warn('[supabase] upsertDevice failed:', error.message);
+      return false;
+    }
+
+    return true;
+  } catch (error) {
+    console.warn('[supabase] upsertDevice failed:', error instanceof Error ? error.message : String(error));
+    return false;
   }
 }
 

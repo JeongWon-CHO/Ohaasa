@@ -14,6 +14,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 
 import { NotificationDeniedSheet } from "@/src/components/NotificationDeniedSheet";
+import { Toast } from "@/src/components/common/Toast";
 import { ResponsiveContainer } from "@/src/components/common/ResponsiveContainer";
 import { ConstellationBadge } from "@/src/components/final/ConstellationBadge";
 import { FinalHeader } from "@/src/components/final/FinalHeader";
@@ -23,6 +24,13 @@ import { SettingsSection } from "@/src/components/final/SettingsSection";
 import { Toggle } from "@/src/components/final/Toggle";
 import { colors, gradients, zodiacColors } from "@/src/constants/design";
 import { ZODIAC_MAP } from "@ohaasa/shared/constants/zodiac";
+import {
+  DEFAULT_NOTIFICATION_TIME,
+  NOTIFICATION_TIMES,
+  formatNotificationTime,
+  type NotificationTime,
+} from "@ohaasa/shared/constants/notificationTime";
+import { useToast } from "@ohaasa/shared/hooks/useToast";
 import { useZodiac } from "@ohaasa/shared/hooks/useZodiac";
 import {
   checkPermissionStatus,
@@ -31,6 +39,8 @@ import {
 } from "@/src/lib/notifications";
 import {
   getNotificationsEnabled,
+  getNotificationTime,
+  setNotificationTime,
   setNotificationsEnabled as saveNotificationsEnabled,
   getOrCreateDeviceId,
   getZodiacSign,
@@ -56,6 +66,11 @@ export default function SettingsScreen() {
   const router = useRouter();
   const { zodiacSign } = useZodiac();
   const [notificationsEnabled, setNotificationsEnabledState] = useState(false);
+  const [notificationTime, setNotificationTimeState] = useState<NotificationTime>(DEFAULT_NOTIFICATION_TIME);
+  const [timeOptionsVisible, setTimeOptionsVisible] = useState(false);
+  const [timeSaving, setTimeSaving] = useState(false);
+  const timeSavingRef = useRef(false);
+  const { showToast, toastProps } = useToast();
   const [storedPushToken, setStoredPushToken] = useState<string | null>(null);
   const [permStatus, setPermStatus] = useState<NotifPermissionStatus | null>(null);
   const [deniedSheetVisible, setDeniedSheetVisible] = useState(false);
@@ -70,11 +85,13 @@ export default function SettingsScreen() {
   // 권한·토큰·알림 활성화 여부를 스토리지+시스템에서 읽어 상태를 동기화
   // useFocusEffect 진입 시 & 앱 포그라운드 복귀 시 모두 호출
   const syncState = useCallback(async () => {
-    const [enabled, token, perm] = await Promise.all([
+    const [enabled, token, perm, savedTime] = await Promise.all([
       getNotificationsEnabled(),
       getPushToken(),
       checkPermissionStatus(),
+      getNotificationTime(),
     ]);
+    if (!timeSavingRef.current) setNotificationTimeState(savedTime);
 
     let effectiveEnabled = enabled;
     let effectiveToken = token;
@@ -228,6 +245,50 @@ export default function SettingsScreen() {
     }
   }
 
+  async function handleNotificationTime(nextTime: NotificationTime) {
+    if (timeSavingRef.current) return;
+    if (nextTime === notificationTime) {
+      setTimeOptionsVisible(false);
+      return;
+    }
+
+    timeSavingRef.current = true;
+    setTimeSaving(true);
+    const previousTime = notificationTime;
+    try {
+      // 모든 기기 upsert도 로컬 시간을 전송하므로, 먼저 저장하고 실패 시 되돌린다.
+      await setNotificationTime(nextTime);
+      const zodiac = await getZodiacSign();
+      if (zodiac) {
+        const [deviceId, pushToken, platform, enabled] = await Promise.all([
+          getOrCreateDeviceId(),
+          getPushToken(),
+          getPlatform(),
+          getNotificationsEnabled(),
+        ]);
+        const saved = await upsertDevice({
+          deviceId,
+          zodiacSign: zodiac,
+          pushToken,
+          platform,
+          notificationsEnabled: enabled,
+          notificationTime: nextTime,
+        });
+        if (!saved) throw new Error("notification time upsert failed");
+      }
+      setNotificationTimeState(nextTime);
+      setTimeOptionsVisible(false);
+      showToast(`알림 시간이 ${formatNotificationTime(nextTime)}로 설정됐어요`);
+    } catch {
+      await setNotificationTime(previousTime).catch(() => {});
+      setNotificationTimeState(previousTime);
+      showToast("알림 시간을 저장하지 못했어요. 다시 시도해 주세요");
+    } finally {
+      timeSavingRef.current = false;
+      setTimeSaving(false);
+    }
+  }
+
   async function sendTestNotification() {
     try {
       const Notifications = await import("expo-notifications");
@@ -362,6 +423,41 @@ export default function SettingsScreen() {
             }
             style={styles.notifRow}
           />
+          <SettingsRow
+            title="알림 시간"
+            description={formatNotificationTime(notificationTime)}
+            showChevron
+            onPress={() => setTimeOptionsVisible((visible) => !visible)}
+            style={[styles.aboutRow, styles.rowBorder]}
+          />
+          {timeOptionsVisible && (
+            <View style={styles.timeOptions}>
+              {NOTIFICATION_TIMES.map((time) => {
+                const selected = time === notificationTime;
+                return (
+                  <Pressable
+                    key={time}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected, disabled: timeSaving }}
+                    disabled={timeSaving}
+                    onPress={() => handleNotificationTime(time)}
+                    style={({ pressed }) => [
+                      styles.timeOption,
+                      selected && styles.timeOptionSelected,
+                      pressed && styles.pressed,
+                    ]}
+                  >
+                    <Text style={[styles.timeOptionText, selected && styles.timeOptionTextSelected]}>
+                      {time}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+              <Text style={styles.timeOptionHint}>
+                오늘 알림을 이미 받았거나 선택한 시간이 지났다면 내일부터 적용돼요.
+              </Text>
+            </View>
+          )}
         </SettingsSection>
 
         {/* COMMUNITY */}
@@ -520,6 +616,7 @@ export default function SettingsScreen() {
         onCancel={() => setUnblockDialogVisible(false)}
         onConfirm={handleConfirmUnblockAll}
       />
+      <Toast {...toastProps} />
     </LinearGradient>
   );
 }
@@ -606,6 +703,39 @@ const styles = StyleSheet.create({
   // ── Row styles ────────────────────────────────────────────────
   notifRow: {
     paddingVertical: 15,
+  },
+  timeOptions: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    paddingTop: 12,
+  },
+  timeOption: {
+    width: "31%",
+    alignItems: "center",
+    paddingVertical: 10,
+    borderRadius: 12,
+    backgroundColor: colors.cream2,
+  },
+  timeOptionSelected: {
+    backgroundColor: colors.apricotDark,
+  },
+  timeOptionText: {
+    fontSize: 12,
+    lineHeight: 18,
+    fontFamily: "NotoSansKR_500Medium",
+    color: colors.text,
+  },
+  timeOptionTextSelected: {
+    color: "#FFFDF9",
+  },
+  timeOptionHint: {
+    width: "100%",
+    marginTop: 4,
+    fontSize: 11,
+    lineHeight: 16,
+    fontFamily: "NotoSansKR_400Regular",
+    color: colors.textSoft,
   },
   openSettingsRow: {
     paddingVertical: 13,

@@ -2,11 +2,17 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Crypto from 'expo-crypto';
 
 import { ZODIAC_LIST, type ZodiacSign } from '../constants/zodiac';
+import {
+  DEFAULT_NOTIFICATION_TIME,
+  isNotificationTime,
+  type NotificationTime,
+} from '../constants/notificationTime';
 
 export const STORAGE_KEYS = {
   deviceId: 'ohaasa:device_id',
   zodiacSign: 'ohaasa:zodiac_sign',
   notificationsEnabled: 'ohaasa:notifications_enabled',
+  notificationTime: 'ohaasa:notification_time',
   pushToken: 'ohaasa:push_token',
   platform: 'ohaasa:platform',
   hasAskedPushPermission: 'ohaasa:has_asked_push_permission',
@@ -72,6 +78,15 @@ export async function getNotificationsEnabled(): Promise<boolean> {
 
 export async function setNotificationsEnabled(enabled: boolean): Promise<void> {
   await AsyncStorage.setItem(STORAGE_KEYS.notificationsEnabled, String(enabled));
+}
+
+export async function getNotificationTime(): Promise<NotificationTime> {
+  const stored = await AsyncStorage.getItem(STORAGE_KEYS.notificationTime);
+  return isNotificationTime(stored) ? stored : DEFAULT_NOTIFICATION_TIME;
+}
+
+export async function setNotificationTime(time: NotificationTime): Promise<void> {
+  await AsyncStorage.setItem(STORAGE_KEYS.notificationTime, time);
 }
 
 export async function getPushToken(): Promise<string | null> {
