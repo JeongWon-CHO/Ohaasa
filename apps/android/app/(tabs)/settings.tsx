@@ -57,7 +57,7 @@ import {
   clearModerationState,
   getBlockedAuthorCount,
 } from "@ohaasa/shared/lib/moderation";
-import { upsertDevice } from "@ohaasa/shared/lib/supabase";
+import { disableDeviceNotifications, upsertDevice } from "@ohaasa/shared/lib/supabase";
 import { deleteDailyReview } from "@ohaasa/shared/lib/dailyReviews";
 
 // ─── Screen ───────────────────────────────────────────────────
@@ -66,6 +66,7 @@ export default function SettingsScreen() {
   const router = useRouter();
   const { zodiacSign } = useZodiac();
   const [notificationsEnabled, setNotificationsEnabledState] = useState(false);
+  const [hasZodiac, setHasZodiac] = useState(false);
   const [notificationTime, setNotificationTimeState] = useState<NotificationTime>(DEFAULT_NOTIFICATION_TIME);
   const [timeOptionsVisible, setTimeOptionsVisible] = useState(false);
   const [timeSaving, setTimeSaving] = useState(false);
@@ -85,16 +86,33 @@ export default function SettingsScreen() {
   // 권한·토큰·알림 활성화 여부를 스토리지+시스템에서 읽어 상태를 동기화
   // useFocusEffect 진입 시 & 앱 포그라운드 복귀 시 모두 호출
   const syncState = useCallback(async () => {
-    const [enabled, token, perm, savedTime] = await Promise.all([
+    const [enabled, token, perm, savedTime, zodiac] = await Promise.all([
       getNotificationsEnabled(),
       getPushToken(),
       checkPermissionStatus(),
       getNotificationTime(),
+      getZodiacSign(),
     ]);
+    setHasZodiac(zodiac !== null);
     if (!timeSavingRef.current) setNotificationTimeState(savedTime);
 
     let effectiveEnabled = enabled;
     let effectiveToken = token;
+
+    if (!zodiac) {
+      effectiveEnabled = false;
+      setNotificationsEnabledState(false);
+      if (enabled) await saveNotificationsEnabled(false);
+      if (enabled || token) {
+        // 이전 버전에서 남은 서버 기기 행도 꺼야 실제 푸시가 멈춘다.
+        void getOrCreateDeviceId()
+          .then(disableDeviceNotifications)
+          .then((disabled) => {
+            if (!disabled) showToast("알림을 끄지 못했어요. 잠시 후 다시 확인해 주세요");
+          })
+          .catch(() => showToast("알림을 끄지 못했어요. 잠시 후 다시 확인해 주세요"));
+      }
+    }
 
     // 시스템 권한이 철회된 경우 앱 내 설정도 강제 동기화
     if (perm.available && !perm.granted && enabled) {
@@ -104,7 +122,7 @@ export default function SettingsScreen() {
 
     // 경우 1-1: 바텀시트 → "설정하러 가기" 후 허용하고 돌아온 경우 자동 활성화
     // 레이스 방지: 진입 즉시 false로 리셋해 동시에 호출된 두 번째 syncState가 이 블록에 진입하지 못하게 함
-    if (pendingActivationRef.current && perm.available && perm.granted) {
+    if (pendingActivationRef.current && zodiac && perm.available && perm.granted) {
       pendingActivationRef.current = false;
       let finalToken = token;
       if (!finalToken) {
@@ -135,7 +153,7 @@ export default function SettingsScreen() {
     setStoredPushToken(effectiveToken);
     setPermStatus(perm);
     setBlockedCount(await getBlockedAuthorCount());
-  }, []);
+  }, [showToast]);
 
   async function handleConfirmUnblockAll() {
     setUnblockDialogVisible(false);
@@ -178,6 +196,12 @@ export default function SettingsScreen() {
 
     // ON: 환경 자체가 지원 안 되면 아무것도 안 함
     if (!permStatus || !permStatus.available) return;
+    if (!await getZodiacSign()) {
+      setNotificationsEnabledState(false);
+      await saveNotificationsEnabled(false);
+      showToast("별자리를 선택한 뒤 알림을 켤 수 있어요");
+      return;
+    }
 
     // 토글 탭 시점에 항상 최신 시스템 권한을 확인 (캐시된 permStatus 신뢰 금지)
     const freshPerm = await checkPermissionStatus();
@@ -410,15 +434,17 @@ export default function SettingsScreen() {
           <SettingsRow
             title="아침 알림"
             description={
-              isUnavailable
+              !hasZodiac
+                ? "별자리를 선택하면 알림을 받을 수 있어요"
+                : isUnavailable
                 ? "알림은 개발 빌드에서 사용할 수 있어요"
                 : "매일 아침 운세 알림 받기"
             }
             right={
               <Toggle
-                value={notificationsEnabled}
+                value={hasZodiac && notificationsEnabled}
                 onChange={handleToggle}
-                disabled={isUnavailable}
+                disabled={isUnavailable || !hasZodiac}
               />
             }
             style={styles.notifRow}
@@ -563,7 +589,14 @@ export default function SettingsScreen() {
               description="별자리 초기화 → 맨처음 화면으로 이동"
               showChevron
               onPress={async () => {
+                const deviceId = await getOrCreateDeviceId();
+                if (!await disableDeviceNotifications(deviceId)) {
+                  showToast("알림을 끄지 못했어요. 다시 시도해 주세요");
+                  return;
+                }
                 await clearZodiacSign();
+                setHasZodiac(false);
+                setNotificationsEnabledState(false);
                 router.replace("/");
               }}
               style={styles.aboutRow}

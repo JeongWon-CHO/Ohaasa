@@ -46,6 +46,24 @@ export async function upsertDevice(params: UpsertDeviceParams): Promise<boolean>
   }
 }
 
+/** 별자리가 없는 기기는 기존 서버 행에 별자리가 남아 있어도 알림을 받지 않게 한다. */
+export async function disableDeviceNotifications(deviceId: string): Promise<boolean> {
+  try {
+    const { error } = await supabase
+      .from('user_devices')
+      .update({ notifications_enabled: false })
+      .eq('device_id', deviceId);
+    if (error) {
+      console.warn('[supabase] disableDeviceNotifications failed:', error.message);
+      return false;
+    }
+    return true;
+  } catch (error) {
+    console.warn('[supabase] disableDeviceNotifications failed:', error instanceof Error ? error.message : String(error));
+    return false;
+  }
+}
+
 // ─── 오늘의 질문 — 공개 답변 ───────────────────────────────────
 // 공개 피드 조회는 device_id 컬럼을 절대 select하지 않는다.
 // (다른 사용자가 device_id를 알아내 남의 글을 수정/삭제하는 것을 막기 위함)

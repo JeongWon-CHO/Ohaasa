@@ -68,7 +68,10 @@ export async function setZodiacSign(zodiacSign: ZodiacSign): Promise<void> {
 }
 
 export async function clearZodiacSign(): Promise<void> {
-  await AsyncStorage.removeItem(STORAGE_KEYS.zodiacSign);
+  await Promise.all([
+    AsyncStorage.removeItem(STORAGE_KEYS.zodiacSign),
+    setNotificationsEnabled(false),
+  ]);
 }
 
 export async function getNotificationsEnabled(): Promise<boolean> {
