@@ -9,7 +9,7 @@ Ohaasa does not require registration or login. On first launch, and for existing
 To verify reporting and blocking:
 
 1. Accept the terms and complete onboarding by selecting a zodiac sign.
-2. Open the Community tab. Select the all-signs feed if necessary. A safe example answer begins with “[사용 예시]”. A comment from a separate example author begins with “[댓글 사용 예시]”. These examples are available for the latest broadcast date and use the same reporting and blocking mechanisms as ordinary content.
+2. Open the Community tab. Select the all-signs feed if necessary. A safe example answer begins with “[AI 예시]”. A comment from a separate example author begins with “[AI 댓글 예시]”. These examples are available for the latest broadcast date and use the same reporting and blocking mechanisms as ordinary content.
 3. Tap the ellipsis on another author's answer or comment, select Report, choose a reason and confirm. Reports are submitted for operator review.
 4. On an example from the other author, select Block user and confirm. That author's answers and comments disappear immediately and remain blocked after restarting the app. Blocking also queues the selected content for operator review; offline requests are retried on reconnect while the app is running.
 5. If needed, unblock example authors through Settings > Community > Blocked users, which clears the local block list.

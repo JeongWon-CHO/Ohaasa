@@ -45,18 +45,19 @@ select public.resolve_community_event('접수 UUID'::uuid, 'remove_and_ban', '�
 
 접수 스냅샷은 검토 및 이의 대응 후 이메일 워크플로가 처리 완료 후 90일이 지난 기록을 자동 정리한다. 워크플로를 끈 경우에는 운영자가 직접 정리한다. 관련 기록은 기본적으로 처리 완료 후 90일 이내 삭제하고,  제재 유지에 필요한 기기 식별자와 사유는 제재 기간 동안 보관한다. 운영 적용 후 백업 대상에 새 검토·제재 테이블을 포함할지도 확인한다. 백업에 포함한다면 아티팩트 접근 권한과 보존 기간을 함께 관리한다.
 
-## 심사용 예시
+## AI 예시 답변 자동 생성
 
-GitHub Secrets에 서로 다른 UUID 두 개를 등록한다:
+`Prepare community AI examples` 워크플로는 매일 KST/JST 오전 06:00(UTC 전날 21:00)에 실행한다. main 반영 후 기본 활성화이며 Repository Variable `COMMUNITY_REVIEW_CONTENT_ENABLED=false`로 중지할 수 있다. GitHub 예약 실행은 지연될 수 있다.
 
-- `REVIEW_ANSWER_DEVICE_ID`
-- `REVIEW_REPLY_DEVICE_ID`
+기존 `OPENAI_API_KEY`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` Secrets를 사용한다. `gpt-4o-mini`로 앱과 동일한 `getQuestionByDate` 질문에 맞는 한국어 답변 1개와 해당 답변에 공감하는 댓글 1개를 만든다. `[AI 예시]`, `[AI 댓글 예시]`로 표시하여 실제 사용자 게시물과 구분한다. 길이·공용 금칙어 필터·서버 필터를 통과한 내용만 저장한다. 잘못된 AI 출력은 최대 두 번 시도하고, 여전히 실패하면 고정 문구로 대체하지 않고 실패 처리한다. 개인 이용자 게시물은 OpenAI로 전송하지 않는다.
 
-`Prepare community review examples` 워크플로를 수동 실행해 확인한 뒤 Repository Variable `COMMUNITY_REVIEW_CONTENT_ENABLED=true`를 설정하면 KST/JST 08:00, 08:30, 09:00에 실행된다. 심사 종료 후 이 변수를 false로 바꾼다.
+오전 6시에는 새 운세 방송일이 아직 수집되지 않았을 수 있어 KST 오늘 날짜의 예시를 미리 준비하고, 앱에 표시되는 최신 방송일이 다르면 해당 날짜에도 예시를 준비한다. 날짜당 답변·댓글 한 쌍만 등록하고 기존 한 쌍이 있으면 AI 호출과 DB 쓰기를 건너뛴다. 기존 답변만 있다면 이를 바꾸지 않고 그 답변에 맞는 댓글만 생성한다. 주말에도 최신 방송일의 기존 예시를 덮어쓰지 않는다. Android에도 같은 AI 예시가 보인다.
 
-앱의 최신 운세 방송일(`horoscopes`의 최신 날짜)에 답변 1개, 댓글 1개를 등록한다. 질문은 앱에서 날짜로 계산되므로 별도 질문 테이블 생성 대기는 필요 없다. 크롤러가 늦으면 08:30/09:00 후속 실행으로 새 방송일에 준비한다. 같은 방송일의 기존 샘플을 덮어쓰지 않고, 숨김·제재된 샘플도 복구하지 않는다. 이전 방송일의 샘플은 삭제하지 않는다. Android에도 같은 샘플이 보인다.
+합성 작성자 UUID는 스크립트에 전용 기본값을 두었다. 별도 작성자가 필요하면 서로 다른 UUID를 `REVIEW_ANSWER_DEVICE_ID`, `REVIEW_REPLY_DEVICE_ID` Secrets로 재정의할 수 있다. 실제 사용자 device_id는 사용하지 않는다. 숨김·제재된 예시는 자동 복구하지 않는다. 이전 날짜 예시는 삭제하지 않는다.
 
-샘플 작성자는 고정이므로 한 번 차단한 심사 기기에서는 다음 날에도 숨겨진다. 재테스트할 때 설정 > 커뮤니티 > 차단한 사용자에서 해제한다. 위반 예시를 공개할 필요는 없으며 안전한 사용 예시를 신고·차단해 기능을 검증한다.
+수동 `Run workflow`의 `dry_run`은 기본 true다. AI 생성과 검증만 하고 DB에 쓰지 않는다. 실제 등록을 확인할 때만 false로 실행한다. 실패 시 GitHub Actions 로그에는 본문·API 키·작성자 ID를 기록하지 않는다.
+
+작성자가 고정이므로 한 번 차단한 기기에서는 다음 날에도 숨겨진다. 재테스트할 때 설정 > 커뮤니티 > 차단한 사용자에서 해제한다. AI 예시도 일반 글과 같은 신고·차단 기능으로 검증한다.
 
 ## 실물 검증과 영상
 
@@ -83,7 +84,7 @@ node --test src/lib/__tests__/*.test.cjs
 저장소 루트에서 자동화 테스트:
 
 ```sh
-node --test .github/scripts/community-automation.test.mjs
+node --import ./backend/node_modules/tsx/dist/loader.mjs --test .github/scripts/community-automation.test.mjs
 ```
 
 운영 DB 대신 임시 PostgreSQL(PGlite)로 SQL을 검증하려면 임시 디렉터리에 `@electric-sql/pglite`를 설치하고 해당 패키지의 ESM 진입점을 `PGLITE_MODULE`에 지정한다:
