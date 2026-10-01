@@ -1,15 +1,39 @@
-import { useState } from 'react';
-import { ActivityIndicator, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { COMMUNITY_GUIDELINES_URL, PRIVACY_POLICY_URL } from '@ohaasa/shared/constants/links';
+import { useEffect, useState } from 'react';
+import { ActivityIndicator, Linking, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
+import { COMMUNITY_GUIDELINES_URL } from '@ohaasa/shared/constants/links';
+import { getHasSeenOnboarding, getZodiacSign } from '@ohaasa/shared/lib/storage';
+import { BottomSheet } from '@/src/components/common/BottomSheet';
+import { WelcomeScreen } from '@/src/components/WelcomeScreen';
 import { useAcceptCommunityTerms } from '@/src/context/CommunityTermsContext';
 import { colors } from '@/src/constants/design';
 
 export default function TermsScreen() {
   const accept = useAcceptCommunityTerms();
+  const [visible, setVisible] = useState(false);
+  const [returning, setReturning] = useState(false);
   const [checked, setChecked] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const { height } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
+
+  useEffect(() => {
+    let active = true;
+    void (async () => {
+      try {
+        const existing = (await getHasSeenOnboarding()) || (await getZodiacSign()) !== null;
+        if (active && existing) {
+          setReturning(true);
+          setVisible(true);
+        }
+      } catch {
+        // 저장소를 읽지 못해도 시작 버튼으로 동의를 진행할 수 있다.
+      }
+    })();
+    return () => { active = false; };
+  }, []);
 
   async function handleAccept() {
     if (!checked || saving) return;
@@ -26,44 +50,55 @@ export default function TermsScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.screen}>
-      <ScrollView contentContainerStyle={styles.content}>
-        <Text style={styles.title}>오하아사에 오신 것을 환영해요</Text>
-        <Text style={styles.intro}>시작하기 전에 이용약관과 커뮤니티 이용 규칙을 확인해 주세요. 회원가입 없이 이용할 수 있어요.</Text>
-        <View style={styles.card}>
-          <Text style={styles.heading}>서로를 존중하는 커뮤니티</Text>
-          <Text style={styles.body}>욕설, 혐오·차별, 음란한 내용, 위협, 괴롭힘과 개인정보 공개 등 부적절한 콘텐츠와 가해 행위를 용납하지 않아요.</Text>
-          <Text style={styles.body}>공개 답변과 댓글에는 콘텐츠 필터가 적용돼요. 다른 사람의 글과 댓글에서 더보기(···)를 눌러 신고하거나 작성자를 차단할 수 있어요.</Text>
-          <Text style={styles.body}>차단하면 해당 작성자의 글과 댓글이 즉시 숨겨지고 운영자에게 검토 요청이 전달돼요. 접수된 신고는 24시간 이내에 검토하고, 위반이 확인되면 콘텐츠를 제거하고 작성자의 커뮤니티 이용을 제한해요.</Text>
+    <>
+      <WelcomeScreen onStart={() => setVisible(true)} />
+      <BottomSheet visible={visible} onClose={saving ? undefined : () => setVisible(false)}>
+        <View style={{ maxHeight: Math.max(180, height - insets.top - insets.bottom - 100) }}>
+          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
+            <Text style={styles.title}>{returning ? '새 이용약관에 동의해 주세요' : '이용약관에 동의해 주세요'}</Text>
+            <View style={styles.row}>
+              <Pressable
+                accessibilityRole="checkbox"
+                accessibilityLabel="이용약관 및 커뮤니티 가이드라인 동의 (필수)"
+                accessibilityState={{ checked, disabled: saving }}
+                disabled={saving}
+                hitSlop={4}
+                onPress={() => setChecked(value => !value)}
+                style={styles.checkTarget}
+              >
+                <View style={[styles.checkbox, checked && styles.checked]}>
+                  <Ionicons name="checkmark" size={17} color={checked ? colors.cream : colors.textSoft} />
+                </View>
+              </Pressable>
+              <Pressable accessibilityRole="link" onPress={() => void openLink(COMMUNITY_GUIDELINES_URL)} style={styles.termsLink}>
+                <Text style={styles.checkText}>[필수] 이용약관 · 커뮤니티 규칙</Text>
+                <Ionicons name="chevron-forward" size={18} color={colors.textSoft} />
+              </Pressable>
+            </View>
+            <Text style={styles.summary}>욕설·혐오·음란물·괴롭힘은 허용하지 않아요.</Text>
+            {error ? <Text accessibilityRole="alert" style={styles.error}>{error}</Text> : null}
+          </ScrollView>
+          <Pressable accessibilityRole="button" accessibilityState={{ disabled: !checked || saving }} disabled={!checked || saving} onPress={() => void handleAccept()} style={[styles.button, (!checked || saving) && styles.disabled]}>
+            {saving ? <ActivityIndicator color={colors.cream} /> : <Text style={styles.buttonText}>동의하고 계속하기</Text>}
+          </Pressable>
         </View>
-        <Pressable accessibilityRole="link" onPress={() => void openLink(COMMUNITY_GUIDELINES_URL)}><Text style={styles.link}>이용약관 및 커뮤니티 가이드라인 전문 보기</Text></Pressable>
-        <Pressable accessibilityRole="link" onPress={() => void openLink(PRIVACY_POLICY_URL)}><Text style={styles.link}>개인정보처리방침 보기</Text></Pressable>
-        <Pressable accessibilityRole="checkbox" accessibilityState={{ checked }} onPress={() => setChecked(!checked)} style={styles.checkRow}>
-          <Text style={styles.checkbox}>{checked ? '☑' : '☐'}</Text>
-          <Text style={styles.checkText}>이용약관 및 커뮤니티 가이드라인에 동의합니다. (필수)</Text>
-        </Pressable>
-        {error ? <Text accessibilityRole="alert" style={styles.error}>{error}</Text> : null}
-        <Pressable accessibilityRole="button" accessibilityState={{ disabled: !checked || saving }} disabled={!checked || saving} onPress={() => void handleAccept()} style={[styles.button, (!checked || saving) && styles.disabled]}>
-          {saving ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>동의하고 시작하기</Text>}
-        </Pressable>
-      </ScrollView>
-    </SafeAreaView>
+      </BottomSheet>
+    </>
   );
 }
+
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: colors.cream },
-  content: { flexGrow: 1, padding: 28, paddingVertical: 40, width: '100%', maxWidth: 600, alignSelf: 'center', gap: 18 },
-  title: { fontFamily: 'NotoSansKR_700Bold', fontSize: 26, color: colors.text },
-  intro: { fontSize: 16, lineHeight: 25, color: colors.textMid },
-  card: { backgroundColor: colors.cardSolid, padding: 22, borderRadius: 20, gap: 16 },
-  heading: { fontFamily: 'NotoSansKR_600SemiBold', fontSize: 19, color: colors.text },
-  body: { fontSize: 15, lineHeight: 25, color: colors.textMid },
-  link: { color: colors.ink, textDecorationLine: 'underline', fontSize: 15, paddingVertical: 4 },
-  checkRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12 },
-  checkbox: { fontSize: 28, color: colors.ink },
-  checkText: { flex: 1, fontSize: 16, lineHeight: 25, color: colors.text },
-  button: { backgroundColor: colors.ink, borderRadius: 18, padding: 18, alignItems: 'center' },
-  disabled: { opacity: 0.4 },
-  buttonText: { fontSize: 17, color: '#fff', fontFamily: 'NotoSansKR_600SemiBold' },
-  error: { color: '#A33232', lineHeight: 22 },
+  content: { paddingBottom: 24 },
+  title: { fontFamily: 'NotoSansKR_600SemiBold', fontSize: 20, lineHeight: 29, color: colors.text },
+  row: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 24 },
+  checkTarget: { width: 44, minHeight: 48, alignItems: 'center', justifyContent: 'center' },
+  checkbox: { width: 25, height: 25, borderRadius: 13, borderWidth: 1, borderColor: colors.cream3, alignItems: 'center', justifyContent: 'center' },
+  checked: { backgroundColor: colors.text, borderColor: colors.text },
+  termsLink: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 8 },
+  checkText: { flex: 1, fontFamily: 'NotoSansKR_500Medium', fontSize: 14, lineHeight: 23, color: colors.text },
+  summary: { marginLeft: 52, marginTop: 8, fontSize: 12, lineHeight: 20, color: colors.textMid },
+  button: { backgroundColor: colors.text, borderRadius: 28, minHeight: 56, justifyContent: 'center', alignItems: 'center' },
+  disabled: { backgroundColor: colors.cream3 },
+  buttonText: { fontSize: 15, color: colors.cream, fontFamily: 'NotoSansKR_500Medium' },
+  error: { color: '#A33232', fontSize: 13, lineHeight: 22 },
 });

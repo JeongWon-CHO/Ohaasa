@@ -108,3 +108,18 @@ test('a hanging block request times out, preserves the queue and releases later 
   await queue.queueCommunityBlock({ kind: 'reply', id: 'b' });
   assert.equal(JSON.parse([...store.data.values()][0]).length, 2);
 });
+
+test('development terms reset preserves other data and does nothing in production', async () => {
+  const store = storage();
+  store.removeItem = async key => store.data.delete(key);
+  store.data.set('journal', 'saved diary');
+  const modules = { '@react-native-async-storage/async-storage': store };
+  const devTerms = load(file('communityTerms'), modules, { __DEV__: true });
+  await devTerms.acceptCommunityTerms();
+  await load(file('communityTerms'), modules, { __DEV__: false }).resetCommunityTermsForDevelopment();
+  assert.equal(await devTerms.hasAcceptedCommunityTerms(), true);
+  await devTerms.resetCommunityTermsForDevelopment();
+  assert.equal(await devTerms.hasAcceptedCommunityTerms(), false);
+  assert.equal(store.data.get('journal'), 'saved diary');
+  assert.equal(store.data.size, 1);
+});

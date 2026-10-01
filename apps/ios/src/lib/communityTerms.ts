@@ -21,3 +21,9 @@ export async function acceptCommunityTerms(): Promise<void> {
     acceptedAt: new Date().toISOString(),
   }));
 }
+
+/** 개발 설정에서 약관 화면을 다시 확인할 때만 사용한다. */
+export async function resetCommunityTermsForDevelopment(): Promise<void> {
+  if (!__DEV__) return;
+  await AsyncStorage.removeItem(KEY);
+}

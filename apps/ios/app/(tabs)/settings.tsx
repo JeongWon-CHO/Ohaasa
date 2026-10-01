@@ -2,6 +2,7 @@ import { useCallback, useRef, useState } from 'react';
 import {
   Alert,
   AppState,
+  DevSettings,
   Linking,
   Pressable,
   ScrollView,
@@ -12,6 +13,7 @@ import {
 import { useFocusEffect, useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 
+import { resetCommunityTermsForDevelopment } from '@/src/lib/communityTerms';
 import { NotificationDeniedSheet } from '@/src/components/NotificationDeniedSheet';
 import { Toast } from '@/src/components/common/Toast';
 import { ResponsiveContainer } from '@/src/components/common/ResponsiveContainer';
@@ -691,6 +693,20 @@ export default function SettingsScreen() {
                     '완료',
                     '숨긴 글·답글과 차단이 초기화되었습니다. 서버의 신고 기록은 그대로입니다.',
                   );
+                }}
+                style={[styles.aboutRow, styles.rowBorder]}
+              />
+              <SettingsRow
+                title="약관 동의 초기화"
+                description="동의 기록만 삭제하고 앱 새로고침 · 일기와 별자리는 유지"
+                showChevron
+                onPress={async () => {
+                  try {
+                    await resetCommunityTermsForDevelopment();
+                    DevSettings.reload();
+                  } catch {
+                    showToast('동의 기록을 초기화하지 못했어요. 다시 시도해 주세요');
+                  }
                 }}
                 style={[styles.aboutRow, styles.rowBorder]}
               />
