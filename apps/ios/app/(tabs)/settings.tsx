@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useRef, useState } from 'react';
 import {
   Alert,
   AppState,
@@ -8,28 +8,42 @@ import {
   StyleSheet,
   Text,
   View,
-} from "react-native";
-import { useFocusEffect , useRouter } from "expo-router";
-import { LinearGradient } from "expo-linear-gradient";
+} from 'react-native';
+import { useFocusEffect, useRouter } from 'expo-router';
+import { LinearGradient } from 'expo-linear-gradient';
 
-import { NotificationDeniedSheet } from "@/src/components/NotificationDeniedSheet";
-import { ResponsiveContainer } from "@/src/components/common/ResponsiveContainer";
-import { ConstellationBadge } from "@/src/components/final/ConstellationBadge";
-import { FinalHeader } from "@/src/components/final/FinalHeader";
-import { CircleDeco, MoonDeco, StarDeco } from "@/src/components/final/ScreenDeco";
-import { SettingsRow } from "@/src/components/final/SettingsRow";
-import { SettingsSection } from "@/src/components/final/SettingsSection";
-import { Toggle } from "@/src/components/final/Toggle";
-import { colors, gradients, zodiacColors } from "@/src/constants/design";
-import { ZODIAC_MAP } from "@ohaasa/shared/constants/zodiac";
-import { useZodiac } from "@ohaasa/shared/hooks/useZodiac";
+import { NotificationDeniedSheet } from '@/src/components/NotificationDeniedSheet';
+import { Toast } from '@/src/components/common/Toast';
+import { ResponsiveContainer } from '@/src/components/common/ResponsiveContainer';
+import { ConstellationBadge } from '@/src/components/final/ConstellationBadge';
+import { FinalHeader } from '@/src/components/final/FinalHeader';
+import {
+  CircleDeco,
+  MoonDeco,
+  StarDeco,
+} from '@/src/components/final/ScreenDeco';
+import { SettingsRow } from '@/src/components/final/SettingsRow';
+import { SettingsSection } from '@/src/components/final/SettingsSection';
+import { Toggle } from '@/src/components/final/Toggle';
+import { colors, gradients, zodiacColors } from '@/src/constants/design';
+import { ZODIAC_MAP } from '@ohaasa/shared/constants/zodiac';
+import {
+  DEFAULT_NOTIFICATION_TIME,
+  NOTIFICATION_TIMES,
+  formatNotificationTime,
+  type NotificationTime,
+} from '@ohaasa/shared/constants/notificationTime';
+import { useToast } from '@ohaasa/shared/hooks/useToast';
+import { useZodiac } from '@ohaasa/shared/hooks/useZodiac';
 import {
   checkPermissionStatus,
   requestPushToken,
   type NotifPermissionStatus,
-} from "@/src/lib/notifications";
+} from '@/src/lib/notifications';
 import {
   getNotificationsEnabled,
+  getNotificationTime,
+  setNotificationTime,
   setNotificationsEnabled as saveNotificationsEnabled,
   getOrCreateDeviceId,
   getZodiacSign,
@@ -39,16 +53,22 @@ import {
   setPlatform,
   clearHasSeenOnboarding,
   clearZodiacSign,
-} from "@ohaasa/shared/lib/storage";
-import { ConfirmDialog } from "@/src/components/common/ConfirmDialog";
-import { COMMUNITY_GUIDELINES_URL, PRIVACY_POLICY_URL } from "@ohaasa/shared/constants/links";
+} from '@ohaasa/shared/lib/storage';
+import { ConfirmDialog } from '@/src/components/common/ConfirmDialog';
+import {
+  COMMUNITY_GUIDELINES_URL,
+  PRIVACY_POLICY_URL,
+} from '@ohaasa/shared/constants/links';
 import {
   clearBlockedAuthors,
   clearModerationState,
   getBlockedAuthorCount,
-} from "@ohaasa/shared/lib/moderation";
-import { upsertDevice } from "@ohaasa/shared/lib/supabase";
-import { deleteDailyReview } from "@ohaasa/shared/lib/dailyReviews";
+} from '@ohaasa/shared/lib/moderation';
+import {
+  disableDeviceNotifications,
+  upsertDevice,
+} from '@ohaasa/shared/lib/supabase';
+import { deleteDailyReview } from '@ohaasa/shared/lib/dailyReviews';
 
 // ─── Screen ───────────────────────────────────────────────────
 
@@ -56,8 +76,17 @@ export default function SettingsScreen() {
   const router = useRouter();
   const { zodiacSign } = useZodiac();
   const [notificationsEnabled, setNotificationsEnabledState] = useState(false);
+  const [hasZodiac, setHasZodiac] = useState(false);
+  const [notificationTime, setNotificationTimeState] =
+    useState<NotificationTime>(DEFAULT_NOTIFICATION_TIME);
+  const [timeOptionsVisible, setTimeOptionsVisible] = useState(false);
+  const [timeSaving, setTimeSaving] = useState(false);
+  const timeSavingRef = useRef(false);
+  const { showToast, toastProps } = useToast();
   const [storedPushToken, setStoredPushToken] = useState<string | null>(null);
-  const [permStatus, setPermStatus] = useState<NotifPermissionStatus | null>(null);
+  const [permStatus, setPermStatus] = useState<NotifPermissionStatus | null>(
+    null,
+  );
   const [deniedSheetVisible, setDeniedSheetVisible] = useState(false);
   const [blockedCount, setBlockedCount] = useState(0);
   const [unblockDialogVisible, setUnblockDialogVisible] = useState(false);
@@ -70,14 +99,36 @@ export default function SettingsScreen() {
   // 권한·토큰·알림 활성화 여부를 스토리지+시스템에서 읽어 상태를 동기화
   // useFocusEffect 진입 시 & 앱 포그라운드 복귀 시 모두 호출
   const syncState = useCallback(async () => {
-    const [enabled, token, perm] = await Promise.all([
+    const [enabled, token, perm, savedTime, zodiac] = await Promise.all([
       getNotificationsEnabled(),
       getPushToken(),
       checkPermissionStatus(),
+      getNotificationTime(),
+      getZodiacSign(),
     ]);
+    setHasZodiac(zodiac !== null);
+    if (!timeSavingRef.current) setNotificationTimeState(savedTime);
 
     let effectiveEnabled = enabled;
     let effectiveToken = token;
+
+    if (!zodiac) {
+      effectiveEnabled = false;
+      setNotificationsEnabledState(false);
+      if (enabled) await saveNotificationsEnabled(false);
+      if (enabled || token) {
+        // 이전 버전에서 남은 서버 기기 행도 꺼야 실제 푸시가 멈춘다.
+        void getOrCreateDeviceId()
+          .then(disableDeviceNotifications)
+          .then((disabled) => {
+            if (!disabled)
+              showToast('알림을 끄지 못했어요. 잠시 후 다시 확인해 주세요');
+          })
+          .catch(() =>
+            showToast('알림을 끄지 못했어요. 잠시 후 다시 확인해 주세요'),
+          );
+      }
+    }
 
     // 시스템 권한이 철회된 경우 앱 내 설정도 강제 동기화
     if (perm.available && !perm.granted && enabled) {
@@ -87,7 +138,12 @@ export default function SettingsScreen() {
 
     // 경우 1-1: 바텀시트 → "설정하러 가기" 후 허용하고 돌아온 경우 자동 활성화
     // 레이스 방지: 진입 즉시 false로 리셋해 동시에 호출된 두 번째 syncState가 이 블록에 진입하지 못하게 함
-    if (pendingActivationRef.current && perm.available && perm.granted) {
+    if (
+      pendingActivationRef.current &&
+      zodiac &&
+      perm.available &&
+      perm.granted
+    ) {
       pendingActivationRef.current = false;
       let finalToken = token;
       if (!finalToken) {
@@ -107,18 +163,25 @@ export default function SettingsScreen() {
           const zodiac = await getZodiacSign();
           const platform = await getPlatform();
           if (!zodiac) return;
-          await upsertDevice({ deviceId, zodiacSign: zodiac, pushToken: finalToken, platform, notificationsEnabled: true });
+          await upsertDevice({
+            deviceId,
+            zodiacSign: zodiac,
+            pushToken: finalToken,
+            platform,
+            notificationsEnabled: true,
+          });
         })();
       }
     } else {
       pendingActivationRef.current = false;
     }
 
+    if (!effectiveEnabled) setTimeOptionsVisible(false);
     setNotificationsEnabledState(effectiveEnabled);
     setStoredPushToken(effectiveToken);
     setPermStatus(perm);
     setBlockedCount(await getBlockedAuthorCount());
-  }, []);
+  }, [showToast]);
 
   async function handleConfirmUnblockAll() {
     setUnblockDialogVisible(false);
@@ -133,8 +196,8 @@ export default function SettingsScreen() {
 
       // Linking.openSettings() 후 앱 복귀 시 useFocusEffect가 재실행되지 않을 수 있으므로
       // AppState 리스너로 포그라운드 복귀를 감지해 권한 상태를 재확인
-      const subscription = AppState.addEventListener("change", (nextState) => {
-        if (nextState === "active") {
+      const subscription = AppState.addEventListener('change', (nextState) => {
+        if (nextState === 'active') {
           syncState();
         }
       });
@@ -147,6 +210,7 @@ export default function SettingsScreen() {
     // OFF: 권한 상태와 무관하게 비활성화
     if (!next) {
       setNotificationsEnabledState(false);
+      setTimeOptionsVisible(false);
       await saveNotificationsEnabled(false);
       const token = storedPushToken;
       (async () => {
@@ -154,13 +218,25 @@ export default function SettingsScreen() {
         const zodiac = await getZodiacSign();
         const platform = await getPlatform();
         if (!zodiac) return;
-        await upsertDevice({ deviceId, zodiacSign: zodiac, pushToken: token, platform, notificationsEnabled: false });
+        await upsertDevice({
+          deviceId,
+          zodiacSign: zodiac,
+          pushToken: token,
+          platform,
+          notificationsEnabled: false,
+        });
       })();
       return;
     }
 
     // ON: 환경 자체가 지원 안 되면 아무것도 안 함
     if (!permStatus || !permStatus.available) return;
+    if (!(await getZodiacSign())) {
+      setNotificationsEnabledState(false);
+      await saveNotificationsEnabled(false);
+      showToast('별자리를 선택한 뒤 알림을 켤 수 있어요');
+      return;
+    }
 
     // 토글 탭 시점에 항상 최신 시스템 권한을 확인 (캐시된 permStatus 신뢰 금지)
     const freshPerm = await checkPermissionStatus();
@@ -183,7 +259,13 @@ export default function SettingsScreen() {
             const deviceId = await getOrCreateDeviceId();
             const zodiac = await getZodiacSign();
             if (!zodiac) return;
-            await upsertDevice({ deviceId, zodiacSign: zodiac, pushToken: result.token, platform: result.platform, notificationsEnabled: true });
+            await upsertDevice({
+              deviceId,
+              zodiacSign: zodiac,
+              pushToken: result.token,
+              platform: result.platform,
+              notificationsEnabled: true,
+            });
           })();
         } else {
           // 다이얼로그에서 거부 → permStatus 갱신만 (토글은 OFF 유지)
@@ -207,7 +289,13 @@ export default function SettingsScreen() {
         const zodiac = await getZodiacSign();
         const platform = await getPlatform();
         if (!zodiac) return;
-        await upsertDevice({ deviceId, zodiacSign: zodiac, pushToken: token, platform, notificationsEnabled: true });
+        await upsertDevice({
+          deviceId,
+          zodiacSign: zodiac,
+          pushToken: token,
+          platform,
+          notificationsEnabled: true,
+        });
       })();
       return;
     }
@@ -223,28 +311,78 @@ export default function SettingsScreen() {
         const deviceId = await getOrCreateDeviceId();
         const zodiac = await getZodiacSign();
         if (!zodiac) return;
-        await upsertDevice({ deviceId, zodiacSign: zodiac, pushToken: result.token, platform: result.platform, notificationsEnabled: true });
+        await upsertDevice({
+          deviceId,
+          zodiacSign: zodiac,
+          pushToken: result.token,
+          platform: result.platform,
+          notificationsEnabled: true,
+        });
       })();
+    }
+  }
+
+  async function handleNotificationTime(nextTime: NotificationTime) {
+    if (timeSavingRef.current) return;
+    if (nextTime === notificationTime) {
+      setTimeOptionsVisible(false);
+      return;
+    }
+
+    timeSavingRef.current = true;
+    setTimeSaving(true);
+    const previousTime = notificationTime;
+    try {
+      // 모든 기기 upsert도 로컬 시간을 전송하므로, 먼저 저장하고 실패 시 되돌린다.
+      await setNotificationTime(nextTime);
+      const zodiac = await getZodiacSign();
+      if (zodiac) {
+        const [deviceId, pushToken, platform, enabled] = await Promise.all([
+          getOrCreateDeviceId(),
+          getPushToken(),
+          getPlatform(),
+          getNotificationsEnabled(),
+        ]);
+        const saved = await upsertDevice({
+          deviceId,
+          zodiacSign: zodiac,
+          pushToken,
+          platform,
+          notificationsEnabled: enabled,
+          notificationTime: nextTime,
+        });
+        if (!saved) throw new Error('notification time upsert failed');
+      }
+      setNotificationTimeState(nextTime);
+      setTimeOptionsVisible(false);
+      showToast(`알림 시간이 ${formatNotificationTime(nextTime)}로 설정됐어요`);
+    } catch {
+      await setNotificationTime(previousTime).catch(() => {});
+      setNotificationTimeState(previousTime);
+      showToast('알림 시간을 저장하지 못했어요. 다시 시도해 주세요');
+    } finally {
+      timeSavingRef.current = false;
+      setTimeSaving(false);
     }
   }
 
   async function sendTestNotification() {
     try {
-      const Notifications = await import("expo-notifications");
+      const Notifications = await import('expo-notifications');
       const { status } = await Notifications.requestPermissionsAsync();
-      if (status !== "granted") {
-        Alert.alert("알림 권한 없음", "권한을 허용한 후 다시 시도해주세요.");
+      if (status !== 'granted') {
+        Alert.alert('알림 권한 없음', '권한을 허용한 후 다시 시도해주세요.');
         return;
       }
       await Notifications.scheduleNotificationAsync({
         content: {
-          title: "오하아사 테스트",
-          body: "오늘의 운세가 도착했어요 ⭐",
+          title: '오하아사 테스트',
+          body: '오늘의 운세가 도착했어요 ⭐',
         },
         trigger: null,
       });
     } catch (err) {
-      Alert.alert("테스트 알림 실패", String(err));
+      Alert.alert('테스트 알림 실패', String(err));
     }
   }
 
@@ -273,275 +411,342 @@ export default function SettingsScreen() {
       />
 
       <ResponsiveContainer>
-      {/* Header */}
-      <FinalHeader subtitle="설정" />
+        {/* Header */}
+        <FinalHeader subtitle="설정" />
 
-      {/*
+        {/*
         Scroll — paddingBottom에 tabBarHeight를 더하지 않는다. tabBarStyle에 position:'absolute'가
         없어서 탭바는 레이아웃 공간을 차지하고, 스크롤 영역은 이미 탭바 위에서 끝난다.
         더하면 탭바 높이(Android edge-to-edge 기준 110 이상)만큼 빈 공간이 한 겹 더 생긴다.
         운세 탭(index.tsx)과 같은 값.
       */}
-      <ScrollView
-        ref={scrollRef}
-        contentContainerStyle={[styles.content, { paddingBottom: 24 }]}
-        showsVerticalScrollIndicator={false}
-        style={styles.scroll}
-      >
-        {/* MY SIGN */}
-        <SettingsSection
-          label="MY SIGN"
-          style={styles.sectionGap}
-          cardStyle={styles.mySignCardOverride}
+        <ScrollView
+          ref={scrollRef}
+          contentContainerStyle={[styles.content, { paddingBottom: 24 }]}
+          showsVerticalScrollIndicator={false}
+          style={styles.scroll}
         >
-          <View style={styles.mySignInner}>
-            {zodiac ? (
-              <>
-                <View
-                  style={[styles.zodiacCircle, { backgroundColor: signColor }]}
-                >
-                  <ConstellationBadge sign={zodiac.sign} size={36} />
-                </View>
-                <View style={styles.zodiacCopy}>
-                  <Text style={styles.zodiacName}>{zodiac.ko}</Text>
-                  <Text style={styles.zodiacSub}>
-                    {zodiac.en} · {zodiac.dateRange}
-                  </Text>
-                </View>
-              </>
-            ) : (
-              <>
-                <View
-                  style={[
-                    styles.zodiacCircle,
-                    { backgroundColor: colors.cream2 },
-                  ]}
-                >
-                  <ConstellationBadge size={36} />
-                </View>
-                <View style={styles.zodiacCopy}>
-                  <Text style={styles.zodiacEmpty}>선택된 별자리가 없습니다</Text>
-                </View>
-              </>
-            )}
-            <Pressable
-              accessibilityRole="button"
-              onPress={() =>
-                router.push({
-                  pathname: "/onboarding",
-                  params: { from: "settings" },
-                })
-              }
-              style={({ pressed }) => [
-                styles.changeButton,
-                pressed && styles.pressed,
-              ]}
-            >
-              <Text style={styles.changeButtonText}>변경</Text>
-            </Pressable>
-          </View>
-        </SettingsSection>
-
-        {/* 운세는 앱의 핵심 경험에서 분리해 여기서만 들어간다 (스펙 §20) */}
-        <SettingsSection label="OHAASA" style={styles.sectionGap}>
-          <SettingsRow
-            title="오늘의 오하아사 보기"
-            description="별자리 운세 · 전체 순위 · 통계"
-            showChevron
-            onPress={() => router.push("/horoscope")}
-            style={styles.aboutRow}
-          />
-        </SettingsSection>
-
-        {/* NOTIFICATIONS */}
-        <SettingsSection label="NOTIFICATIONS" style={styles.sectionGap}>
-          <SettingsRow
-            title="아침 알림"
-            description={
-              isUnavailable
-                ? "알림은 개발 빌드에서 사용할 수 있어요"
-                : "매일 아침 운세 알림 받기"
-            }
-            right={
-              <Toggle
-                value={notificationsEnabled}
-                onChange={handleToggle}
-                disabled={isUnavailable}
-              />
-            }
-            style={styles.notifRow}
-          />
-        </SettingsSection>
-
-        {/* COMMUNITY */}
-        <SettingsSection label="COMMUNITY" style={styles.sectionGap}>
-          <SettingsRow
-            title="커뮤니티 가이드라인"
-            description="공개 답변에 적용되는 이용약관"
-            showChevron
-            onPress={() => Linking.openURL(COMMUNITY_GUIDELINES_URL)}
-            style={[styles.aboutRow, styles.rowBorder]}
-          />
-          <SettingsRow
-            title="차단한 사용자"
-            description={
-              blockedCount === 0
-                ? "차단한 사용자가 없어요"
-                : `${blockedCount}명 · 눌러서 전체 해제`
-            }
-            showChevron={blockedCount > 0}
-            onPress={blockedCount > 0 ? () => setUnblockDialogVisible(true) : undefined}
-            style={styles.aboutRow}
-          />
-        </SettingsSection>
-
-        {/* ABOUT */}
-        <SettingsSection label="ABOUT" style={styles.aboutSection}>
-          <SettingsRow
-            title="오하아사 별자리"
-            showChevron
-            onPress={() =>
-              Linking.openURL("https://www.asahi.co.jp/ohaasa/week/horoscope/")
-            }
-            style={[styles.aboutRow, styles.rowBorder]}
-          />
-          <SettingsRow
-            title="고고별자리"
-            showChevron
-            onPress={() =>
-              Linking.openURL("https://www.tv-asahi.co.jp/goodmorning/uranai/")
-            }
-            style={[styles.aboutRow, styles.rowBorder]}
-          />
-          <SettingsRow
-            title="개발자에게 문의하기"
-            showChevron
-            onPress={() =>
-              Linking.openURL(
-                "https://docs.google.com/forms/d/e/1FAIpQLSdWvd5ARPMCe_lcvlmuRiTMUKNuO1gwOk8JI6vCRDJ2pu2ASw/viewform?usp=publish-editor",
-              )
-            }
-            style={[styles.aboutRow, styles.rowBorder]}
-          />
-          <SettingsRow
-            title="개인정보 처리방침"
-            showChevron
-            onPress={() => Linking.openURL(PRIVACY_POLICY_URL)}
-            style={styles.aboutRow}
-          />
-        </SettingsSection>
-
-        {/* DEV */}
-        {__DEV__ && (
-          <SettingsSection label="DEV" style={styles.sectionGap}>
-            <SettingsRow
-              title="오늘 일기 쓰기"
-              description="기분 → 그림 → 한마디 3단계 퍼널"
-              showChevron
-              onPress={() => router.push("/journal-write")}
-              style={[styles.aboutRow, styles.rowBorder]}
-            />
-            <SettingsRow
-              title="그림일기 프로토타입"
-              description="캔버스 그리기 · 저장/복원 · PNG 용량 비교"
-              showChevron
-              onPress={() => router.push("/sketch-prototype")}
-              style={[styles.aboutRow, styles.rowBorder]}
-            />
-            <SettingsRow
-              title="샘플 데이터"
-              description="달 단위로 샘플 일기 채우기 · 전부 지우기"
-              showChevron
-              onPress={() => router.push("/sketchbook")}
-              style={[styles.aboutRow, styles.rowBorder]}
-            />
-            <SettingsRow
-              title="기분 입력 비교"
-              description="선으로 그린 표정 5단계 vs 숫자 1~10"
-              showChevron
-              onPress={() => router.push("/mood-prototype")}
-              style={[styles.aboutRow, styles.rowBorder]}
-            />
-            <SettingsRow
-              title="테스트 알림 보내기"
-              description="로컬 알림 즉시 발송"
-              showChevron
-              onPress={sendTestNotification}
-              style={[styles.aboutRow, styles.rowBorder]}
-            />
-            <SettingsRow
-              title="오늘의 리뷰 초기화"
-              description="오늘 저장한 일일 리뷰 삭제 → 미작성 상태로 복원"
-              showChevron
-              onPress={async () => {
-                const zodiac = await getZodiacSign();
-                if (!zodiac) {
-                  Alert.alert("알림", "별자리가 설정되지 않았습니다.");
-                  return;
+          {/* MY SIGN */}
+          <SettingsSection
+            label="MY SIGN"
+            style={styles.sectionGap}
+            cardStyle={styles.mySignCardOverride}
+          >
+            <View style={styles.mySignInner}>
+              {zodiac ? (
+                <>
+                  <View
+                    style={[
+                      styles.zodiacCircle,
+                      { backgroundColor: signColor },
+                    ]}
+                  >
+                    <ConstellationBadge sign={zodiac.sign} size={36} />
+                  </View>
+                  <View style={styles.zodiacCopy}>
+                    <Text style={styles.zodiacName}>{zodiac.ko}</Text>
+                    <Text style={styles.zodiacSub}>
+                      {zodiac.en} · {zodiac.dateRange}
+                    </Text>
+                  </View>
+                </>
+              ) : (
+                <>
+                  <View
+                    style={[
+                      styles.zodiacCircle,
+                      { backgroundColor: colors.cream2 },
+                    ]}
+                  >
+                    <ConstellationBadge size={36} />
+                  </View>
+                  <View style={styles.zodiacCopy}>
+                    <Text style={styles.zodiacEmpty}>
+                      선택된 별자리가 없습니다
+                    </Text>
+                  </View>
+                </>
+              )}
+              <Pressable
+                accessibilityRole="button"
+                onPress={() =>
+                  router.push({
+                    pathname: '/onboarding',
+                    params: { from: 'settings' },
+                  })
                 }
-                const today = new Date().toISOString().slice(0, 10);
-                await deleteDailyReview(today, zodiac);
-                Alert.alert("완료", "오늘의 리뷰가 초기화되었습니다.");
-              }}
-              style={[styles.aboutRow, styles.rowBorder]}
-            />
+                style={({ pressed }) => [
+                  styles.changeButton,
+                  pressed && styles.pressed,
+                ]}
+              >
+                <Text style={styles.changeButtonText}>변경</Text>
+              </Pressable>
+            </View>
+          </SettingsSection>
+
+          {/* 운세는 앱의 핵심 경험에서 분리해 여기서만 들어간다 (스펙 §20) */}
+          <SettingsSection label="OHAASA" style={styles.sectionGap}>
             <SettingsRow
-              title="신고 · 차단 기록 초기화"
-              description="숨긴 글·답글과 차단 목록 삭제 → 피드에 다시 표시"
+              title="오늘의 오하아사 보기"
+              description="별자리 운세 · 전체 순위 · 통계"
               showChevron
-              onPress={async () => {
-                await clearModerationState();
-                setBlockedCount(0);
-                Alert.alert(
-                  "완료",
-                  "숨긴 글·답글과 차단이 초기화되었습니다. 서버의 신고 기록은 그대로입니다.",
-                );
-              }}
-              style={[styles.aboutRow, styles.rowBorder]}
-            />
-            <SettingsRow
-              title="온보딩으로 돌아가기"
-              description="별자리·온보딩 기록 초기화 → 맨처음 화면으로 이동"
-              showChevron
-              onPress={async () => {
-                // 둘 다 지워야 한다 — 진입 라우트가 (플래그 || 별자리)로 판정해서
-                // 하나만 지우면 그대로 홈으로 간다.
-                await Promise.all([clearZodiacSign(), clearHasSeenOnboarding()]);
-                // "/"로 보내면 안 된다 — 그룹은 경로에 안 들어가서 app/index.tsx와
-                // app/(tabs)/index.tsx가 둘 다 "/"를 갖고, 탭 쪽이 이겨 홈이 열린다.
-                // 방금 두 키를 지웠으니 스플래시가 내릴 결론도 온보딩이라 바로 보낸다.
-                router.replace("/onboarding");
-              }}
+              onPress={() => router.push('/horoscope')}
               style={styles.aboutRow}
             />
           </SettingsSection>
-        )}
 
-        {/* Footer */}
-        <View style={styles.footer}>
-          <View style={styles.footerLogoWrap}>
-            <StarDeco
-              x={-14}
-              y={-6}
-              size={6}
-              color={colors.yellow}
-              opacity={0.38}
+          {/* NOTIFICATIONS */}
+          <SettingsSection label="NOTIFICATIONS" style={styles.sectionGap}>
+            <SettingsRow
+              title="아침 알림"
+              description={
+                !hasZodiac
+                  ? '별자리를 선택하면 알림을 받을 수 있어요'
+                  : isUnavailable
+                    ? '알림은 개발 빌드에서 사용할 수 있어요'
+                    : '매일 아침 운세 알림 받기'
+              }
+              right={
+                <Toggle
+                  value={hasZodiac && notificationsEnabled}
+                  onChange={handleToggle}
+                  disabled={isUnavailable || !hasZodiac}
+                />
+              }
+              style={styles.notifRow}
             />
-            <StarDeco
-              x={102}
-              y={2}
-              size={5}
-              color={colors.apricot}
-              opacity={0.32}
+            {hasZodiac && notificationsEnabled && (
+              <>
+                <SettingsRow
+                  title="알림 시간"
+                  description={formatNotificationTime(notificationTime)}
+                  showChevron
+                  chevronExpanded={timeOptionsVisible}
+                  onPress={() => setTimeOptionsVisible((visible) => !visible)}
+                  style={[styles.aboutRow, styles.rowBorder]}
+                />
+                {timeOptionsVisible && (
+                  <View style={styles.timeOptions}>
+                    {NOTIFICATION_TIMES.map((time) => {
+                      const selected = time === notificationTime;
+                      return (
+                        <Pressable
+                          key={time}
+                          accessibilityRole="button"
+                          accessibilityState={{ selected, disabled: timeSaving }}
+                          disabled={timeSaving}
+                          onPress={() => handleNotificationTime(time)}
+                          style={({ pressed }) => [
+                            styles.timeOption,
+                            selected && styles.timeOptionSelected,
+                            pressed && styles.pressed,
+                          ]}
+                        >
+                          <Text
+                            style={[
+                              styles.timeOptionText,
+                              selected && styles.timeOptionTextSelected,
+                            ]}
+                          >
+                            {time}
+                          </Text>
+                        </Pressable>
+                      );
+                    })}
+                  </View>
+                )}
+              </>
+            )}
+          </SettingsSection>
+
+          {/* COMMUNITY */}
+          <SettingsSection label="COMMUNITY" style={styles.sectionGap}>
+            <SettingsRow
+              title="커뮤니티 가이드라인"
+              description="공개 답변에 적용되는 이용약관"
+              showChevron
+              onPress={() => Linking.openURL(COMMUNITY_GUIDELINES_URL)}
+              style={[styles.aboutRow, styles.rowBorder]}
             />
-            <Text style={styles.footerLogo}>ohaasa ✦</Text>
+            <SettingsRow
+              title="차단한 사용자"
+              description={
+                blockedCount === 0
+                  ? '차단한 사용자가 없어요'
+                  : `${blockedCount}명 · 눌러서 전체 해제`
+              }
+              showChevron={blockedCount > 0}
+              onPress={
+                blockedCount > 0
+                  ? () => setUnblockDialogVisible(true)
+                  : undefined
+              }
+              style={styles.aboutRow}
+            />
+          </SettingsSection>
+
+          {/* ABOUT */}
+          <SettingsSection label="ABOUT" style={styles.aboutSection}>
+            <SettingsRow
+              title="오하아사 별자리"
+              showChevron
+              onPress={() =>
+                Linking.openURL(
+                  'https://www.asahi.co.jp/ohaasa/week/horoscope/',
+                )
+              }
+              style={[styles.aboutRow, styles.rowBorder]}
+            />
+            <SettingsRow
+              title="고고별자리"
+              showChevron
+              onPress={() =>
+                Linking.openURL(
+                  'https://www.tv-asahi.co.jp/goodmorning/uranai/',
+                )
+              }
+              style={[styles.aboutRow, styles.rowBorder]}
+            />
+            <SettingsRow
+              title="개발자에게 문의하기"
+              showChevron
+              onPress={() =>
+                Linking.openURL(
+                  'https://docs.google.com/forms/d/e/1FAIpQLSdWvd5ARPMCe_lcvlmuRiTMUKNuO1gwOk8JI6vCRDJ2pu2ASw/viewform?usp=publish-editor',
+                )
+              }
+              style={[styles.aboutRow, styles.rowBorder]}
+            />
+            <SettingsRow
+              title="개인정보 처리방침"
+              showChevron
+              onPress={() => Linking.openURL(PRIVACY_POLICY_URL)}
+              style={styles.aboutRow}
+            />
+          </SettingsSection>
+
+          {/* DEV */}
+          {__DEV__ && (
+            <SettingsSection label="DEV" style={styles.sectionGap}>
+              <SettingsRow
+                title="오늘 일기 쓰기"
+                description="기분 → 그림 → 한마디 3단계 퍼널"
+                showChevron
+                onPress={() => router.push('/journal-write')}
+                style={[styles.aboutRow, styles.rowBorder]}
+              />
+              <SettingsRow
+                title="그림일기 프로토타입"
+                description="캔버스 그리기 · 저장/복원 · PNG 용량 비교"
+                showChevron
+                onPress={() => router.push('/sketch-prototype')}
+                style={[styles.aboutRow, styles.rowBorder]}
+              />
+              <SettingsRow
+                title="샘플 데이터"
+                description="달 단위로 샘플 일기 채우기 · 전부 지우기"
+                showChevron
+                onPress={() => router.push('/sketchbook')}
+                style={[styles.aboutRow, styles.rowBorder]}
+              />
+              <SettingsRow
+                title="기분 입력 비교"
+                description="선으로 그린 표정 5단계 vs 숫자 1~10"
+                showChevron
+                onPress={() => router.push('/mood-prototype')}
+                style={[styles.aboutRow, styles.rowBorder]}
+              />
+              <SettingsRow
+                title="테스트 알림 보내기"
+                description="로컬 알림 즉시 발송"
+                showChevron
+                onPress={sendTestNotification}
+                style={[styles.aboutRow, styles.rowBorder]}
+              />
+              <SettingsRow
+                title="오늘의 리뷰 초기화"
+                description="오늘 저장한 일일 리뷰 삭제 → 미작성 상태로 복원"
+                showChevron
+                onPress={async () => {
+                  const zodiac = await getZodiacSign();
+                  if (!zodiac) {
+                    Alert.alert('알림', '별자리가 설정되지 않았습니다.');
+                    return;
+                  }
+                  const today = new Date().toISOString().slice(0, 10);
+                  await deleteDailyReview(today, zodiac);
+                  Alert.alert('완료', '오늘의 리뷰가 초기화되었습니다.');
+                }}
+                style={[styles.aboutRow, styles.rowBorder]}
+              />
+              <SettingsRow
+                title="신고 · 차단 기록 초기화"
+                description="숨긴 글·답글과 차단 목록 삭제 → 피드에 다시 표시"
+                showChevron
+                onPress={async () => {
+                  await clearModerationState();
+                  setBlockedCount(0);
+                  Alert.alert(
+                    '완료',
+                    '숨긴 글·답글과 차단이 초기화되었습니다. 서버의 신고 기록은 그대로입니다.',
+                  );
+                }}
+                style={[styles.aboutRow, styles.rowBorder]}
+              />
+              <SettingsRow
+                title="온보딩으로 돌아가기"
+                description="별자리·온보딩 기록 초기화 → 맨처음 화면으로 이동"
+                showChevron
+                onPress={async () => {
+                  // 둘 다 지워야 한다 — 진입 라우트가 (플래그 || 별자리)로 판정해서
+                  // 하나만 지우면 그대로 홈으로 간다.
+                  const deviceId = await getOrCreateDeviceId();
+                  if (!(await disableDeviceNotifications(deviceId))) {
+                    showToast('알림을 끄지 못했어요. 다시 시도해 주세요');
+                    return;
+                  }
+                  await Promise.all([
+                    clearZodiacSign(),
+                    clearHasSeenOnboarding(),
+                  ]);
+                  setHasZodiac(false);
+                  setNotificationsEnabledState(false);
+                  // "/"로 보내면 안 된다 — 그룹은 경로에 안 들어가서 app/index.tsx와
+                  // app/(tabs)/index.tsx가 둘 다 "/"를 갖고, 탭 쪽이 이겨 홈이 열린다.
+                  // 방금 두 키를 지웠으니 스플래시가 내릴 결론도 온보딩이라 바로 보낸다.
+                  router.replace('/onboarding');
+                }}
+                style={styles.aboutRow}
+              />
+            </SettingsSection>
+          )}
+
+          {/* Footer */}
+          <View style={styles.footer}>
+            <View style={styles.footerLogoWrap}>
+              <StarDeco
+                x={-14}
+                y={-6}
+                size={6}
+                color={colors.yellow}
+                opacity={0.38}
+              />
+              <StarDeco
+                x={102}
+                y={2}
+                size={5}
+                color={colors.apricot}
+                opacity={0.32}
+              />
+              <Text style={styles.footerLogo}>ohaasa ✦</Text>
+            </View>
+            <Text style={styles.footerJa}>おはあさ</Text>
+            <Text style={styles.footerCaption}>v1.8.0</Text>
           </View>
-          <Text style={styles.footerJa}>おはあさ</Text>
-          <Text style={styles.footerCaption}>v1.8.0</Text>
-        </View>
 
-        <View style={styles.spacer} />
-      </ScrollView>
+          <View style={styles.spacer} />
+        </ScrollView>
       </ResponsiveContainer>
 
       <NotificationDeniedSheet
@@ -562,6 +767,7 @@ export default function SettingsScreen() {
         onCancel={() => setUnblockDialogVisible(false)}
         onConfirm={handleConfirmUnblockAll}
       />
+      <Toast {...toastProps} />
     </LinearGradient>
   );
 }
@@ -569,7 +775,7 @@ export default function SettingsScreen() {
 const styles = StyleSheet.create({
   fill: {
     flex: 1,
-    overflow: "hidden",
+    overflow: 'hidden',
   },
   scroll: {
     flex: 1,
@@ -596,8 +802,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 18,
   },
   mySignInner: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: 14,
   },
   zodiacCircle: {
@@ -605,9 +811,9 @@ const styles = StyleSheet.create({
     height: 44,
     borderRadius: 22,
     flexShrink: 0,
-    alignItems: "center",
-    justifyContent: "center",
-    overflow: "hidden",
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
   },
   zodiacCopy: {
     flex: 1,
@@ -616,7 +822,7 @@ const styles = StyleSheet.create({
   zodiacName: {
     fontSize: 15,
     lineHeight: 20,
-    fontFamily: "NotoSansKR_400Regular",
+    fontFamily: 'NotoSansKR_400Regular',
     includeFontPadding: false,
     color: colors.text,
   },
@@ -628,20 +834,20 @@ const styles = StyleSheet.create({
   zodiacEmpty: {
     fontSize: 13,
     lineHeight: 18,
-    fontFamily: "NotoSansKR_300Light",
+    fontFamily: 'NotoSansKR_300Light',
     includeFontPadding: false,
     color: colors.text,
   },
   zodiacSub: {
     fontSize: 11,
     lineHeight: 16,
-    fontFamily: "NotoSansKR_400Regular",
+    fontFamily: 'NotoSansKR_400Regular',
     includeFontPadding: false,
     color: colors.textSoft,
     marginTop: 2,
   },
   changeButton: {
-    backgroundColor: "rgba(240,184,154,0.35)",
+    backgroundColor: 'rgba(240,184,154,0.35)',
     borderRadius: 12,
     paddingHorizontal: 14,
     paddingVertical: 7,
@@ -649,7 +855,7 @@ const styles = StyleSheet.create({
   changeButtonText: {
     fontSize: 12,
     lineHeight: 16,
-    fontFamily: "NotoSansKR_500Medium",
+    fontFamily: 'NotoSansKR_500Medium',
     includeFontPadding: false,
     color: colors.apricotDark,
   },
@@ -661,15 +867,41 @@ const styles = StyleSheet.create({
   notifRow: {
     paddingVertical: 15,
   },
+  timeOptions: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    paddingTop: 12,
+    paddingBottom: 20,
+  },
+  timeOption: {
+    width: '31%',
+    alignItems: 'center',
+    paddingVertical: 10,
+    borderRadius: 12,
+    backgroundColor: colors.cream2,
+  },
+  timeOptionSelected: {
+    backgroundColor: colors.apricotDark,
+  },
+  timeOptionText: {
+    fontSize: 12,
+    lineHeight: 18,
+    fontFamily: 'NotoSansKR_500Medium',
+    color: colors.text,
+  },
+  timeOptionTextSelected: {
+    color: '#FFFDF9',
+  },
   openSettingsRow: {
     paddingVertical: 13,
     paddingHorizontal: 4,
-    alignSelf: "flex-start",
+    alignSelf: 'flex-start',
   },
   openSettingsText: {
     fontSize: 12,
     lineHeight: 16,
-    fontFamily: "NotoSansKR_500Medium",
+    fontFamily: 'NotoSansKR_500Medium',
     includeFontPadding: false,
     color: colors.apricotDark,
   },
@@ -679,27 +911,27 @@ const styles = StyleSheet.create({
   versionText: {
     fontSize: 13,
     lineHeight: 18,
-    fontFamily: "NotoSansKR_400Regular",
+    fontFamily: 'NotoSansKR_400Regular',
     includeFontPadding: false,
     color: colors.textSoft,
   },
   rowBorder: {
     borderBottomWidth: 1,
-    borderBottomColor: "rgba(237,227,214,0.6)",
+    borderBottomColor: 'rgba(237,227,214,0.6)',
   },
 
   // ── Footer ────────────────────────────────────────────────────
   footer: {
-    alignItems: "center",
+    alignItems: 'center',
     paddingBottom: 6,
   },
   footerLogoWrap: {
-    position: "relative",
+    position: 'relative',
   },
   footerLogo: {
     fontSize: 20,
     lineHeight: 26,
-    fontFamily: "NotoSansKR_300Light",
+    fontFamily: 'NotoSansKR_300Light',
     includeFontPadding: false,
     color: colors.textSoft,
     letterSpacing: 2.8,
@@ -707,7 +939,7 @@ const styles = StyleSheet.create({
   footerJa: {
     fontSize: 11,
     lineHeight: 16,
-    fontFamily: "NotoSansKR_400Regular",
+    fontFamily: 'NotoSansKR_400Regular',
     includeFontPadding: false,
     color: colors.apricot,
     marginTop: 4,
@@ -716,7 +948,7 @@ const styles = StyleSheet.create({
   footerCaption: {
     fontSize: 10,
     lineHeight: 14,
-    fontFamily: "NotoSansKR_400Regular",
+    fontFamily: 'NotoSansKR_400Regular',
     includeFontPadding: false,
     color: colors.textSoft,
     marginTop: 12,
