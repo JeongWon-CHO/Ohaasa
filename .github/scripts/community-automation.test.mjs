@@ -5,7 +5,7 @@ import { notifyModeration } from './notify-community-moderation.mjs';
 import dailyQuestions from '../../packages/shared/src/constants/dailyQuestions.ts';
 const { getQuestionByDate } = dailyQuestions;
 const env = name => ({ REVIEW_ANSWER_DEVICE_ID: '00000000-0000-4000-8000-000000000001', REVIEW_REPLY_DEVICE_ID: '00000000-0000-4000-8000-000000000002', OPENAI_API_KEY: 'test-only' })[name];
-const generated = { answer: '[AI 예시] 따뜻한 차를 마시며 잠깐 쉬고 싶어요.', reply: '[AI 댓글 예시] 잠깐의 여유가 큰 힘이 되겠네요.' };
+const generated = { answer: '따뜻한 차를 마시며 잠깐 쉬고 싶어요.', reply: '잠깐의 여유가 큰 힘이 되겠네요.' };
 const now = new Date('2026-10-01T21:00:00Z'); // Oct 2 06:00 KST
 function mockDatabase(latest = '2026-10-01') {
   const answers = new Map();
@@ -34,6 +34,8 @@ test('6am prepares the KST calendar date and currently visible broadcast date wi
   await seedReviewContent(state.db, env, generate, now);
   assert.deepEqual(questions, [getQuestionByDate('2026-10-02'), getQuestionByDate('2026-10-01')]);
   assert.equal(state.writes.length, 4);
+  assert.equal(state.writes[0].body.body, generated.answer);
+  assert.equal(state.writes[1].body.body, generated.reply);
   assert.notEqual(state.writes[0].body.device_id, state.writes[1].body.device_id);
   assert.ok(state.writes.every(write => write.prefer.includes('ignore-duplicates')));
   await seedReviewContent(state.db, env, generate, now);
@@ -74,7 +76,7 @@ test('dry run and rejected unsafe/oversized generated content never write to the
   const state = mockDatabase('2026-10-02');
   await seedReviewContent(state.db, env, async () => generated, now, true);
   assert.equal(state.writes.length, 0);
-  for (const answer of ['[AI 예시] 씨 발', '[AI 예시] ' + '가'.repeat(120), 'unlabelled']) {
+  for (const answer of ['씨 발', '' + '가'.repeat(121), '']) {
     await assert.rejects(seedReviewContent(state.db, env, async () => ({ ...generated, answer }), now));
     assert.equal(state.writes.length, 0);
   }
@@ -83,7 +85,7 @@ test('dry run and rejected unsafe/oversized generated content never write to the
 function aiResponse(content, finish = 'stop') {
   return { ok: true, json: async () => ({ choices: [{ finish_reason: finish, message: { content } }] }) };
 }
-test('AI request uses JSON mode, labels content and contains only the question and synthetic answer', async () => {
+test('AI request uses JSON mode, returns plain content and contains only the question and synthetic answer', async () => {
   const result = await generateExample('어떤 하루를 보내고 싶나요?', 'saved', env, async (url, opts) => {
     assert.equal(url, 'https://api.openai.com/v1/chat/completions');
     const request = JSON.parse(opts.body);
@@ -92,8 +94,8 @@ test('AI request uses JSON mode, labels content and contains only the question a
     assert.deepEqual(JSON.parse(request.messages[1].content), { question: '어떤 하루를 보내고 싶나요?', existingAnswer: 'saved' });
     return aiResponse(JSON.stringify({ answer: '좋아하는 음악을 듣고 싶어요.', reply: '편안한 하루가 되겠네요.' }));
   });
-  assert.ok(result.answer.startsWith('[AI 예시]'));
-  assert.ok(result.reply.startsWith('[AI 댓글 예시]'));
+  assert.equal(result.answer, '좋아하는 음악을 듣고 싶어요.');
+  assert.equal(result.reply, '편안한 하루가 되겠네요.');
 });
 
 test('invalid or unsafe model output is retried twice at most without logging its content', async () => {
