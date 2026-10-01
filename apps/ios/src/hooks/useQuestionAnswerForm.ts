@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 
+import { containsObjectionableContent } from '@ohaasa/shared/lib/contentFilter';
 import type { ZodiacSign } from '@ohaasa/shared/constants/zodiac';
 import { getOrCreateDeviceId } from '@ohaasa/shared/lib/storage';
 import {
@@ -29,7 +30,7 @@ type UseQuestionAnswerFormResult = {
   form: QuestionAnswerDraft;
   setForm: React.Dispatch<React.SetStateAction<QuestionAnswerDraft>>;
   save: () => Promise<QuestionAnswer | null>;
-  remove: () => Promise<void>;
+  remove: () => Promise<boolean>;
   isSaving: boolean;
   existingAnswer: QuestionAnswer | null;
   isLoaded: boolean;
@@ -87,19 +88,18 @@ export function useQuestionAnswerForm({
         ? form.visibility
         : 'private';
 
-      const saved = await upsertQuestionAnswer({
-        date,
-        zodiacSign,
-        questionText,
-        body: form.body.trim(),
-        visibility,
-      });
-
+      const body = form.body.trim();
+      // Do not mark a rejected public write as successfully published in local storage.
       if (visibility === 'public' && zodiacSign) {
-        await upsertPublicAnswer(date, deviceId, zodiacSign, saved.body);
+        if (containsObjectionableContent(body)) return null;
+        const ok = await upsertPublicAnswer(date, deviceId, zodiacSign, body);
+        if (!ok) return null;
       } else if (existingAnswer?.visibility === 'public') {
-        await deletePublicAnswer(date, deviceId);
+        if (!await deletePublicAnswer(date, deviceId)) return null;
       }
+      const saved = await upsertQuestionAnswer({
+        date, zodiacSign, questionText, body, visibility,
+      });
 
       setExistingAnswer(saved);
       return saved;
@@ -108,19 +108,18 @@ export function useQuestionAnswerForm({
     }
   }, [date, zodiacSign, questionText, form, existingAnswer]);
 
-  const remove = useCallback(async (): Promise<void> => {
-    if (!date) return;
-
+  const remove = useCallback(async (): Promise<boolean> => {
+    if (!date) return false;
     const wasPublic = existingAnswer?.visibility === 'public';
-    await deleteQuestionAnswer(date);
-
     if (wasPublic) {
       const deviceId = await getOrCreateDeviceId();
-      await deletePublicAnswer(date, deviceId);
+      if (!await deletePublicAnswer(date, deviceId)) return false;
     }
+    await deleteQuestionAnswer(date);
 
     setExistingAnswer(null);
     setForm(EMPTY_DRAFT);
+    return true;
   }, [date, existingAnswer]);
 
   return { form, setForm, save, remove, isSaving, existingAnswer, isLoaded };

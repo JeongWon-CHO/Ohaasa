@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
+import { containsObjectionableContent } from '@ohaasa/shared/lib/contentFilter';
 import type { ZodiacSign } from '@ohaasa/shared/constants/zodiac';
 import {
   addHiddenReplyId,
@@ -139,7 +140,7 @@ export function useAnswerReplies(
       // 별자리 미등록 사용자의 답글을 막는다. Android 1.8.0+ 보급 후 허용할 때 제거한다.
       // DB와 공용 타입의 zodiac_sign null 허용은 iOS 심사 대응 요구사항이므로 유지해야 한다.
       // UI가 우회되더라도 null 공개 행이 생기지 않게 저장 경계에서도 한 번 더 차단한다.
-      if (!deviceId || !zodiacSign || trimmed.length === 0) return false;
+      if (!deviceId || !zodiacSign || trimmed.length === 0 || containsObjectionableContent(trimmed)) return false;
 
       const saved = await upsertPublicReply(
         answerId,

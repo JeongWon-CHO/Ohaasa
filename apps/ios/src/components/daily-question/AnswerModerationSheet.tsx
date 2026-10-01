@@ -63,7 +63,8 @@ export function AnswerModerationSheet({
       {step === 'confirmBlock' ? (
         <>
           <Text style={styles.description}>
-            앞으로 이 사용자가 남기는 글이 보이지 않아요.{'\n'}
+            이 사용자의 글과 댓글이 즉시 숨겨져요.{'\n'}
+            대상 콘텐츠는 운영자에게 검토 요청으로 전달돼요.{'\n'}
             설정 &gt; 커뮤니티에서 언제든 해제할 수 있어요.
           </Text>
 
