@@ -1,0 +1,29 @@
+name: Prepare community review examples
+on:
+  schedule:
+    - cron: '0,30 23 * * *' # KST/JST 08:00 and 08:30
+    - cron: '0 0 * * *' # KST/JST 09:00; GitHub schedule can be delayed.
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: community-review-examples
+  cancel-in-progress: false
+jobs:
+  seed:
+    # Enable only during review. Manual runs work before enabling the schedule.
+    if: github.event_name == 'workflow_dispatch' || vars.COMMUNITY_REVIEW_CONTENT_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Register examples for the visible broadcast date
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          REVIEW_ANSWER_DEVICE_ID: ${{ secrets.REVIEW_ANSWER_DEVICE_ID }}
+          REVIEW_REPLY_DEVICE_ID: ${{ secrets.REVIEW_REPLY_DEVICE_ID }}
+        run: node .github/scripts/seed-community-review.mjs

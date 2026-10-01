@@ -1,0 +1,28 @@
+name: Notify community moderation
+on:
+  schedule:
+    - cron: '*/15 * * * *'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: community-moderation-email
+  cancel-in-progress: false
+jobs:
+  notify:
+    if: github.event_name == 'workflow_dispatch' || vars.COMMUNITY_MODERATION_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Send new reports and unresolved reminders
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          MODERATION_EMAIL_FROM: ${{ secrets.MODERATION_EMAIL_FROM }}
+          MODERATION_EMAIL_TO: ${{ secrets.MODERATION_EMAIL_TO }}
+        run: node .github/scripts/notify-community-moderation.mjs

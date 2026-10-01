@@ -187,7 +187,7 @@ export async function upsertPublicAnswer(
 export async function deletePublicAnswer(
   date: string,
   deviceId: string,
-): Promise<void> {
+): Promise<boolean> {
   const { error } = await supabase
     .from('question_answers')
     .delete()
@@ -196,7 +196,9 @@ export async function deletePublicAnswer(
 
   if (error) {
     console.warn('[supabase] deletePublicAnswer failed:', error.message);
+    return false;
   }
+  return true;
 }
 
 export async function fetchMyAnswerId(

@@ -88,10 +88,10 @@ export function QuestionAnswerForm({
           style={({ pressed }) => pressed && { opacity: 0.6 }}
         >
           <Text style={styles.notice}>
-            공개한 답변은 다른 사용자에게 보여요. 공개하면{' '}
+            공개한 답변은 다른 사용자에게 보여요.{' '}
             <Text style={styles.noticeLink}>커뮤니티 가이드라인</Text>에
-            동의하는 것으로 간주되며, 욕설·괴롭힘 등 불쾌한 콘텐츠는 무관용
-            정책에 따라 24시간 이내에 삭제돼요.
+            따라 욕설·괴롭힘 등 부적절한 콘텐츠는 금지돼요. 신고는 24시간
+            이내에 검토하고 위반이 확인되면 삭제 및 이용 제한 조치를 해요.
           </Text>
         </Pressable>
       )}

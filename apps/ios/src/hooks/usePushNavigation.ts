@@ -50,7 +50,7 @@ export function usePushNavigation() {
 
   const root = segments[0] as string | undefined;
   // segments가 비어 있으면 아직 스플래시(`index`)다. 온보딩 중이면 끼어들지 않는다.
-  const ready = Boolean(navigationState?.key) && root !== undefined && root !== 'onboarding';
+  const ready = Boolean(navigationState?.key) && root !== undefined && root !== 'index' && root !== 'terms' && root !== 'onboarding';
 
   useEffect(() => {
     if (!pendingRef.current || !ready) return;

@@ -28,6 +28,8 @@ export function BottomSheet({ visible, onClose, children }: BottomSheetProps) {
   const insets = useSafeAreaInsets();
 
   useEffect(() => {
+    let active = true;
+    let animation: Animated.CompositeAnimation;
     if (visible) {
       // Modal을 올리는 것과 애니메이션 시작은 같은 tick에 있어야 한다.
       // 렌더 중 setModalVisible로 앞당겼더니 시트가 화면 밖에 뜬 채 화면 전체가
@@ -38,7 +40,7 @@ export function BottomSheet({ visible, onClose, children }: BottomSheetProps) {
       translateY.setValue(SHEET_HEIGHT);
       backdropOpacity.setValue(0);
 
-      Animated.parallel([
+      animation = Animated.parallel([
         Animated.timing(translateY, {
           toValue: 0,
           duration: OPEN_DURATION,
@@ -49,9 +51,10 @@ export function BottomSheet({ visible, onClose, children }: BottomSheetProps) {
           duration: OPEN_DURATION - 40,
           useNativeDriver: true,
         }),
-      ]).start();
+      ]);
+      animation.start();
     } else {
-      Animated.parallel([
+      animation = Animated.parallel([
         Animated.timing(translateY, {
           toValue: SHEET_HEIGHT,
           duration: CLOSE_DURATION,
@@ -62,10 +65,16 @@ export function BottomSheet({ visible, onClose, children }: BottomSheetProps) {
           duration: CLOSE_DURATION - 40,
           useNativeDriver: true,
         }),
-      ]).start(() => {
-        setModalVisible(false);
+      ]);
+      animation.start(({ finished }) => {
+        if (active && finished) setModalVisible(false);
       });
     }
+    return () => {
+      // 이전 닫기 콜백이 다시 열린 시트를 숨기지 않도록 먼저 무효화한다.
+      active = false;
+      animation.stop();
+    };
   }, [visible, translateY, backdropOpacity]);
 
   return (

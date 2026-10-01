@@ -43,6 +43,8 @@ import { useNewReplyBadge } from '@/src/hooks/useNewReplyBadge';
 import { useQuestionAnswerForm } from '@/src/hooks/useQuestionAnswerForm';
 import { useToast } from '@ohaasa/shared/hooks/useToast';
 import { useZodiac } from '@ohaasa/shared/hooks/useZodiac';
+import { CONTENT_FILTER_MESSAGE, containsObjectionableContent } from '@ohaasa/shared/lib/contentFilter';
+import { queueCommunityBlock, flushCommunityBlocks } from '@/src/lib/communityBlockQueue';
 import type { ReportReason } from '@ohaasa/shared/lib/moderation';
 import { getOrCreateDeviceId } from '@ohaasa/shared/lib/storage';
 import type { PublicReply } from '@ohaasa/shared/lib/supabase';
@@ -339,12 +341,23 @@ export function DailyQuestionView({
     );
   }
 
-  function handleBlock() {
+  async function handleBlock() {
     if (!moderationTarget) return;
     // 답변·답글이 같은 차단 Set(useAnswerFeed 소유)을 보므로 한 번 호출로 양쪽이 함께 사라진다.
-    blockAuthor(moderationTarget.authorHash);
+    const target = moderationTarget;
+    if (!target.authorHash) {
+      showToast('작성자 정보를 확인하지 못했어요. 새로고침 후 다시 시도해 주세요');
+      return;
+    }
+    blockAuthor(target.authorHash);
     setModerationTarget(null);
-    showToast('차단했어요. 이 사용자의 글이 보이지 않아요');
+    try {
+      await queueCommunityBlock({ kind: target.kind, id: target.id });
+      showToast('차단했어요. 운영자에게 검토 요청을 전달해요');
+      void flushCommunityBlocks().catch(() => {});
+    } catch {
+      showToast('차단했지만 검토 요청을 저장하지 못했어요. 신고하기 또는 개발자 문의를 이용해 주세요');
+    }
   }
 
   function handleToggleReplies(answerId: string) {
@@ -365,6 +378,10 @@ export function DailyQuestionView({
     answerId: string,
     body: string,
   ): Promise<boolean> {
+    if (containsObjectionableContent(body)) {
+      showToast(CONTENT_FILTER_MESSAGE);
+      return false;
+    }
     const ok = await saveReply(answerId, body);
     if (ok) {
       Keyboard.dismiss();
@@ -407,8 +424,17 @@ export function DailyQuestionView({
   const showBack = !isTab || returnToCommunity;
 
   async function handleSave() {
-    const saved = await save();
-    if (!saved) return;
+    if (form.visibility === 'public' && zodiacSign && containsObjectionableContent(form.body)) {
+      showToast(CONTENT_FILTER_MESSAGE);
+      return;
+    }
+    let saved;
+    try { saved = await save(); }
+    catch { showToast('답변을 저장하지 못했어요. 다시 시도해 주세요'); return; }
+    if (!saved) {
+      showToast('공개 답변을 저장하지 못했어요. 연결 상태나 커뮤니티 이용 제한 여부를 확인해 주세요');
+      return;
+    }
 
     if (isEditMode) {
       router.back();
@@ -421,7 +447,15 @@ export function DailyQuestionView({
   }
 
   async function handleDeleteMine() {
-    await remove();
+    try {
+      if (!await remove()) {
+        showToast('답변을 삭제하지 못했어요. 연결 상태를 확인하고 다시 시도해 주세요');
+        return;
+      }
+    } catch {
+      showToast('답변을 삭제하지 못했어요. 다시 시도해 주세요');
+      return;
+    }
     showToast('삭제했어요');
     // 탭에는 나갈 곳이 없다. 글을 지웠으니 다시 쓰는 자리로 되돌린다.
     if (isTab) {

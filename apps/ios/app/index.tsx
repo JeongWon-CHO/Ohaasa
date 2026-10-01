@@ -37,7 +37,7 @@ export default function IndexScreen() {
         return;
       }
 
-      router.replace(seen ? '/(tabs)' : '/onboarding');
+      router.replace(seen ? '/(tabs)' : '/onboarding?initialStep=selection');
 
       // 운세 알림으로 켜진 경우엔 같은 tick에 운세까지 밀어 넣는다. 홈을 거치긴 하지만
       // 머물지 않고, 뒤로가기를 누르면 홈이 남아 있어야 하므로 replace가 아니라 push다.
