@@ -88,7 +88,7 @@ test('AI request uses JSON mode, labels content and contains only the question a
     assert.equal(url, 'https://api.openai.com/v1/chat/completions');
     const request = JSON.parse(opts.body);
     assert.equal(request.response_format.type, 'json_object');
-    assert.equal(request.model, 'gpt-4o-mini');
+    assert.equal(request.model, 'gpt-5.4-mini');
     assert.deepEqual(JSON.parse(request.messages[1].content), { question: '어떤 하루를 보내고 싶나요?', existingAnswer: 'saved' });
     return aiResponse(JSON.stringify({ answer: '좋아하는 음악을 듣고 싶어요.', reply: '편안한 하루가 되겠네요.' }));
   });

@@ -49,7 +49,7 @@ select public.resolve_community_event('접수 UUID'::uuid, 'remove_and_ban', '�
 
 `Prepare community AI examples` 워크플로는 매일 KST/JST 오전 06:00(UTC 전날 21:00)에 실행한다. main 반영 후 기본 활성화이며 Repository Variable `COMMUNITY_REVIEW_CONTENT_ENABLED=false`로 중지할 수 있다. GitHub 예약 실행은 지연될 수 있다.
 
-기존 `OPENAI_API_KEY`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` Secrets를 사용한다. `gpt-4o-mini`로 앱과 동일한 `getQuestionByDate` 질문에 맞는 한국어 답변 1개와 해당 답변에 공감하는 댓글 1개를 만든다. `[AI 예시]`, `[AI 댓글 예시]`로 표시하여 실제 사용자 게시물과 구분한다. 길이·공용 금칙어 필터·서버 필터를 통과한 내용만 저장한다. 잘못된 AI 출력은 최대 두 번 시도하고, 여전히 실패하면 고정 문구로 대체하지 않고 실패 처리한다. 개인 이용자 게시물은 OpenAI로 전송하지 않는다.
+기존 `OPENAI_API_KEY`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` Secrets를 사용한다. `gpt-5.4-mini`로 앱과 동일한 `getQuestionByDate` 질문에 맞는 한국어 답변 1개와 해당 답변에 공감하는 댓글 1개를 만든다. 프롬프트는 `.github/scripts/seed-community-review.mjs`의 `COMMUNITY_EXAMPLE_PROMPT`에서 관리한다. 짧은 한국어 댓글체와 선택적인 인터넷 표현을 사용하되 욕설·초성 욕설·실명 공격·성별 비하를 금지한다. `[AI 예시]`, `[AI 댓글 예시]`로 표시하여 실제 사용자 게시물과 구분한다. 길이·공용 금칙어 필터·서버 필터를 통과한 내용만 저장한다. 잘못된 AI 출력은 최대 두 번 시도하고, 여전히 실패하면 고정 문구로 대체하지 않고 실패 처리한다. 개인 이용자 게시물은 OpenAI로 전송하지 않는다.
 
 오전 6시에는 새 운세 방송일이 아직 수집되지 않았을 수 있어 KST 오늘 날짜의 예시를 미리 준비하고, 앱에 표시되는 최신 방송일이 다르면 해당 날짜에도 예시를 준비한다. 날짜당 답변·댓글 한 쌍만 등록하고 기존 한 쌍이 있으면 AI 호출과 DB 쓰기를 건너뛴다. 기존 답변만 있다면 이를 바꾸지 않고 그 답변에 맞는 댓글만 생성한다. 주말에도 최신 방송일의 기존 예시를 덮어쓰지 않는다. Android에도 같은 AI 예시가 보인다.
 
