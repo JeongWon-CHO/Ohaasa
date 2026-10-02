@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { seedReviewContent, generateExample } from './seed-community-review.mjs';
+import { database } from './community-api.mjs';
 import { notifyModeration } from './notify-community-moderation.mjs';
 import dailyQuestions from '../../packages/shared/src/constants/dailyQuestions.ts';
 const { getQuestionByDate } = dailyQuestions;
@@ -160,4 +161,10 @@ test('reminder rotation updates the latest notification time and prioritizes lea
   assert.equal(patches[0].notified_at, now.toISOString());
   assert.ok(queries[1].includes('order=notified_at.asc'));
   assert.ok(decodeURIComponent(queries[1]).includes('notified_at=lt.2026-10-01T12:00:00.000Z'));
+});
+
+
+test('database errors identify the failing operation without exposing content or identifiers', async () => {
+  const request = async () => ({ ok: false, status: 403, json: async () => ({ code: '42501', message: 'private body and key', details: 'private id' }) });
+  await assert.rejects(database('question_answers?device_id=eq.private-id', { method: 'POST', body: { body: 'private content' } }, request, () => 'test-only'), { message: 'Database POST question_answers failed (403; code=42501)' });
 });

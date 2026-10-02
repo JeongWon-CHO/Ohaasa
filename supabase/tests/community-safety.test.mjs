@@ -4,6 +4,7 @@ import { test } from 'node:test';
 // Install @electric-sql/pglite in a temporary directory; no production DB is contacted.
 const { PGlite } = await import(process.env.PGLITE_MODULE ?? '@electric-sql/pglite');
 const migration = await readFile(new URL('../migrations/20261001000000_community_safety.sql', import.meta.url), 'utf8');
+const automationMigration = await readFile(new URL('../migrations/20261002000000_community_automation_insert.sql', import.meta.url), 'utf8');
 const schema = `
 create role anon; create role authenticated; create role service_role bypassrls;
 grant usage on schema public to anon, authenticated, service_role;
@@ -21,14 +22,15 @@ create table question_answer_replies (
 );
 create table question_answer_reports (answer_id uuid references question_answers on delete cascade, device_id uuid, reason text, created_at timestamptz default now(), primary key(answer_id, device_id));
 create table question_answer_reply_reports (reply_id uuid references question_answer_replies on delete cascade, device_id uuid, reason text, created_at timestamptz default now(), primary key(reply_id, device_id));
-grant select, insert, update, delete on question_answers, question_answer_replies to anon, service_role;
+grant select, insert, update, delete on question_answers, question_answer_replies to anon;
+grant select on question_answers, question_answer_replies to service_role;
 grant insert on question_answer_reports, question_answer_reply_reports to anon;
 `;
 const author = '00000000-0000-4000-8000-000000000001';
 const reporter = '00000000-0000-4000-8000-000000000002';
 async function setup() {
   const db = new PGlite();
-  try { await db.exec(schema); await db.exec(migration); return db; }
+  try { await db.exec(schema); await db.exec(migration); await db.exec(automationMigration); return db; }
   catch (error) { await db.close(); throw error; }
 }
 async function answer(db, body = '안녕하세요') {
@@ -132,5 +134,28 @@ test('migration preserves existing reports and their original reception time', a
     assert.equal(event.status, 'pending');
     assert.equal(event.body_snapshot, '안녕하세요');
     assert.equal(new Date(event.created_at).toISOString(), '2026-09-30T00:00:00.000Z');
+  } finally { await db.close(); }
+});
+
+
+test('automation migration fixes service_role inserts while preserving duplicate rows and write restrictions', async () => {
+  const db = new PGlite();
+  try {
+    await db.exec(schema);
+    await db.exec(migration);
+    await db.exec('set role service_role');
+    await assert.rejects(answer(db), /permission denied/);
+    await db.exec('reset role');
+    await db.exec(automationMigration);
+    await db.exec('set role service_role');
+    const id = await answer(db);
+    await db.query("insert into question_answers(question_date,device_id,body) values('2026-10-01',$1,'duplicate') on conflict(question_date,device_id) do nothing", [author]);
+    await db.query("insert into question_answer_replies(answer_id,device_id,body) values($1,$2,'자동 댓글') on conflict(answer_id,device_id) do nothing", [id, reporter]);
+    await db.query("insert into question_answer_replies(answer_id,device_id,body) values($1,$2,'duplicate') on conflict(answer_id,device_id) do nothing", [id, reporter]);
+    assert.equal((await db.query('select body from question_answers')).rows[0].body, '안녕하세요');
+    assert.equal((await db.query('select body from question_answer_replies')).rows[0].body, '자동 댓글');
+    await assert.rejects(db.query('update question_answers set body=$1 where id=$2', ['변경', id]), /permission denied/);
+    await assert.rejects(db.query('delete from question_answer_replies'), /permission denied/);
+    await assert.rejects(db.query("insert into question_answers(question_date,device_id,body) values('2026-10-02',$1,'씨발')", [author]), /COMMUNITY_CONTENT_REJECTED/);
   } finally { await db.close(); }
 });

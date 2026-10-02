@@ -47,6 +47,8 @@ select public.resolve_community_event('접수 UUID'::uuid, 'remove_and_ban', '�
 
 ## AI 예시 답변 자동 생성
 
+운영 테이블의 기존 `service_role` 권한은 조회만 허용되어 자동 등록이 403으로 실패할 수 있다. `20261002000000_community_automation_insert.sql`로 답변·댓글 두 테이블에 서버 계정 INSERT 권한만 추가한다. 기존 사용자 권한과 RLS·필터·제재 트리거는 유지한다.
+
 `Prepare community AI examples` 워크플로는 매일 KST/JST 오전 06:00(UTC 전날 21:00)에 실행한다. main 반영 후 기본 활성화이며 Repository Variable `COMMUNITY_REVIEW_CONTENT_ENABLED=false`로 중지할 수 있다. GitHub 예약 실행은 지연될 수 있다.
 
 기존 `OPENAI_API_KEY`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` Secrets를 사용한다. `gpt-5.4-mini`로 앱과 동일한 `getQuestionByDate` 질문에 맞는 한국어 답변 1개와 해당 답변에 공감하는 댓글 1개를 만든다. 프롬프트는 `.github/scripts/seed-community-review.mjs`의 `COMMUNITY_EXAMPLE_PROMPT`에서 관리한다. 짧은 한국어 댓글체와 선택적인 인터넷 표현을 사용하되 욕설·초성 욕설·실명 공격·성별 비하를 금지한다. 본문에 AI·예시 접두사를 붙이지 않고 일반 답변·댓글과 같은 UI에 표시한다. 전용 작성자 ID는 유지하므로 운영자는 합성 작성자의 콘텐츠를 구분할 수 있다. 길이·공용 금칙어 필터·서버 필터를 통과한 내용만 저장한다. 잘못된 AI 출력은 최대 두 번 시도하고, 여전히 실패하면 고정 문구로 대체하지 않고 실패 처리한다. 개인 이용자 게시물은 OpenAI로 전송하지 않는다.
