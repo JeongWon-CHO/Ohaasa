@@ -18,7 +18,7 @@ jobs:
     # Enabled by default; set the repository variable to false to stop publication.
     if: github.event_name == 'workflow_dispatch' || vars.COMMUNITY_REVIEW_CONTENT_ENABLED != 'false'
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4

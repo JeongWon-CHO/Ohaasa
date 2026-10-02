@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { seedReviewContent, generateExample } from './seed-community-review.mjs';
+import { seedSingleAuthor as seedReviewContent, seedReviewContent as seedTenAnswers, generateExample } from './seed-community-review.mjs';
 import { database } from './community-api.mjs';
 import { notifyModeration } from './notify-community-moderation.mjs';
 import dailyQuestions from '../../packages/shared/src/constants/dailyQuestions.ts';
@@ -167,4 +167,49 @@ test('reminder rotation updates the latest notification time and prioritizes lea
 test('database errors identify the failing operation without exposing content or identifiers', async () => {
   const request = async () => ({ ok: false, status: 403, json: async () => ({ code: '42501', message: 'private body and key', details: 'private id' }) });
   await assert.rejects(database('question_answers?device_id=eq.private-id', { method: 'POST', body: { body: 'private content' } }, request, () => 'test-only'), { message: 'Database POST question_answers failed (403; code=42501)' });
+});
+
+
+test('daily batch fills ten stable authors, keeps one reply, and resumes without extra generation', async () => {
+  const rows = new Map();
+  const writes = [];
+  const db = async (route, options) => {
+    if (route.startsWith('horoscopes?')) return [{ date: '2026-10-02' }];
+    if (route.startsWith('community_bans?')) return [];
+    if (options) {
+      writes.push(options.body);
+      if (route.startsWith('question_answers?')) rows.set(options.body.device_id, { id: options.body.device_id, body: options.body.body });
+      else rows.set('reply', { id: 'reply' });
+      return null;
+    }
+    const key = route.startsWith('question_answers?') ? route.match(/device_id=eq\.([^&]+)/)[1] : 'reply';
+    return rows.has(key) ? [rows.get(key)] : [];
+  };
+  let calls = 0;
+  const generate = async () => ({ answer: `오늘은 다른 음식 ${++calls} 먹고 싶음`, reply: '좋지ㅋㅋ' });
+  await seedTenAnswers(db, env, generate, now);
+  assert.equal(writes.length, 11);
+  assert.equal(new Set(writes.slice().filter(row => row.question_date).map(row => row.device_id)).size, 10);
+  assert.equal(writes[0].device_id, env('REVIEW_ANSWER_DEVICE_ID'));
+  assert.equal(new Set(writes.filter(row => row.question_date).map(row => row.zodiac_sign)).size, 10);
+  await seedTenAnswers(db, env, generate, now);
+  assert.equal(calls, 10);
+  assert.equal(writes.length, 11);
+  const removed = writes[5].device_id;
+  rows.delete(removed);
+  await seedTenAnswers(db, env, generate, now);
+  assert.equal(calls, 11);
+  assert.equal(writes.at(-1).device_id, removed);
+});
+
+test('ten-answer dry run validates all slots without writing and duplicate output is bounded', async () => {
+  const state = mockDatabase('2026-10-02');
+  let calls = 0;
+  await seedTenAnswers(state.db, env, async () => ({ ...generated, answer: `오늘 할 일 ${++calls} 생각중` }), now, true);
+  assert.equal(calls, 10);
+  assert.equal(state.writes.length, 0);
+  calls = 0;
+  await assert.rejects(seedTenAnswers(state.db, env, async () => { calls++; return { ...generated }; }, now, true), /duplicate/);
+  assert.equal(calls, 4);
+  assert.equal(state.writes.length, 0);
 });
