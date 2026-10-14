@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
+import Constants from 'expo-constants';
 
 import { resetCommunityTermsForDevelopment } from '@/src/lib/communityTerms';
 import { NotificationDeniedSheet } from '@/src/components/NotificationDeniedSheet';
@@ -758,7 +759,7 @@ export default function SettingsScreen() {
               <Text style={styles.footerLogo}>ohaasa ✦</Text>
             </View>
             <Text style={styles.footerJa}>おはあさ</Text>
-            <Text style={styles.footerCaption}>v1.8.0</Text>
+            <Text style={styles.footerCaption}>v{Constants.expoConfig?.version ?? '—'}</Text>
           </View>
 
           <View style={styles.spacer} />

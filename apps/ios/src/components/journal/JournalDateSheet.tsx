@@ -61,6 +61,11 @@ export function JournalDateSheet({
     ...daysInMonth(month),
   ];
 
+  // Keep each week in its own seven-cell row so rounding cannot wrap a day.
+  const weeks = Array.from({ length: Math.ceil(days.length / 7) }, (_, index) =>
+    Array.from({ length: 7 }, (_, weekday) => days[index * 7 + weekday] ?? null),
+  );
+
   return (
     <BottomSheet visible onClose={onClose}>
       <View style={styles.row}>
@@ -90,38 +95,44 @@ export function JournalDateSheet({
           <Feather name="chevron-right" size={22} color={colors.textMid} />
         </Pressable>
       </View>
-      <View style={styles.grid}>
-        {["일", "월", "화", "수", "목", "금", "토"].map((day) => (
-          <View key={day} style={styles.cell}>
-            <Text style={styles.hint}>{day}</Text>
+      <View>
+        <View style={styles.weekRow}>
+          {["일", "월", "화", "수", "목", "금", "토"].map((day) => (
+            <View key={day} style={styles.cell}>
+              <Text style={styles.hint}>{day}</Text>
+            </View>
+          ))}
+        </View>
+        {weeks.map((week, weekIndex) => (
+          <View key={weekIndex} style={styles.weekRow}>
+            {week.map((day, index) =>
+              day ? (
+                <Pressable
+                  key={day}
+                  accessibilityRole="button"
+                  accessibilityLabel={`${year}년 ${monthNumber}월 ${Number(day.slice(8))}일`}
+                  accessibilityState={{
+                    selected: day === date,
+                    disabled: checking || day > today,
+                  }}
+                  disabled={checking || day > today}
+                  onPress={() => {
+                    void selectDate(day);
+                  }}
+                  style={[
+                    styles.cell,
+                    day === date && styles.selected,
+                    day > today && styles.disabled,
+                  ]}
+                >
+                  <Text style={styles.title}>{Number(day.slice(8))}</Text>
+                </Pressable>
+              ) : (
+                <View key={`empty-${index}`} style={styles.cell} />
+              ),
+            )}
           </View>
         ))}
-        {days.map((day, index) =>
-          day ? (
-            <Pressable
-              key={day}
-              accessibilityRole="button"
-              accessibilityLabel={`${year}년 ${monthNumber}월 ${Number(day.slice(8))}일`}
-              accessibilityState={{
-                selected: day === date,
-                disabled: checking || day > today,
-              }}
-              disabled={checking || day > today}
-              onPress={() => {
-                void selectDate(day);
-              }}
-              style={[
-                styles.cell,
-                day === date && styles.selected,
-                day > today && styles.disabled,
-              ]}
-            >
-              <Text style={styles.title}>{Number(day.slice(8))}</Text>
-            </Pressable>
-          ) : (
-            <View key={`empty-${index}`} style={styles.cell} />
-          ),
-        )}
       </View>
     </BottomSheet>
   );
@@ -141,9 +152,9 @@ const styles = StyleSheet.create({
   },
   hint: { fontSize: 13, color: colors.textMid, marginVertical: spacing.sm },
   nav: { padding: spacing.sm },
-  grid: { flexDirection: "row", flexWrap: "wrap" },
+  weekRow: { flexDirection: "row" },
   cell: {
-    width: "14.285714%",
+    flex: 1,
     height: 44,
     alignItems: "center",
     justifyContent: "center",
