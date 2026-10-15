@@ -28,6 +28,10 @@ module.exports = {
     ios: {
       supportsTablet: true,
       bundleIdentifier: packageName,
+      infoPlist: {
+        CFBundleDevelopmentRegion: 'ko',
+        CFBundleLocalizations: ['ko'],
+      },
       config: {
         usesNonExemptEncryption: false,
       },
