@@ -537,7 +537,10 @@ export default function SettingsScreen() {
                         <Pressable
                           key={time}
                           accessibilityRole="button"
-                          accessibilityState={{ selected, disabled: timeSaving }}
+                          accessibilityState={{
+                            selected,
+                            disabled: timeSaving,
+                          }}
                           disabled={timeSaving}
                           onPress={() => handleNotificationTime(time)}
                           style={({ pressed }) => [
@@ -706,7 +709,9 @@ export default function SettingsScreen() {
                     await resetCommunityTermsForDevelopment();
                     DevSettings.reload();
                   } catch {
-                    showToast('동의 기록을 초기화하지 못했어요. 다시 시도해 주세요');
+                    showToast(
+                      '동의 기록을 초기화하지 못했어요. 다시 시도해 주세요',
+                    );
                   }
                 }}
                 style={[styles.aboutRow, styles.rowBorder]}
@@ -759,7 +764,9 @@ export default function SettingsScreen() {
               <Text style={styles.footerLogo}>ohaasa ✦</Text>
             </View>
             <Text style={styles.footerJa}>おはあさ</Text>
-            <Text style={styles.footerCaption}>v{Constants.expoConfig?.version ?? '—'}</Text>
+            <Text style={styles.footerCaption}>
+              v{Constants.expoConfig?.version ?? '—'}
+            </Text>
           </View>
 
           <View style={styles.spacer} />
