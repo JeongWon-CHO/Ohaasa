@@ -488,6 +488,15 @@ export function DailyQuestionView({
     router.back();
   }
 
+  const header = (
+    <View style={styles.headerWrap}>
+      <FinalHeader
+        onBackPress={showBack ? handleBack : undefined}
+        subtitle="오늘의 질문"
+      />
+    </View>
+  );
+
   return (
     <LinearGradient colors={gradients.screen} style={styles.fill}>
       <KeyboardAvoidingView
@@ -495,6 +504,7 @@ export function DailyQuestionView({
         style={[styles.fill, { paddingBottom: androidKeyboardHeight }]}
       >
         <ResponsiveContainer>
+          {isTab && header}
           <ScrollView
             ref={scrollRef}
             style={styles.scroll}
@@ -523,12 +533,7 @@ export function DailyQuestionView({
             }
           >
             <View>
-              <View style={styles.headerWrap}>
-                <FinalHeader
-                  onBackPress={showBack ? handleBack : undefined}
-                  subtitle="오늘의 질문"
-                />
-              </View>
+              {!isTab && header}
 
               <View style={styles.body}>
                 {step === 'answer' ? (

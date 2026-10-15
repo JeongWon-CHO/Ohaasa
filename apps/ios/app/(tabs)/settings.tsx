@@ -797,6 +797,7 @@ const styles = StyleSheet.create({
   scroll: {
     flex: 1,
     zIndex: 1,
+    marginTop: 12,
   },
 
   // ── Scroll content ────────────────────────────────────────────
