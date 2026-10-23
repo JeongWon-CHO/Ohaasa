@@ -1,3 +1,4 @@
+import { isTodayHoroscope } from '@ohaasa/shared/lib/horoscopeDate';
 import {
   ActivityIndicator,
   ScrollView,
@@ -5,49 +6,51 @@ import {
   Text,
   TouchableOpacity,
   View,
-} from "react-native";
-import { ShareCard } from "@/src/components/share/ShareCard";
-import { useShareHoroscope } from "@ohaasa/shared/hooks/useShareHoroscope";
-import { LinearGradient } from "expo-linear-gradient";
-import FontAwesome from "@expo/vector-icons/FontAwesome";
-import { Feather } from "@expo/vector-icons";
-import { useLocalSearchParams, useRouter } from "expo-router";
-import Svg, {
-  Circle,
-  Defs,
-  RadialGradient,
-  Stop,
-} from "react-native-svg";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+} from 'react-native';
+import { ShareCard } from '@/src/components/share/ShareCard';
+import { useShareHoroscope } from '@ohaasa/shared/hooks/useShareHoroscope';
+import { LinearGradient } from 'expo-linear-gradient';
+import FontAwesome from '@expo/vector-icons/FontAwesome';
+import { Feather } from '@expo/vector-icons';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import Svg, { Circle, Defs, RadialGradient, Stop } from 'react-native-svg';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { ConstellationBadge } from "@/src/components/final/ConstellationBadge";
-import { CircleDeco, MoonDeco, StarDeco } from "@/src/components/final/ScreenDeco";
-import { DatePill } from "@/src/components/final/DatePill";
-import { GogoInfoGrid } from "@/src/components/final/GogoInfoGrid";
-import { HoroscopeCard } from "@/src/components/HoroscopeCard";
-import { ResponsiveContainer } from "@/src/components/common/ResponsiveContainer";
-import { useHoroscopeDateContext } from "@ohaasa/shared/context/HoroscopeDateContext";
-import { colors, gradients } from "@/src/constants/design";
-import { ZODIAC_MAP, type ZodiacSign } from "@ohaasa/shared/constants/zodiac";
-import { useAllHoroscopes } from "@ohaasa/shared/hooks/useHoroscope";
+import { ConstellationBadge } from '@/src/components/final/ConstellationBadge';
+import {
+  CircleDeco,
+  MoonDeco,
+  StarDeco,
+} from '@/src/components/final/ScreenDeco';
+import { DatePill } from '@/src/components/final/DatePill';
+import { GogoInfoGrid } from '@/src/components/final/GogoInfoGrid';
+import { HoroscopeCard } from '@/src/components/HoroscopeCard';
+import { ResponsiveContainer } from '@/src/components/common/ResponsiveContainer';
+import { colors, gradients } from '@/src/constants/design';
+import { ZODIAC_MAP, type ZodiacSign } from '@ohaasa/shared/constants/zodiac';
+import { useAllHoroscopes } from '@ohaasa/shared/hooks/useHoroscope';
 
 // ─── Screen ───────────────────────────────────────────────────
 
 export default function ZodiacDetailScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { sign, date: dateParam } = useLocalSearchParams<{ sign: string; date?: string }>();
-  const { latestDate } = useHoroscopeDateContext();
+  const { sign, date: dateParam } = useLocalSearchParams<{
+    sign: string;
+    date?: string;
+  }>();
 
   // dateParam이 빈 문자열이거나 없으면 최신 날짜 조회 (기존 진입 방식 유지)
   const targetDate = dateParam || undefined;
 
-  const { horoscopes, broadcastDate, loading, error } = useAllHoroscopes({ date: targetDate });
+  const { horoscopes, broadcastDate, loading, error } = useAllHoroscopes({
+    date: targetDate,
+  });
 
   const { cardRef, share, sharing } = useShareHoroscope();
 
   const validSign =
-    typeof sign === "string" && sign in ZODIAC_MAP
+    typeof sign === 'string' && sign in ZODIAC_MAP
       ? (sign as ZodiacSign)
       : null;
 
@@ -56,11 +59,10 @@ export default function ZodiacDetailScreen() {
     ? (horoscopes.find((h) => h.zodiac_sign === validSign) ?? null)
     : null;
 
-  // targetDate가 있고, latestDate와 다르면 과거 날짜로 간주
-  const isPast = !!targetDate && (!latestDate || targetDate !== latestDate);
-  const rankPillText = isPast
-    ? `그날의 운세 ${horoscope?.rank}위`
-    : `오늘의 운세 ${horoscope?.rank}위`;
+  const isToday = isTodayHoroscope(horoscope?.date);
+  const rankPillText = isToday
+    ? `오늘의 운세 ${horoscope?.rank}위`
+    : `그날의 운세 ${horoscope?.rank}위`;
 
   return (
     <LinearGradient colors={gradients.screen} style={styles.fill}>
@@ -97,152 +99,156 @@ export default function ZodiacDetailScreen() {
       />
 
       <ResponsiveContainer>
-      {/* 헤더 */}
-      <View style={[styles.backRow, { paddingTop: insets.top + 14 }]}>
-        <TouchableOpacity
-          onPress={() => router.back()}
-          hitSlop={12}
-          style={styles.backBtn}
-        >
-          <FontAwesome
-            name="chevron-left"
-            size={16}
-            color={colors.apricotDark}
-          />
-        </TouchableOpacity>
-        {horoscope && zodiac && (
+        {/* 헤더 */}
+        <View style={[styles.backRow, { paddingTop: insets.top + 14 }]}>
           <TouchableOpacity
-            onPress={share}
+            onPress={() => router.back()}
             hitSlop={12}
-            style={[styles.backBtn, styles.shareBtn]}
-            disabled={sharing}
+            style={styles.backBtn}
           >
-            <Feather
-              name="share-2"
+            <FontAwesome
+              name="chevron-left"
               size={16}
-              color={sharing ? colors.textSoft : colors.apricotDark}
+              color={colors.apricotDark}
             />
-            <Text
-              style={[
-                styles.shareText,
-                sharing && { color: colors.textSoft },
-              ]}
-            >
-              공유하기
-            </Text>
           </TouchableOpacity>
-        )}
-      </View>
-
-      <ScrollView
-        contentContainerStyle={styles.content}
-        showsVerticalScrollIndicator={false}
-        style={styles.scroll}
-      >
-        {/* DatePill */}
-        <View style={styles.pillWrap}>
-          <DatePill dateText={broadcastDate ?? ""} />
+          {horoscope && zodiac && (
+            <TouchableOpacity
+              onPress={share}
+              hitSlop={12}
+              style={[styles.backBtn, styles.shareBtn]}
+              disabled={sharing}
+            >
+              <Feather
+                name="share-2"
+                size={16}
+                color={sharing ? colors.textSoft : colors.apricotDark}
+              />
+              <Text
+                style={[
+                  styles.shareText,
+                  sharing && { color: colors.textSoft },
+                ]}
+              >
+                공유하기
+              </Text>
+            </TouchableOpacity>
+          )}
         </View>
 
-        {loading ? (
-          <View style={styles.loadingBox}>
-            <ActivityIndicator color={colors.apricotDark} size="large" />
+        <ScrollView
+          contentContainerStyle={styles.content}
+          showsVerticalScrollIndicator={false}
+          style={styles.scroll}
+        >
+          {/* DatePill */}
+          <View style={styles.pillWrap}>
+            <DatePill dateText={broadcastDate ?? ''} />
           </View>
-        ) : error ? (
-          <View style={styles.emptyWrap}>
-            <Text style={styles.errorText}>{error}</Text>
-          </View>
-        ) : !validSign || !zodiac ? (
-          <View style={styles.emptyWrap}>
-            <Text style={styles.emptyText}>알 수 없는 별자리입니다.</Text>
-          </View>
-        ) : !horoscope ? (
-          <View style={styles.emptyWrap}>
-            <Text style={styles.emptyText}>
-              {targetDate
-                ? "해당 날짜에 저장된 운세가 없어요."
-                : "방송 데이터가 없습니다."}
-            </Text>
-          </View>
-        ) : (
-          <>
-            {/* Hero */}
-            <View style={styles.hero}>
-              <LinearGradient
-                colors={[colors.yellow, colors.apricot]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={styles.rankPill}
-              >
-                <Text style={styles.rankPillText}>{rankPillText}</Text>
-              </LinearGradient>
 
-              <View style={styles.circleOuter}>
-                <Svg
-                  width={128}
-                  height={128}
-                  style={{ position: "absolute", top: -16, left: -16 }}
+          {loading ? (
+            <View style={styles.loadingBox}>
+              <ActivityIndicator color={colors.apricotDark} size="large" />
+            </View>
+          ) : error ? (
+            <View style={styles.emptyWrap}>
+              <Text style={styles.errorText}>{error}</Text>
+            </View>
+          ) : !validSign || !zodiac ? (
+            <View style={styles.emptyWrap}>
+              <Text style={styles.emptyText}>알 수 없는 별자리입니다.</Text>
+            </View>
+          ) : !horoscope ? (
+            <View style={styles.emptyWrap}>
+              <Text style={styles.emptyText}>
+                {targetDate
+                  ? '해당 날짜에 저장된 운세가 없어요.'
+                  : '방송 데이터가 없습니다.'}
+              </Text>
+            </View>
+          ) : (
+            <>
+              {/* Hero */}
+              <View style={styles.hero}>
+                <LinearGradient
+                  colors={[colors.yellow, colors.apricot]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={styles.rankPill}
                 >
-                  <Defs>
-                    <RadialGradient
-                      id="detailCircleGlow"
-                      cx="50%"
-                      cy="50%"
-                      r="50%"
-                    >
-                      <Stop
-                        offset="0%"
-                        stopColor="#F0B89A"
-                        stopOpacity={0.58}
-                      />
-                      <Stop
-                        offset="45%"
-                        stopColor="#F5D98B"
-                        stopOpacity={0.3}
-                      />
-                      <Stop
-                        offset="80%"
-                        stopColor="#FAF6F0"
-                        stopOpacity={0.12}
-                      />
-                      <Stop offset="100%" stopColor="#FAF6F0" stopOpacity={0} />
-                    </RadialGradient>
-                  </Defs>
-                  <Circle
-                    cx={64}
-                    cy={64}
-                    r={64}
-                    fill="url(#detailCircleGlow)"
-                  />
-                </Svg>
-                <View style={styles.circleDash} />
-                <View style={styles.circleBadge}>
-                  <ConstellationBadge sign={zodiac.sign} size={76} />
+                  <Text style={styles.rankPillText}>{rankPillText}</Text>
+                </LinearGradient>
+
+                <View style={styles.circleOuter}>
+                  <Svg
+                    width={128}
+                    height={128}
+                    style={{ position: 'absolute', top: -16, left: -16 }}
+                  >
+                    <Defs>
+                      <RadialGradient
+                        id="detailCircleGlow"
+                        cx="50%"
+                        cy="50%"
+                        r="50%"
+                      >
+                        <Stop
+                          offset="0%"
+                          stopColor="#F0B89A"
+                          stopOpacity={0.58}
+                        />
+                        <Stop
+                          offset="45%"
+                          stopColor="#F5D98B"
+                          stopOpacity={0.3}
+                        />
+                        <Stop
+                          offset="80%"
+                          stopColor="#FAF6F0"
+                          stopOpacity={0.12}
+                        />
+                        <Stop
+                          offset="100%"
+                          stopColor="#FAF6F0"
+                          stopOpacity={0}
+                        />
+                      </RadialGradient>
+                    </Defs>
+                    <Circle
+                      cx={64}
+                      cy={64}
+                      r={64}
+                      fill="url(#detailCircleGlow)"
+                    />
+                  </Svg>
+                  <View style={styles.circleDash} />
+                  <View style={styles.circleBadge}>
+                    <ConstellationBadge sign={zodiac.sign} size={76} />
+                  </View>
+                </View>
+
+                <View style={styles.zodiacText}>
+                  <Text style={styles.zodiacName}>{zodiac.ko}</Text>
+                  <Text style={styles.zodiacSub}>
+                    {zodiac.en} · {zodiac.dateRange}
+                  </Text>
                 </View>
               </View>
 
-              <View style={styles.zodiacText}>
-                <Text style={styles.zodiacName}>{zodiac.ko}</Text>
-                <Text style={styles.zodiacSub}>
-                  {zodiac.en} · {zodiac.dateRange}
-                </Text>
-              </View>
-            </View>
+              {/* Fortune card */}
+              <HoroscopeCard
+                advice={horoscope.advice_ko ?? horoscope.advice}
+                horoscope={horoscope}
+                style={styles.fortuneCard}
+              />
 
-            {/* Fortune card */}
-            <HoroscopeCard
-              advice={horoscope.advice_ko ?? horoscope.advice}
-              horoscope={horoscope}
-              style={styles.fortuneCard}
-            />
+              {/* 고고별자리 행운 아이템 · 오늘의 운 */}
+              <GogoInfoGrid horoscope={horoscope} style={styles.infoGrid} />
+            </>
+          )}
 
-            {/* 고고별자리 행운 아이템 · 오늘의 운 */}
-            <GogoInfoGrid horoscope={horoscope} style={styles.infoGrid} />
-          </>
-        )}
-
-        <View style={styles.spacer} />
-      </ScrollView>
+          <View style={styles.spacer} />
+        </ScrollView>
       </ResponsiveContainer>
 
       {/* 오프스크린 캡처용 ShareCard */}
@@ -258,12 +264,12 @@ export default function ZodiacDetailScreen() {
 const styles = StyleSheet.create({
   fill: {
     flex: 1,
-    overflow: "hidden",
+    overflow: 'hidden',
   },
   backRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     paddingHorizontal: 20,
     paddingBottom: 8,
     zIndex: 1,
@@ -271,19 +277,19 @@ const styles = StyleSheet.create({
   backBtn: {
     width: 36,
     height: 36,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   shareBtn: {
-    width: "auto",
-    flexDirection: "row",
+    width: 'auto',
+    flexDirection: 'row',
     gap: 6,
     paddingHorizontal: 6,
   },
   shareText: {
     fontSize: 12,
     lineHeight: 16,
-    fontFamily: "NotoSansKR_600SemiBold",
+    fontFamily: 'NotoSansKR_600SemiBold',
     includeFontPadding: false,
     color: colors.apricotDark,
   },
@@ -299,31 +305,31 @@ const styles = StyleSheet.create({
     marginHorizontal: 28,
   },
   loadingBox: {
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: 'center',
+    justifyContent: 'center',
     minHeight: 300,
     marginTop: 28,
   },
   emptyWrap: {
     marginTop: 40,
-    alignItems: "center",
+    alignItems: 'center',
     paddingHorizontal: 24,
   },
   emptyText: {
     fontSize: 14,
     color: colors.textMid,
-    textAlign: "center",
+    textAlign: 'center',
     lineHeight: 22,
   },
   errorText: {
     fontSize: 13,
     color: colors.apricotDark,
-    textAlign: "center",
+    textAlign: 'center',
   },
 
   hero: {
     marginTop: 28,
-    alignItems: "center",
+    alignItems: 'center',
   },
   rankPill: {
     borderRadius: 20,
@@ -338,9 +344,9 @@ const styles = StyleSheet.create({
   rankPillText: {
     fontSize: 12,
     lineHeight: 16,
-    fontFamily: "NotoSansKR_500Medium",
+    fontFamily: 'NotoSansKR_500Medium',
     includeFontPadding: false,
-    color: "#FFFDF9",
+    color: '#FFFDF9',
     letterSpacing: 0.66,
   },
   circleOuter: {
@@ -349,40 +355,40 @@ const styles = StyleSheet.create({
     marginVertical: 12,
   },
   circleDash: {
-    position: "absolute",
+    position: 'absolute',
     top: -8,
     bottom: -8,
     left: -8,
     right: -8,
     borderRadius: 56,
     borderWidth: 1,
-    borderStyle: "dashed",
-    borderColor: "rgba(217,138,104,0.32)",
+    borderStyle: 'dashed',
+    borderColor: 'rgba(217,138,104,0.32)',
   },
   circleBadge: {
-    position: "absolute",
+    position: 'absolute',
     top: 0,
     bottom: 0,
     left: 0,
     right: 0,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   zodiacText: {
-    alignItems: "center",
+    alignItems: 'center',
     marginTop: 10,
   },
   zodiacName: {
     fontSize: 20,
     lineHeight: 28,
-    fontFamily: "NotoSansKR_400Regular",
+    fontFamily: 'NotoSansKR_400Regular',
     includeFontPadding: false,
     color: colors.text,
   },
   zodiacSub: {
     fontSize: 11,
     lineHeight: 16,
-    fontFamily: "NotoSansKR_400Regular",
+    fontFamily: 'NotoSansKR_400Regular',
     includeFontPadding: false,
     color: colors.textSoft,
     marginTop: 3,
@@ -402,7 +408,7 @@ const styles = StyleSheet.create({
     minHeight: 20,
   },
   offscreen: {
-    position: "absolute",
+    position: 'absolute',
     left: -9999,
     top: 0,
   },
