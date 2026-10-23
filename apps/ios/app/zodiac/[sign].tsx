@@ -232,6 +232,7 @@ export default function ZodiacDetailScreen() {
             {/* Fortune card */}
             <HoroscopeCard
               advice={horoscope.advice_ko ?? horoscope.advice}
+              horoscope={horoscope}
               style={styles.fortuneCard}
             />
 

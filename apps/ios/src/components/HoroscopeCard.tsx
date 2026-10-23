@@ -1,5 +1,8 @@
 import { StyleSheet, Text, type StyleProp, type ViewStyle } from "react-native";
 
+import type { Horoscope } from "@ohaasa/shared/types/horoscope";
+import { GogoInfoGrid } from "@/src/components/final/GogoInfoGrid";
+
 import { FinalCard } from "@/src/components/final/FinalCard";
 import { typography } from "@/src/constants/design";
 import { useScreenSize } from "@ohaasa/shared/hooks/useScreenSize";
@@ -21,10 +24,11 @@ const ADVICE_CONFIG = {
 
 interface HoroscopeCardProps {
   advice: string;
+  horoscope?: Horoscope;
   style?: StyleProp<ViewStyle>;
 }
 
-export function HoroscopeCard({ advice, style }: HoroscopeCardProps) {
+export function HoroscopeCard({ advice, horoscope, style }: HoroscopeCardProps) {
   const cfg = ADVICE_CONFIG[useScreenSize()];
   return (
     <FinalCard
@@ -46,6 +50,7 @@ export function HoroscopeCard({ advice, style }: HoroscopeCardProps) {
       >
         {advice}
       </Text>
+      {horoscope && <GogoInfoGrid horoscope={horoscope} inline />}
     </FinalCard>
   );
 }

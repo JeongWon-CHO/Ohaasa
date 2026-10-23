@@ -176,6 +176,7 @@ export default function TodayScreen() {
             {/* Fortune card */}
             <HoroscopeCard
               advice={horoscope.advice_ko ?? horoscope.advice}
+              horoscope={horoscope}
               style={styles.fortuneCard}
             />
 
