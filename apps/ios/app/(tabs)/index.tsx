@@ -47,15 +47,16 @@ export default function HomeScreen() {
   return (
     <ScreenBackground deco="starfield">
       <ResponsiveContainer>
+        <FinalHeader subtitle={formatTodayKo()} />
         <ScrollView
+          style={styles.scroll}
+          alwaysBounceVertical={false}
           contentContainerStyle={[
             styles.content,
             // 상단 안전영역은 FinalHeader가, 바닥은 탭바가 차지하는 레이아웃 공간이 이미 처리한다.
             { paddingBottom: spacing.xl },
           ]}
         >
-          <FinalHeader subtitle={formatTodayKo()} bleed />
-
           <HoroscopeStrip />
 
           <MonthCalendar
@@ -106,6 +107,10 @@ export default function HomeScreen() {
 }
 
 const styles = StyleSheet.create({
+  scroll: {
+    flex: 1,
+    marginTop: spacing.lg,
+  },
   content: {
     paddingHorizontal: spacing.lg,
     alignItems: "center",

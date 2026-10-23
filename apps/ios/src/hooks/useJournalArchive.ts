@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import {
   loadJournalDates,
@@ -48,6 +48,8 @@ export function useJournalArchive() {
         if (list[list.length - 1] !== ym) list.push(ym);
       }
       setMonths(list);
+      // 월 목록과 캐시를 함께 갱신해야 이전 조회 취소 후에도 본문을 다시 읽는다.
+      setLoaded(new Map());
       setLoading(false);
     });
     return () => {
@@ -57,17 +59,9 @@ export function useJournalArchive() {
 
   const target = useMemo(() => months.slice(0, limit), [months, limit]);
 
-  // ② 보이는 달만 본문을 읽는다.
-  //
-  // tick이 올라간 회차에는 이미 읽은 달도 다시 읽는다 — 일기를 고치고 돌아왔을 때
-  // 내용이 바뀌었는지는 키 목록만으로 알 수 없기 때문이다. 대신 달이 쌓일수록
-  // 이 재조회가 무거워지므로, expo-file-system으로 옮길 때 같이 손봐야 한다.
-  const seenTickRef = useRef(tick);
+  // ② 보이는 달만 본문을 읽는다. 갱신 시 ①에서 캐시를 비워 다시 읽게 한다.
   useEffect(() => {
-    const stale = seenTickRef.current !== tick;
-    seenTickRef.current = tick;
-
-    const wanted = stale ? target : target.filter((ym) => !loaded.has(ym));
+    const wanted = target.filter((ym) => !loaded.has(ym));
     if (wanted.length === 0) return;
 
     let cancelled = false;
@@ -91,7 +85,7 @@ export function useJournalArchive() {
     return () => {
       cancelled = true;
     };
-  }, [target, loaded, tick]);
+  }, [target, loaded]);
 
   // 아직 본문을 안 읽은 달은 내보내지 않는다 — 넘기면 "0장" 헤더가 먼저 떴다가
   // 그림이 뒤늦게 채워지는 게 보인다.

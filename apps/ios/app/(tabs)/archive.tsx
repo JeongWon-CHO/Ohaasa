@@ -8,7 +8,6 @@ import {
   useWindowDimensions,
   View,
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import {
   ArchiveMonthHeader,
@@ -33,7 +32,6 @@ import type { DailyJournal } from '@/src/lib/journal';
  * 기록이 있는 날만 최신순으로 붙인다.
  */
 export default function ArchiveScreen() {
-  const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
 
   const { sections, loading, isEmpty, loadMore, refresh } = useJournalArchive();
@@ -66,11 +64,10 @@ export default function ArchiveScreen() {
 
   return (
     <ScreenBackground>
-      {/* 안전영역은 contentContainer가 아니라 리스트 **바깥**에 준다 —
-          sticky 헤더는 콘텐츠 패딩을 무시하고 스크롤 뷰포트 맨 위에 붙어서,
-          여기에 주면 달 알약이 상태바와 겹친다. */}
-      <ResponsiveContainer style={{ paddingTop: insets.top }}>
+      <ResponsiveContainer>
+        <FinalHeader subtitle="지금까지 남긴 그림" />
         <SectionList<DailyJournal[], { yearMonth: string; count: number }>
+          style={styles.list}
           sections={listSections}
           keyExtractor={(row) => row[0].date}
           renderItem={({ item }) => (
@@ -92,13 +89,6 @@ export default function ArchiveScreen() {
             // 탭바가 레이아웃 공간을 차지하므로 여기에 탭바 높이를 더하지 않는다.
             { paddingBottom: spacing.xl },
           ]}
-          ListHeaderComponent={
-            /* 상단 인셋은 ResponsiveContainer가 이미 줬다(sticky 월 헤더 때문에). */
-            <FinalHeader subtitle="지금까지 남긴 그림" withTopInset={false} bleed />
-          }
-          // 헤더 아래 여백. 월 알약이 자기 paddingTop(8)만 갖고 있어서 그대로 두면
-          // 헤더에 붙고, 섹션과 섹션 사이보다 좁아 보인다.
-          ListHeaderComponentStyle={styles.listHeader}
           ListEmptyComponent={
             // 첫 조회 중에는 아무것도 띄우지 않는다 — 기록이 있는데도
             // "없어요"가 한 번 깜빡이면 지운 줄 알게 된다.
@@ -128,8 +118,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     flexGrow: 1,
   },
-  listHeader: {
-    marginBottom: spacing.lg,
+  list: {
+    flex: 1,
+    marginTop: spacing.lg,
   },
   empty: {
     flex: 1,
