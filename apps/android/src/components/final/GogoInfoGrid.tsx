@@ -14,15 +14,16 @@ import { FinalCard } from "./FinalCard";
 
 interface GogoInfoGridProps {
   horoscope: Horoscope;
+  inline?: boolean;
   style?: StyleProp<ViewStyle>;
 }
 
-function LuckyRow({ label, value }: { label: string; value: string | null }) {
+function LuckyRow({ label, value, inline = false }: { label: string; value: string | null; inline?: boolean }) {
   if (value === null) return null;
   return (
-    <View style={styles.luckyRow}>
+    <View style={[styles.luckyRow, inline && styles.inlineLuckyRow]}>
       <Text style={styles.rowLabel}>{label}</Text>
-      <Text style={styles.rowValue}>{value}</Text>
+      <Text style={[styles.rowValue, inline && styles.inlineRowValue]}>{value}</Text>
     </View>
   );
 }
@@ -49,7 +50,7 @@ function StarRow({ label, value }: { label: string; value: number | null }) {
   );
 }
 
-export function GogoInfoGrid({ horoscope, style }: GogoInfoGridProps) {
+export function GogoInfoGrid({ horoscope, inline = false, style }: GogoInfoGridProps) {
   const luckyItem =
     horoscope.lucky_item_ohaasa_ko ??
     horoscope.lucky_item_ohaasa ??
@@ -76,7 +77,23 @@ export function GogoInfoGrid({ horoscope, style }: GogoInfoGridProps) {
     (horoscope.money_score !== null && horoscope.money_score > 0) ||
     (horoscope.health_score !== null && horoscope.health_score > 0);
 
-  if (!hasLucky && !hasScore) return null;
+  // 점수가 없으면 행운 정보를 운세 본문 안에만 표시한다.
+  if (inline) {
+    if (hasScore || !hasLucky) return null;
+    return (
+      <View style={styles.inlineLucky}>
+        <LuckyRow
+          label="행운의 장소"
+          inline
+          value={horoscope.lucky_place_ko ?? horoscope.lucky_place}
+        />
+        <LuckyRow label="행운의 컬러" value={luckyColor} inline />
+        <LuckyRow label="행운 아이템" value={luckyItem} inline />
+      </View>
+    );
+  }
+
+  if (!hasScore) return null;
 
   return (
     <View style={[styles.infoGrid, style]}>
@@ -112,6 +129,12 @@ export function GogoInfoGrid({ horoscope, style }: GogoInfoGridProps) {
 }
 
 const styles = StyleSheet.create({
+  inlineLucky: {
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.cream3,
+    marginTop: 14,
+    paddingTop: 14,
+  },
   infoGrid: {
     flexDirection: "row",
     gap: 10,
@@ -157,6 +180,14 @@ const styles = StyleSheet.create({
     includeFontPadding: false,
     color: colors.textMid,
     textAlign: "right",
+  },
+  inlineLuckyRow: {
+    justifyContent: "center",
+  },
+  inlineRowValue: {
+    flex: 0,
+    flexShrink: 1,
+    textAlign: "left",
   },
   stars: {
     flexDirection: "row",
