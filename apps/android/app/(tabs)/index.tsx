@@ -1,5 +1,6 @@
-import { useCallback, useRef, useState } from "react";
-import { router } from "expo-router";
+import { isTodayHoroscope } from '@ohaasa/shared/lib/horoscopeDate';
+import { useCallback, useRef, useState } from 'react';
+import { router } from 'expo-router';
 import {
   ActivityIndicator,
   Linking,
@@ -7,45 +8,60 @@ import {
   StyleSheet,
   Text,
   View,
-} from "react-native";
-import { TodayQuestionSection } from "@/src/components/daily-question/TodayQuestionSection";
-import { DailyReviewEntryCard } from "@/src/components/daily-review/DailyReviewEntryCard";
-import { useDailyQuestion } from "@ohaasa/shared/hooks/useDailyQuestion";
-import { useFocusEffect } from "expo-router";
-import { LinearGradient } from "expo-linear-gradient";
+} from 'react-native';
+import { TodayQuestionSection } from '@/src/components/daily-question/TodayQuestionSection';
+import { DailyReviewEntryCard } from '@/src/components/daily-review/DailyReviewEntryCard';
+import { useDailyQuestion } from '@ohaasa/shared/hooks/useDailyQuestion';
+import { useFocusEffect } from 'expo-router';
+import { LinearGradient } from 'expo-linear-gradient';
 
-import { CircleDeco, MoonDeco, StarDeco } from "@/src/components/final/ScreenDeco";
-import { DatePill } from "@/src/components/final/DatePill";
-import { FinalHeader } from "@/src/components/final/FinalHeader";
-import { GogoInfoGrid } from "@/src/components/final/GogoInfoGrid";
-import { ZodiacHeroCircle } from "@/src/components/final/ZodiacHeroCircle";
-import { HoroscopeCard } from "@/src/components/HoroscopeCard";
-import { HoroscopeDateSheet } from "@/src/components/HoroscopeDateSheet";
-import { MediaDeniedSheet } from "@/src/components/MediaDeniedSheet";
-import { PushPermissionSheet } from "@/src/components/PushPermissionSheet";
-import { ShareCard } from "@/src/components/share/ShareCard";
-import { Toast } from "@/src/components/common/Toast";
-import { useHoroscopeDateContext } from "@ohaasa/shared/context/HoroscopeDateContext";
-import { colors, gradients, layout } from "@/src/constants/design";
-import { ZODIAC_MAP } from "@ohaasa/shared/constants/zodiac";
-import { useAllHoroscopes } from "@ohaasa/shared/hooks/useHoroscope";
-import { getDailyReview, type DailyReview } from "@ohaasa/shared/lib/dailyReviews";
-import { usePushPermissionPrompt } from "@/src/hooks/usePushPermissionPrompt";
-import { useShareHoroscope } from "@ohaasa/shared/hooks/useShareHoroscope";
-import { useToast } from "@ohaasa/shared/hooks/useToast";
-import { useZodiac } from "@ohaasa/shared/hooks/useZodiac";
+import {
+  CircleDeco,
+  MoonDeco,
+  StarDeco,
+} from '@/src/components/final/ScreenDeco';
+import { DatePill } from '@/src/components/final/DatePill';
+import { FinalHeader } from '@/src/components/final/FinalHeader';
+import { GogoInfoGrid } from '@/src/components/final/GogoInfoGrid';
+import { ZodiacHeroCircle } from '@/src/components/final/ZodiacHeroCircle';
+import { HoroscopeCard } from '@/src/components/HoroscopeCard';
+import { HoroscopeDateSheet } from '@/src/components/HoroscopeDateSheet';
+import { MediaDeniedSheet } from '@/src/components/MediaDeniedSheet';
+import { PushPermissionSheet } from '@/src/components/PushPermissionSheet';
+import { ShareCard } from '@/src/components/share/ShareCard';
+import { Toast } from '@/src/components/common/Toast';
+import { useHoroscopeDateContext } from '@ohaasa/shared/context/HoroscopeDateContext';
+import { colors, gradients, layout } from '@/src/constants/design';
+import { ZODIAC_MAP } from '@ohaasa/shared/constants/zodiac';
+import { useAllHoroscopes } from '@ohaasa/shared/hooks/useHoroscope';
+import {
+  getDailyReview,
+  type DailyReview,
+} from '@ohaasa/shared/lib/dailyReviews';
+import { usePushPermissionPrompt } from '@/src/hooks/usePushPermissionPrompt';
+import { useShareHoroscope } from '@ohaasa/shared/hooks/useShareHoroscope';
+import { useToast } from '@ohaasa/shared/hooks/useToast';
+import { useZodiac } from '@ohaasa/shared/hooks/useZodiac';
 
 const COPY = {
-  headerToday: "오늘도 좋은 하루 되세요 ☀️",
-  headerPast: "그날의 운세를 다시 보고 있어요 ✨",
-  noZodiac: "별자리를 선택해주세요.",
-  noData: "방송 데이터가 없습니다.",
-  noDateData: "해당 날짜에 저장된 운세가 없어요.\n다른 날짜를 선택해 주세요.",
+  headerToday: '오늘도 좋은 하루 되세요 ☀️',
+  headerPast: '그날의 운세를 다시 보고 있어요 ✨',
+  noZodiac: '별자리를 선택해주세요.',
+  noData: '방송 데이터가 없습니다.',
+  noDateData: '해당 날짜에 저장된 운세가 없어요.\n다른 날짜를 선택해 주세요.',
 };
 
 export default function TodayScreen() {
   const { showToast, toastProps } = useToast();
-  const { cardRef, share, sharing, saveImage, saving, mediaDeniedSheetVisible, closeMediaDeniedSheet } = useShareHoroscope({
+  const {
+    cardRef,
+    share,
+    sharing,
+    saveImage,
+    saving,
+    mediaDeniedSheetVisible,
+    closeMediaDeniedSheet,
+  } = useShareHoroscope({
     showToast,
   });
 
@@ -82,24 +98,29 @@ export default function TodayScreen() {
   const [dateSheetVisible, setDateSheetVisible] = useState(false);
   const [currentReview, setCurrentReview] = useState<DailyReview | null>(null);
 
-  useFocusEffect(useCallback(() => {
-    scrollRef.current?.scrollTo({ y: 0, animated: false });
-  }, []));
+  useFocusEffect(
+    useCallback(() => {
+      scrollRef.current?.scrollTo({ y: 0, animated: false });
+    }, []),
+  );
 
-  useFocusEffect(useCallback(() => {
-    if (!horoscope?.date || !zodiacSign) {
-      setCurrentReview(null);
-      return;
-    }
-    getDailyReview(horoscope.date, zodiacSign).then(setCurrentReview);
-  }, [horoscope?.date, zodiacSign]));
+  useFocusEffect(
+    useCallback(() => {
+      if (!horoscope?.date || !zodiacSign) {
+        setCurrentReview(null);
+        return;
+      }
+      getDailyReview(horoscope.date, zodiacSign).then(setCurrentReview);
+    }, [horoscope?.date, zodiacSign]),
+  );
 
   const { pushSheetVisible, handlePushAccept, handlePushDecline } =
     usePushPermissionPrompt({ loading, zodiacSign });
 
   const { hasAnswered } = useDailyQuestion(horoscope?.date ?? null);
 
-  const rankPillText = isLatest
+  const isToday = isTodayHoroscope(horoscope?.date);
+  const rankPillText = isToday
     ? `오늘의 운세 ${horoscope?.rank}위`
     : `그날의 운세 ${horoscope?.rank}위`;
 
@@ -147,7 +168,7 @@ export default function TodayScreen() {
       >
         {/* Header */}
         <FinalHeader
-          subtitle={isLatest ? COPY.headerToday : COPY.headerPast}
+          subtitle={!horoscope || isToday ? COPY.headerToday : COPY.headerPast}
           onSharePress={horoscope ? share : undefined}
           sharing={sharing}
           onSavePress={horoscope ? saveImage : undefined}
@@ -157,7 +178,7 @@ export default function TodayScreen() {
         {/* DatePill */}
         <View style={styles.pillWrap}>
           <DatePill
-            dateText={broadcastDate ?? ""}
+            dateText={broadcastDate ?? ''}
             onPress={() => setDateSheetVisible(true)}
           />
         </View>
@@ -187,7 +208,10 @@ export default function TodayScreen() {
               hasAnswered={hasAnswered}
               onPress={() =>
                 horoscope?.date &&
-                router.push({ pathname: "/daily-question", params: { date: horoscope.date } })
+                router.push({
+                  pathname: '/daily-question',
+                  params: { date: horoscope.date },
+                })
               }
               style={styles.cardSection}
             />
@@ -195,7 +219,7 @@ export default function TodayScreen() {
             <DailyReviewEntryCard
               hasReview={currentReview !== null}
               rating={currentReview?.rating}
-              onPress={() => router.push("/daily-review")}
+              onPress={() => router.push('/daily-review')}
               style={styles.reviewEntryCard}
             />
           </>
@@ -204,7 +228,6 @@ export default function TodayScreen() {
             <Text style={styles.emptyText}>{emptyText}</Text>
           </View>
         )}
-
       </ScrollView>
 
       {/* 오프스크린 캡처용 ShareCard */}
@@ -225,7 +248,10 @@ export default function TodayScreen() {
       <MediaDeniedSheet
         visible={mediaDeniedSheetVisible}
         onClose={closeMediaDeniedSheet}
-        onOpenSettings={() => { Linking.openSettings(); closeMediaDeniedSheet(); }}
+        onOpenSettings={() => {
+          Linking.openSettings();
+          closeMediaDeniedSheet();
+        }}
       />
 
       <HoroscopeDateSheet
@@ -243,13 +269,13 @@ export default function TodayScreen() {
 const styles = StyleSheet.create({
   fill: {
     flex: 1,
-    overflow: "hidden",
+    overflow: 'hidden',
   },
   scroll: {
     flex: 1,
-    width: "100%",
+    width: '100%',
     maxWidth: layout.maxContentWidth,
-    alignSelf: "center",
+    alignSelf: 'center',
   },
   content: {},
 
@@ -258,8 +284,8 @@ const styles = StyleSheet.create({
     marginHorizontal: 28,
   },
   loadingBox: {
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: 'center',
+    justifyContent: 'center',
     minHeight: 300,
     marginTop: 28,
   },
@@ -270,7 +296,7 @@ const styles = StyleSheet.create({
   },
 
   infoGrid: {
-    flexDirection: "row",
+    flexDirection: 'row',
     gap: 10,
     marginTop: 12,
     marginHorizontal: 24,
@@ -284,22 +310,22 @@ const styles = StyleSheet.create({
 
   emptyWrap: {
     marginTop: 40,
-    alignItems: "center",
+    alignItems: 'center',
     paddingHorizontal: 24,
   },
   emptyText: {
     fontSize: 14,
     color: colors.textMid,
-    textAlign: "center",
+    textAlign: 'center',
     lineHeight: 22,
   },
   errorText: {
     color: colors.apricotDark,
     fontSize: 13,
-    textAlign: "center",
+    textAlign: 'center',
   },
   offscreen: {
-    position: "absolute",
+    position: 'absolute',
     left: -9999,
     top: 0,
   },

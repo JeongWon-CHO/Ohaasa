@@ -1,12 +1,13 @@
-import { forwardRef } from "react";
-import { Platform, StyleSheet, Text, View } from "react-native";
-import { LinearGradient } from "expo-linear-gradient";
-import FontAwesome from "@expo/vector-icons/FontAwesome";
-import Svg, { Circle, Defs, RadialGradient, Stop } from "react-native-svg";
-import { ConstellationBadge } from "@/src/components/final/ConstellationBadge";
-import { colors, gradients } from "@/src/constants/design";
-import type { ZodiacInfo } from "@ohaasa/shared/constants/zodiac";
-import type { Horoscope } from "@ohaasa/shared/types/horoscope";
+import { isTodayHoroscope } from '@ohaasa/shared/lib/horoscopeDate';
+import { forwardRef } from 'react';
+import { Platform, StyleSheet, Text, View } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import FontAwesome from '@expo/vector-icons/FontAwesome';
+import Svg, { Circle, Defs, RadialGradient, Stop } from 'react-native-svg';
+import { ConstellationBadge } from '@/src/components/final/ConstellationBadge';
+import { colors, gradients } from '@/src/constants/design';
+import type { ZodiacInfo } from '@ohaasa/shared/constants/zodiac';
+import type { Horoscope } from '@ohaasa/shared/types/horoscope';
 
 export const CARD_WIDTH = 360;
 export const CARD_HEIGHT = 640;
@@ -23,20 +24,35 @@ interface ShareCardProps {
   zodiac: ZodiacInfo;
 }
 
-function formatShareDate(dateStr: string, source: "ohaasa" | "gogo"): string {
-  const [, month, day] = dateStr.split("-").map(Number);
-  const label = source === "gogo" ? "고고별자리" : "오하아사";
+function formatShareDate(dateStr: string, source: 'ohaasa' | 'gogo'): string {
+  const [, month, day] = dateStr.split('-').map(Number);
+  const label = source === 'gogo' ? '고고별자리' : '오하아사';
   return `${month}월 ${day}일 ${label}`;
 }
 
-function LuckyRow({ label, value, inline = false }: { label: string; value: string | null; inline?: boolean }) {
+function LuckyRow({
+  label,
+  value,
+  inline = false,
+}: {
+  label: string;
+  value: string | null;
+  inline?: boolean;
+}) {
   if (value === null) return null;
   return (
     <View style={[infoStyles.row, inline && infoStyles.inlineRow]}>
       <Text style={infoStyles.rowLabel}>{label}</Text>
-      <View style={[infoStyles.rowValueContainer, inline && infoStyles.inlineValueContainer]}>
-        <View style={[infoStyles.wordsRow, inline && infoStyles.inlineWordsRow]}>
-          {value.split(" ").map((word, i) => (
+      <View
+        style={[
+          infoStyles.rowValueContainer,
+          inline && infoStyles.inlineValueContainer,
+        ]}
+      >
+        <View
+          style={[infoStyles.wordsRow, inline && infoStyles.inlineWordsRow]}
+        >
+          {value.split(' ').map((word, i) => (
             <Text key={i} style={infoStyles.rowValue}>
               {word}
             </Text>
@@ -47,7 +63,13 @@ function LuckyRow({ label, value, inline = false }: { label: string; value: stri
   );
 }
 
-function ShareInfoGrid({ horoscope, inline = false }: { horoscope: Horoscope; inline?: boolean }) {
+function ShareInfoGrid({
+  horoscope,
+  inline = false,
+}: {
+  horoscope: Horoscope;
+  inline?: boolean;
+}) {
   const luckyItem =
     horoscope.lucky_item_ohaasa_ko ??
     horoscope.lucky_item_ohaasa ??
@@ -56,15 +78,13 @@ function ShareInfoGrid({ horoscope, inline = false }: { horoscope: Horoscope; in
 
   /* 고고 컬러 열 — 평일 비노출. 메인 화면(GogoInfoGrid)과 같은 규칙을 쓴다.
      되살릴 때는 두 파일을 함께 고칠 것. */
-  const showGogoColor = horoscope.source === "gogo";
+  const showGogoColor = horoscope.source === 'gogo';
   const luckyColor = showGogoColor
-    ? horoscope.lucky_color_ko ?? horoscope.lucky_color
+    ? (horoscope.lucky_color_ko ?? horoscope.lucky_color)
     : null;
 
   const hasLucky =
-    luckyColor !== null ||
-    luckyItem !== null ||
-    horoscope.lucky_place !== null;
+    luckyColor !== null || luckyItem !== null || horoscope.lucky_place !== null;
   const hasScore =
     (horoscope.love_score !== null && horoscope.love_score > 0) ||
     (horoscope.work_score !== null && horoscope.work_score > 0) ||
@@ -89,10 +109,10 @@ function ShareInfoGrid({ horoscope, inline = false }: { horoscope: Horoscope; in
   if (!hasScore) return null;
 
   const scoreRows = [
-    { label: "연애", value: horoscope.love_score },
-    { label: "직장", value: horoscope.work_score },
-    { label: "금운", value: horoscope.money_score },
-    { label: "건강", value: horoscope.health_score },
+    { label: '연애', value: horoscope.love_score },
+    { label: '직장', value: horoscope.work_score },
+    { label: '금운', value: horoscope.money_score },
+    { label: '건강', value: horoscope.health_score },
   ].filter((r) => r.value !== null && r.value > 0);
 
   return (
@@ -104,14 +124,8 @@ function ShareInfoGrid({ horoscope, inline = false }: { horoscope: Horoscope; in
             label="장소"
             value={horoscope.lucky_place_ko ?? horoscope.lucky_place}
           />
-          <LuckyRow
-            label="컬러"
-            value={luckyColor}
-          />
-          <LuckyRow
-            label="아이템"
-            value={luckyItem}
-          />
+          <LuckyRow label="컬러" value={luckyColor} />
+          <LuckyRow label="아이템" value={luckyItem} />
         </View>
       )}
       {hasScore && (
@@ -160,7 +174,10 @@ export const ShareCard = forwardRef<View, ShareCardProps>(
                 style={styles.rankPill}
               >
                 <Text style={styles.rankText}>
-                  오늘의 운세 {horoscope.rank}위
+                  {isTodayHoroscope(horoscope.date)
+                    ? '오늘의 운세'
+                    : '그날의 운세'}{' '}
+                  {horoscope.rank}위
                 </Text>
               </LinearGradient>
 
@@ -168,7 +185,7 @@ export const ShareCard = forwardRef<View, ShareCardProps>(
                 <Svg
                   width={GLOW_SIZE}
                   height={GLOW_SIZE}
-                  style={{ position: "absolute", top: -16, left: -16 }}
+                  style={{ position: 'absolute', top: -16, left: -16 }}
                 >
                   <Defs>
                     <RadialGradient id="shareGlow" cx="50%" cy="50%" r="50%">
@@ -249,18 +266,18 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: 'center',
+    justifyContent: 'center',
     gap: 20,
   },
   header: {
     fontSize: 12,
     lineHeight: 16,
-    fontFamily: "NotoSansKR_400Regular",
+    fontFamily: 'NotoSansKR_400Regular',
     includeFontPadding: false,
     color: colors.textSoft,
     letterSpacing: 1.2,
-    textAlign: "center",
+    textAlign: 'center',
   },
   rankPill: {
     borderRadius: 20,
@@ -270,8 +287,8 @@ const styles = StyleSheet.create({
   rankText: {
     fontSize: 11,
     lineHeight: 14,
-    fontFamily: "NotoSansKR_600SemiBold",
-    color: "#FFFDF9",
+    fontFamily: 'NotoSansKR_600SemiBold',
+    color: '#FFFDF9',
     letterSpacing: 0.6,
   },
   circleOuter: {
@@ -279,38 +296,38 @@ const styles = StyleSheet.create({
     height: CIRCLE_SIZE,
   },
   circleDash: {
-    position: "absolute",
+    position: 'absolute',
     top: -8,
     bottom: -8,
     left: -8,
     right: -8,
     borderWidth: 1,
-    borderStyle: "dashed",
-    borderColor: "rgba(217,138,104,0.32)",
+    borderStyle: 'dashed',
+    borderColor: 'rgba(217,138,104,0.32)',
   },
   circleBadge: {
-    position: "absolute",
+    position: 'absolute',
     top: 0,
     bottom: 0,
     left: 0,
     right: 0,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   zodiacText: {
-    alignItems: "center",
+    alignItems: 'center',
   },
   zodiacName: {
     fontSize: 18,
     lineHeight: 26,
-    fontFamily: "NotoSansKR_400Regular",
+    fontFamily: 'NotoSansKR_400Regular',
     color: colors.text,
     letterSpacing: 0.5,
   },
   zodiacSub: {
     fontSize: 11,
     lineHeight: 16,
-    fontFamily: "NotoSansKR_300Light",
+    fontFamily: 'NotoSansKR_300Light',
     color: colors.textSoft,
     letterSpacing: 0.3,
     marginTop: 3,
@@ -319,30 +336,30 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
     borderRadius: 16,
-    backgroundColor: "rgba(255,253,249,0.75)",
+    backgroundColor: 'rgba(255,253,249,0.75)',
     paddingHorizontal: 16,
     paddingVertical: 14,
-    width: "100%",
+    width: '100%',
   },
   adviceContent: {
-    maxHeight: 7 * (Platform.OS === "android" ? 22 : 20),
-    overflow: "hidden",
+    maxHeight: 7 * (Platform.OS === 'android' ? 22 : 20),
+    overflow: 'hidden',
   },
   advice: {
     fontSize: 13,
-    fontFamily: "NotoSansKR_300Light",
+    fontFamily: 'NotoSansKR_300Light',
     color: colors.text,
-    lineHeight: Platform.OS === "android" ? 22 : 20,
-    textAlign: "center",
+    lineHeight: Platform.OS === 'android' ? 22 : 20,
+    textAlign: 'center',
   },
   topGroup: {
-    alignItems: "center",
+    alignItems: 'center',
     gap: 16,
   },
   bottomGroup: {
-    alignItems: "center",
+    alignItems: 'center',
     gap: 12,
-    width: "100%",
+    width: '100%',
   },
 });
 
@@ -354,44 +371,44 @@ const infoStyles = StyleSheet.create({
     paddingTop: 14,
   },
   inlineRow: {
-    justifyContent: "center",
+    justifyContent: 'center',
   },
   inlineValueContainer: {
     flex: 0,
     flexShrink: 1,
   },
   inlineWordsRow: {
-    justifyContent: "flex-start",
+    justifyContent: 'flex-start',
   },
   grid: {
-    flexDirection: "row",
+    flexDirection: 'row',
     gap: 16,
-    width: "100%",
+    width: '100%',
   },
   card: {
     flex: 1,
     borderWidth: 1,
     borderColor: colors.border,
     borderRadius: 12,
-    backgroundColor: "rgba(255,253,249,0.75)",
+    backgroundColor: 'rgba(255,253,249,0.75)',
     padding: 12,
   },
   cardHeader: {
     fontSize: 10,
-    fontFamily: "NotoSansKR_400Regular",
+    fontFamily: 'NotoSansKR_400Regular',
     includeFontPadding: false,
     color: colors.textSoft,
     letterSpacing: 1,
     marginBottom: 10,
   },
   row: {
-    flexDirection: "row",
+    flexDirection: 'row',
     gap: 8,
     marginBottom: 4,
   },
   rowLabel: {
     fontSize: 11,
-    fontFamily: "NotoSansKR_400Regular",
+    fontFamily: 'NotoSansKR_400Regular',
     includeFontPadding: false,
     color: colors.textSoft,
     flexShrink: 0,
@@ -400,33 +417,33 @@ const infoStyles = StyleSheet.create({
     flex: 1,
   },
   wordsRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "flex-end",
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'flex-end',
     columnGap: 3,
   },
   rowValue: {
     fontSize: 11,
-    fontFamily: "NotoSansKR_400Regular",
+    fontFamily: 'NotoSansKR_400Regular',
     lineHeight: 16,
     includeFontPadding: false,
     color: colors.textMid,
   },
   starRow: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: 8,
     marginBottom: 4,
   },
   starLabel: {
     fontSize: 11,
-    fontFamily: "NotoSansKR_400Regular",
+    fontFamily: 'NotoSansKR_400Regular',
     includeFontPadding: false,
     color: colors.textSoft,
     width: 28,
   },
   stars: {
-    flexDirection: "row",
+    flexDirection: 'row',
     gap: 2,
   },
 });
