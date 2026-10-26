@@ -72,6 +72,8 @@ module.exports = {
         'expo-build-properties',
         {
           ios: {
+            // Build Expo modules with the local Swift toolchain (Xcode 27.1).
+            usePrecompiledModules: false,
             // Xcode 27로 빌드한 앱은 UIScene 생명주기가 필수다.
             enableSceneSupport: true,
           },
@@ -100,6 +102,7 @@ module.exports = {
       './plugins/withoutSystemAlertWindow',
       './plugins/withGradleJvmArgs',
       './plugins/withIosDeploymentTarget',
+      './plugins/withExpoJsiSwiftCompatibility',
     ],
     experiments: {
       typedRoutes: true,
