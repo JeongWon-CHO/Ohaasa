@@ -6,6 +6,7 @@
     "crawl": "tsx src/main.ts",
     "crawl:dry": "tsx src/main.ts --dry-run",
     "crawl:save": "tsx src/main.ts --no-notify",
+    "crawl:mezamashi": "tsx src/mezamashi/main.ts",
     "test": "vitest run",
     "test:watch": "vitest"
   },
