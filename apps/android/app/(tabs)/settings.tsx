@@ -633,6 +633,13 @@ export default function SettingsScreen() {
           {__DEV__ && (
             <SettingsSection label="DEV" style={styles.sectionGap}>
               <SettingsRow
+                title="메자마시 운세 미리보기"
+                description="1위 · 일반 순위 · 12위와 공유 이미지 확인"
+                showChevron
+                onPress={() => router.push('/mezamashi-preview')}
+                style={[styles.aboutRow, styles.rowBorder]}
+              />
+              <SettingsRow
                 title="테스트 알림 보내기"
                 description="로컬 알림 즉시 발송"
                 showChevron

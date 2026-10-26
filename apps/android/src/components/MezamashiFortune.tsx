@@ -143,7 +143,7 @@ const styles = StyleSheet.create({
     fontFamily: 'NotoSansKR_400Regular',
     fontSize: 13,
     lineHeight: 21,
-    color: colors.text,
+    color: colors.textMid,
     textAlign: 'right',
   },
   divider: {
