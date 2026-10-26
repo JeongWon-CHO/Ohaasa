@@ -84,6 +84,7 @@ module.exports = {
       './plugins/withWriteOnlyMediaLibrary',
       './plugins/withoutSystemAlertWindow',
       './plugins/withGradleJvmArgs',
+      './plugins/withAndroidReleaseOptimization',
     ],
     experiments: {
       typedRoutes: true,
