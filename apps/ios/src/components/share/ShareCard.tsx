@@ -85,11 +85,16 @@ function ShareInfoGrid({
 
   const hasLucky =
     luckyColor !== null || luckyItem !== null || horoscope.lucky_place !== null;
-  const hasScore =
+  /* 평일 오하아사에는 고고별자리 '오늘의 운'을 표시하지 않는다.
+     기존 상시 표시 설정은 주석으로 보관한다. 공유 이미지에도 같은 규칙을 적용한다.
+     const showGogoScore = true; */
+  const showGogoScore = horoscope.source === "gogo";
+  const hasScore = showGogoScore && (
     (horoscope.love_score !== null && horoscope.love_score > 0) ||
     (horoscope.work_score !== null && horoscope.work_score > 0) ||
     (horoscope.money_score !== null && horoscope.money_score > 0) ||
-    (horoscope.health_score !== null && horoscope.health_score > 0);
+    (horoscope.health_score !== null && horoscope.health_score > 0)
+  );
 
   if (inline) {
     if (hasScore || !hasLucky) return null;
