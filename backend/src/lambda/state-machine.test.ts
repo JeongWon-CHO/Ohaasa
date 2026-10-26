@@ -24,13 +24,7 @@ describe("crawl state machine dry-run flow", () => {
   });
 
   it("retains execution input through every crawler and reads the saved result", () => {
-    for (const name of [
-      "First",
-      "Second",
-      "Third",
-      "Weekend",
-      "WeekendRetry",
-    ]) {
+    for (const name of ["First", "Second", "Third"]) {
       const crawl = states[`${name}Crawl`];
       const result = states[`${name}Result`];
       assert.equal(crawl.Parameters["Payload.$"], "$");
@@ -48,20 +42,14 @@ describe("crawl state machine dry-run flow", () => {
     });
   });
 
-  it("retries weekend sources after the 07:00 update window without extending weekdays", () => {
-    for (const choice of states.ThirdResult.Choices)
-      assert.equal(choice.Next, "CheckWeekendFallbackWindow");
-    assert.equal(states.CheckWeekendFallbackWindow.Default, "NoFreshData");
+  it("keeps three crawl stages with two 20-minute waits for every source", () => {
     assert.deepEqual(
-      states.CheckWeekendFallbackWindow.Choices[0].Or.map(
-        (choice: { StringEquals: string }) => choice.StringEquals,
-      ),
-      ["gogo", "mezamashi"],
+      Object.keys(states).filter(name => name.endsWith("Crawl") && states[name].Type === "Task"),
+      ["FirstCrawl", "SecondCrawl", "ThirdCrawl"],
     );
-    assert.equal(states.WaitForWeekendUpdate.Seconds, 3600);
-    assert.equal(states.WaitForWeekendUpdate.Next, "WeekendCrawl");
-    assert.equal(states.WaitBeforeWeekendRetry.Seconds, 1200);
-    for (const choice of states.WeekendRetryResult.Choices)
+    assert.equal(states.WaitBeforeSecondCrawl.Seconds, 1200);
+    assert.equal(states.WaitBeforeThirdCrawl.Seconds, 1200);
+    for (const choice of states.ThirdResult.Choices)
       assert.equal(choice.Next, "NoFreshData");
   });
 });

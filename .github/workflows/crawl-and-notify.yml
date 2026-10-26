@@ -25,7 +25,7 @@ permissions:
 jobs:
   crawl-and-notify:
     runs-on: ubuntu-latest
-    timeout-minutes: 180 # 주말에는 메자마시 갱신 이후까지 재시도할 수 있도록 여유 확보
+    timeout-minutes: 70 # 초기 실행 (~8분) + 재시도 최대 2회 × 20분 대기 + 여유
 
     steps:
       - name: Checkout
@@ -57,10 +57,6 @@ jobs:
           fi
 
           MAX_RETRIES=2
-          DAY_OF_WEEK=$(TZ=Asia/Seoul date +%u)
-          if [ "$DAY_OF_WEEK" -ge 6 ]; then
-            MAX_RETRIES=6
-          fi
           RETRY=0
           while true; do
             EXIT_CODE=0

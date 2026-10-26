@@ -1,5 +1,5 @@
 {
-  "Comment": "Crawl today with weekday retries and late weekend retries after the Mezamashi update window",
+  "Comment": "Crawl today's horoscope and retry stale source data twice at 20-minute intervals",
   "StartAt": "CheckDryRun",
   "States": {
     "CheckDryRun": {
@@ -29,12 +29,7 @@
       "ResultPath": "$.crawlResult",
       "Retry": [
         {
-          "ErrorEquals": [
-            "Lambda.ServiceException",
-            "Lambda.AWSLambdaException",
-            "Lambda.SdkClientException",
-            "States.TaskFailed"
-          ],
+          "ErrorEquals": ["Lambda.ServiceException", "Lambda.AWSLambdaException", "Lambda.SdkClientException", "States.TaskFailed"],
           "IntervalSeconds": 10,
           "BackoffRate": 2,
           "MaxAttempts": 3
@@ -73,12 +68,7 @@
       "ResultPath": "$.crawlResult",
       "Retry": [
         {
-          "ErrorEquals": [
-            "Lambda.ServiceException",
-            "Lambda.AWSLambdaException",
-            "Lambda.SdkClientException",
-            "States.TaskFailed"
-          ],
+          "ErrorEquals": ["Lambda.ServiceException", "Lambda.AWSLambdaException", "Lambda.SdkClientException", "States.TaskFailed"],
           "IntervalSeconds": 10,
           "BackoffRate": 2,
           "MaxAttempts": 3
@@ -117,12 +107,7 @@
       "ResultPath": "$.crawlResult",
       "Retry": [
         {
-          "ErrorEquals": [
-            "Lambda.ServiceException",
-            "Lambda.AWSLambdaException",
-            "Lambda.SdkClientException",
-            "States.TaskFailed"
-          ],
+          "ErrorEquals": ["Lambda.ServiceException", "Lambda.AWSLambdaException", "Lambda.SdkClientException", "States.TaskFailed"],
           "IntervalSeconds": 10,
           "BackoffRate": 2,
           "MaxAttempts": 3
@@ -136,12 +121,12 @@
         {
           "Variable": "$.crawlResult.Payload.status",
           "StringEquals": "stale",
-          "Next": "CheckWeekendFallbackWindow"
+          "Next": "NoFreshData"
         },
         {
           "Variable": "$.crawlResult.Payload.status",
           "StringEquals": "partial",
-          "Next": "CheckWeekendFallbackWindow"
+          "Next": "NoFreshData"
         }
       ],
       "Default": "DispatchDueNotifications"
@@ -149,7 +134,7 @@
     "NoFreshData": {
       "Type": "Fail",
       "Error": "NoFreshHoroscopeData",
-      "Cause": "No complete translated horoscope data after the configured weekday/weekend retries"
+      "Cause": "The source was still stale after three crawl attempts"
     },
     "DispatchDueNotifications": {
       "Type": "Task",
@@ -162,11 +147,7 @@
       },
       "Retry": [
         {
-          "ErrorEquals": [
-            "Lambda.ServiceException",
-            "Lambda.AWSLambdaException",
-            "Lambda.SdkClientException"
-          ],
+          "ErrorEquals": ["Lambda.ServiceException", "Lambda.AWSLambdaException", "Lambda.SdkClientException"],
           "IntervalSeconds": 10,
           "BackoffRate": 2,
           "MaxAttempts": 2
@@ -174,9 +155,7 @@
       ],
       "Catch": [
         {
-          "ErrorEquals": [
-            "States.ALL"
-          ],
+          "ErrorEquals": ["States.ALL"],
           "Next": "Succeeded"
         }
       ],
@@ -184,113 +163,6 @@
     },
     "Succeeded": {
       "Type": "Succeed"
-    },
-    "CheckWeekendFallbackWindow": {
-      "Type": "Choice",
-      "Choices": [
-        {
-          "Or": [
-            {
-              "Variable": "$.crawlResult.Payload.source",
-              "StringEquals": "gogo"
-            },
-            {
-              "Variable": "$.crawlResult.Payload.source",
-              "StringEquals": "mezamashi"
-            }
-          ],
-          "Next": "WaitForWeekendUpdate"
-        }
-      ],
-      "Default": "NoFreshData"
-    },
-    "WaitForWeekendUpdate": {
-      "Type": "Wait",
-      "Seconds": 3600,
-      "Next": "WeekendCrawl"
-    },
-    "WeekendCrawl": {
-      "Type": "Task",
-      "Resource": "arn:aws:states:::lambda:invoke",
-      "Parameters": {
-        "FunctionName": "${CrawlerFunctionArn}",
-        "Payload.$": "$"
-      },
-      "ResultPath": "$.crawlResult",
-      "Retry": [
-        {
-          "ErrorEquals": [
-            "Lambda.ServiceException",
-            "Lambda.AWSLambdaException",
-            "Lambda.SdkClientException",
-            "States.TaskFailed"
-          ],
-          "IntervalSeconds": 10,
-          "BackoffRate": 2,
-          "MaxAttempts": 3
-        }
-      ],
-      "Next": "WeekendResult"
-    },
-    "WeekendResult": {
-      "Type": "Choice",
-      "Choices": [
-        {
-          "Variable": "$.crawlResult.Payload.status",
-          "StringEquals": "stale",
-          "Next": "WaitBeforeWeekendRetry"
-        },
-        {
-          "Variable": "$.crawlResult.Payload.status",
-          "StringEquals": "partial",
-          "Next": "WaitBeforeWeekendRetry"
-        }
-      ],
-      "Default": "DispatchDueNotifications"
-    },
-    "WaitBeforeWeekendRetry": {
-      "Type": "Wait",
-      "Seconds": 1200,
-      "Next": "WeekendRetryCrawl"
-    },
-    "WeekendRetryCrawl": {
-      "Type": "Task",
-      "Resource": "arn:aws:states:::lambda:invoke",
-      "Parameters": {
-        "FunctionName": "${CrawlerFunctionArn}",
-        "Payload.$": "$"
-      },
-      "ResultPath": "$.crawlResult",
-      "Retry": [
-        {
-          "ErrorEquals": [
-            "Lambda.ServiceException",
-            "Lambda.AWSLambdaException",
-            "Lambda.SdkClientException",
-            "States.TaskFailed"
-          ],
-          "IntervalSeconds": 10,
-          "BackoffRate": 2,
-          "MaxAttempts": 3
-        }
-      ],
-      "Next": "WeekendRetryResult"
-    },
-    "WeekendRetryResult": {
-      "Type": "Choice",
-      "Choices": [
-        {
-          "Variable": "$.crawlResult.Payload.status",
-          "StringEquals": "stale",
-          "Next": "NoFreshData"
-        },
-        {
-          "Variable": "$.crawlResult.Payload.status",
-          "StringEquals": "partial",
-          "Next": "NoFreshData"
-        }
-      ],
-      "Default": "DispatchDueNotifications"
     }
   }
 }
