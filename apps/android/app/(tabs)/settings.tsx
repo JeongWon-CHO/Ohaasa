@@ -524,7 +524,10 @@ export default function SettingsScreen() {
                         <Pressable
                           key={time}
                           accessibilityRole="button"
-                          accessibilityState={{ selected, disabled: timeSaving }}
+                          accessibilityState={{
+                            selected,
+                            disabled: timeSaving,
+                          }}
                           disabled={timeSaving}
                           onPress={() => handleNotificationTime(time)}
                           style={({ pressed }) => [
@@ -594,6 +597,16 @@ export default function SettingsScreen() {
               onPress={() =>
                 Linking.openURL(
                   'https://www.tv-asahi.co.jp/goodmorning/uranai/',
+                )
+              }
+              style={[styles.aboutRow, styles.rowBorder]}
+            />
+            <SettingsRow
+              title="메자마시 운세"
+              showChevron
+              onPress={() =>
+                Linking.openURL(
+                  'https://www.fujitv.co.jp/meza/uranai/index.html',
                 )
               }
               style={[styles.aboutRow, styles.rowBorder]}
@@ -697,7 +710,9 @@ export default function SettingsScreen() {
             </View>
             <Text style={styles.footerJa}>おはあさ</Text>
             <Text style={styles.footerCaption}>
-              {Constants.expoConfig?.version ? `v${Constants.expoConfig.version}` : '버전 정보 없음'}
+              {Constants.expoConfig?.version
+                ? `v${Constants.expoConfig.version}`
+                : '버전 정보 없음'}
             </Text>
           </View>
 

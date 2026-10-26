@@ -1,25 +1,30 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { isTodayHoroscope } from '@ohaasa/shared/lib/horoscopeDate';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   ScrollView,
   StyleSheet,
   Text,
   View,
-} from "react-native";
-import { useFocusEffect , useRouter } from "expo-router";
-import { LinearGradient } from "expo-linear-gradient";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+} from 'react-native';
+import { useFocusEffect, useRouter } from 'expo-router';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { DatePill } from "@/src/components/final/DatePill";
-import { FinalHeader } from "@/src/components/final/FinalHeader";
-import { HoroscopeDateSheet } from "@/src/components/HoroscopeDateSheet";
-import { RankingRow } from "@/src/components/final/RankingRow";
-import { CircleDeco, MoonDeco, StarDeco } from "@/src/components/final/ScreenDeco";
-import { ResponsiveContainer } from "@/src/components/common/ResponsiveContainer";
-import { useHoroscopeDateContext } from "@ohaasa/shared/context/HoroscopeDateContext";
-import { colors, gradients } from "@/src/constants/design";
-import { useAllHoroscopes } from "@ohaasa/shared/hooks/useHoroscope";
-import { useZodiac } from "@ohaasa/shared/hooks/useZodiac";
+import { DatePill } from '@/src/components/final/DatePill';
+import { FinalHeader } from '@/src/components/final/FinalHeader';
+import { HoroscopeDateSheet } from '@/src/components/HoroscopeDateSheet';
+import { RankingRow } from '@/src/components/final/RankingRow';
+import {
+  CircleDeco,
+  MoonDeco,
+  StarDeco,
+} from '@/src/components/final/ScreenDeco';
+import { ResponsiveContainer } from '@/src/components/common/ResponsiveContainer';
+import { useHoroscopeDateContext } from '@ohaasa/shared/context/HoroscopeDateContext';
+import { colors, gradients } from '@/src/constants/design';
+import { useAllHoroscopes } from '@ohaasa/shared/hooks/useHoroscope';
+import { useZodiac } from '@ohaasa/shared/hooks/useZodiac';
 
 // ─── Screen ───────────────────────────────────────────────────
 
@@ -29,8 +34,10 @@ export default function RankingsScreen() {
   // 바닥 안전영역을 대신 먹어줄 게 없으므로 화면이 직접 인셋을 더한다.
   const insets = useSafeAreaInsets();
   const { zodiacSign } = useZodiac();
-  const { selectedDate, isLatest, setSelectedDate } = useHoroscopeDateContext();
-  const { horoscopes, broadcastDate, loading, error } = useAllHoroscopes({ date: selectedDate });
+  const { selectedDate, setSelectedDate } = useHoroscopeDateContext();
+  const { horoscopes, broadcastDate, loading, error } = useAllHoroscopes({
+    date: selectedDate,
+  });
   const navigatingRef = useRef(false);
   const multiTouchRef = useRef(false);
   const scrollRef = useRef<ScrollView>(null);
@@ -38,11 +45,13 @@ export default function RankingsScreen() {
 
   const [dateSheetVisible, setDateSheetVisible] = useState(false);
 
-  useFocusEffect(useCallback(() => {
-    navigatingRef.current = false;
-    multiTouchRef.current = false;
-    scrollRef.current?.scrollTo({ y: 0, animated: false });
-  }, []));
+  useFocusEffect(
+    useCallback(() => {
+      navigatingRef.current = false;
+      multiTouchRef.current = false;
+      scrollRef.current?.scrollTo({ y: 0, animated: false });
+    }, []),
+  );
 
   useEffect(() => {
     if (prevZodiacRef.current !== zodiacSign) {
@@ -51,13 +60,15 @@ export default function RankingsScreen() {
     }
   }, [zodiacSign]);
 
-  const sectionTitle = isLatest ? "오늘의 전체 순위" : "그날의 전체 순위";
+  const sectionTitle = isTodayHoroscope(horoscopes[0]?.date)
+    ? '오늘의 전체 순위'
+    : '그날의 전체 순위';
 
   // 날짜에 데이터가 없을 때 문구
   const noDataText =
     selectedDate !== null && horoscopes.length === 0 && !loading
-      ? "해당 날짜에 저장된 운세가 없어요.\n다른 날짜를 선택해 주세요."
-      : "방송 데이터가 없습니다.";
+      ? '해당 날짜에 저장된 운세가 없어요.\n다른 날짜를 선택해 주세요.'
+      : '방송 데이터가 없습니다.';
 
   return (
     <LinearGradient colors={gradients.screen} style={styles.fill}>
@@ -98,13 +109,13 @@ export default function RankingsScreen() {
         <FinalHeader
           onBackPress={() => router.back()}
           title="Ranking"
-          subtitle="12개 별자리 오하아사 순위"
+          subtitle="12개 별자리 운세 순위"
         />
 
         {/* DatePill */}
         <View style={styles.pillWrap}>
           <DatePill
-            dateText={broadcastDate ?? ""}
+            dateText={broadcastDate ?? ''}
             onPress={() => setDateSheetVisible(true)}
           />
         </View>
@@ -135,7 +146,9 @@ export default function RankingsScreen() {
               }
             }}
             onTouchEnd={(e) => {
-              const remaining = e.nativeEvent.touches.length - e.nativeEvent.changedTouches.length;
+              const remaining =
+                e.nativeEvent.touches.length -
+                e.nativeEvent.changedTouches.length;
               if (remaining <= 0) {
                 requestAnimationFrame(() => {
                   multiTouchRef.current = false;
@@ -158,7 +171,7 @@ export default function RankingsScreen() {
                   if (navigatingRef.current || multiTouchRef.current) return;
                   navigatingRef.current = true;
                   router.push({
-                    pathname: "/zodiac/[sign]",
+                    pathname: '/zodiac/[sign]',
                     params: {
                       sign: horoscope.zodiac_sign,
                       ...(selectedDate ? { date: selectedDate } : {}),
@@ -185,7 +198,7 @@ export default function RankingsScreen() {
 const styles = StyleSheet.create({
   fill: {
     flex: 1,
-    overflow: "hidden",
+    overflow: 'hidden',
   },
   pillWrap: {
     marginTop: 12,
@@ -195,7 +208,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     lineHeight: 24,
-    fontFamily: "NotoSansKR_400Regular",
+    fontFamily: 'NotoSansKR_400Regular',
     includeFontPadding: false,
     color: colors.text,
     paddingTop: 6,
@@ -208,25 +221,25 @@ const styles = StyleSheet.create({
   },
   loadingBox: {
     flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   emptyWrap: {
     flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: 'center',
+    justifyContent: 'center',
     paddingHorizontal: 24,
   },
   emptyText: {
     fontSize: 14,
     color: colors.textMid,
-    textAlign: "center",
+    textAlign: 'center',
     lineHeight: 22,
   },
   errorText: {
     fontSize: 13,
     color: colors.apricotDark,
-    textAlign: "center",
+    textAlign: 'center',
   },
   scroll: {
     flex: 1,

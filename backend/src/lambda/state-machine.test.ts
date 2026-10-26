@@ -4,7 +4,10 @@ import { resolve } from "node:path";
 import { describe, it } from "vitest";
 
 const definition = JSON.parse(
-  readFileSync(resolve(__dirname, "../../../infra/aws/state-machine.asl.json"), "utf8"),
+  readFileSync(
+    resolve(__dirname, "../../../infra/aws/state-machine.asl.json"),
+    "utf8",
+  ),
 );
 const states = definition.States;
 
@@ -21,7 +24,13 @@ describe("crawl state machine dry-run flow", () => {
   });
 
   it("retains execution input through every crawler and reads the saved result", () => {
-    for (const name of ["First", "Second", "Third"]) {
+    for (const name of [
+      "First",
+      "Second",
+      "Third",
+      "Weekend",
+      "WeekendRetry",
+    ]) {
       const crawl = states[`${name}Crawl`];
       const result = states[`${name}Result`];
       assert.equal(crawl.Parameters["Payload.$"], "$");
@@ -37,5 +46,22 @@ describe("crawl state machine dry-run flow", () => {
     assert.deepEqual(states.DispatchDueNotifications.Parameters.Payload, {
       "dryRun.$": "$.dryRun",
     });
+  });
+
+  it("retries weekend sources after the 07:00 update window without extending weekdays", () => {
+    for (const choice of states.ThirdResult.Choices)
+      assert.equal(choice.Next, "CheckWeekendFallbackWindow");
+    assert.equal(states.CheckWeekendFallbackWindow.Default, "NoFreshData");
+    assert.deepEqual(
+      states.CheckWeekendFallbackWindow.Choices[0].Or.map(
+        (choice: { StringEquals: string }) => choice.StringEquals,
+      ),
+      ["gogo", "mezamashi"],
+    );
+    assert.equal(states.WaitForWeekendUpdate.Seconds, 3600);
+    assert.equal(states.WaitForWeekendUpdate.Next, "WeekendCrawl");
+    assert.equal(states.WaitBeforeWeekendRetry.Seconds, 1200);
+    for (const choice of states.WeekendRetryResult.Choices)
+      assert.equal(choice.Next, "NoFreshData");
   });
 });

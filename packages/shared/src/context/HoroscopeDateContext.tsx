@@ -1,31 +1,44 @@
-import { createContext, useCallback, useContext, useEffect, useState } from 'react';
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useState,
+} from "react";
+import { AppState } from "react-native";
 
-import { supabase } from '../lib/supabase';
+import { supabase } from "../lib/supabase";
 
 type HoroscopeDateContextValue = {
-  selectedDate: string | null;  // null = 항상 최신 날짜 사용
-  latestDate: string | null;    // Supabase에서 조회한 최신 방송일
+  selectedDate: string | null; // null = 항상 최신 날짜 사용
+  latestDate: string | null; // Supabase에서 조회한 최신 방송일
   latestDateLoading: boolean;
   setSelectedDate: (date: string | null) => void;
   resetToLatestDate: () => void;
-  isLatest: boolean;            // selectedDate === null || selectedDate === latestDate
+  isLatest: boolean; // selectedDate === null || selectedDate === latestDate
 };
 
-const HoroscopeDateContext = createContext<HoroscopeDateContextValue | null>(null);
+const HoroscopeDateContext = createContext<HoroscopeDateContextValue | null>(
+  null,
+);
 
-export function HoroscopeDateProvider({ children }: { children: React.ReactNode }) {
+export function HoroscopeDateProvider({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   const [selectedDate, setSelectedDateState] = useState<string | null>(null);
   const [latestDate, setLatestDate] = useState<string | null>(null);
   const [latestDateLoading, setLatestDateLoading] = useState(true);
 
   useEffect(() => {
     let isMounted = true;
-    (async () => {
+    async function loadLatestDate() {
       try {
         const { data } = await supabase
-          .from('horoscopes')
-          .select('date')
-          .order('date', { ascending: false })
+          .from("resolved_horoscopes")
+          .select("date")
+          .order("date", { ascending: false })
           .limit(1)
           .maybeSingle();
         if (isMounted && data) {
@@ -36,8 +49,19 @@ export function HoroscopeDateProvider({ children }: { children: React.ReactNode 
       } finally {
         if (isMounted) setLatestDateLoading(false);
       }
-    })();
-    return () => { isMounted = false; };
+    }
+    void loadLatestDate();
+    const subscription = AppState.addEventListener("change", (value) => {
+      if (value === "active") void loadLatestDate();
+    });
+    const timer = setInterval(() => {
+      if (AppState.currentState === "active") void loadLatestDate();
+    }, 60_000);
+    return () => {
+      isMounted = false;
+      subscription.remove();
+      clearInterval(timer);
+    };
   }, []);
 
   const setSelectedDate = useCallback((date: string | null) => {
@@ -53,7 +77,14 @@ export function HoroscopeDateProvider({ children }: { children: React.ReactNode 
 
   return (
     <HoroscopeDateContext.Provider
-      value={{ selectedDate, latestDate, latestDateLoading, setSelectedDate, resetToLatestDate, isLatest }}
+      value={{
+        selectedDate,
+        latestDate,
+        latestDateLoading,
+        setSelectedDate,
+        resetToLatestDate,
+        isLatest,
+      }}
     >
       {children}
     </HoroscopeDateContext.Provider>
@@ -62,6 +93,9 @@ export function HoroscopeDateProvider({ children }: { children: React.ReactNode 
 
 export function useHoroscopeDateContext() {
   const ctx = useContext(HoroscopeDateContext);
-  if (!ctx) throw new Error('useHoroscopeDateContext must be used within HoroscopeDateProvider');
+  if (!ctx)
+    throw new Error(
+      "useHoroscopeDateContext must be used within HoroscopeDateProvider",
+    );
   return ctx;
 }

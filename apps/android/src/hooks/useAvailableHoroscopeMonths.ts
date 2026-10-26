@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { supabase } from '@ohaasa/shared/lib/supabase';
 
 export interface AvailableMonth {
-  month: string;    // "YYYY-MM"
+  month: string; // "YYYY-MM"
   dayCount: number; // 그 달에 실제로 쌓인 방송일 수
 }
 
@@ -36,6 +36,7 @@ async function fetchMonths(): Promise<AvailableMonth[]> {
     const { data, error } = await supabase
       .from('horoscopes')
       .select('date')
+      .eq('source', 'ohaasa')
       .eq('zodiac_sign', PROBE_SIGN)
       .order('date', { ascending: false })
       .range(from, from + PAGE - 1);
@@ -57,7 +58,9 @@ async function fetchMonths(): Promise<AvailableMonth[]> {
 }
 
 // enabled=false면 조회하지 않는다 — 시트가 항상 마운트돼 있어도 열기 전에는 네트워크를 쓰지 않는다.
-export function useAvailableHoroscopeMonths(enabled: boolean): UseAvailableHoroscopeMonthsResult {
+export function useAvailableHoroscopeMonths(
+  enabled: boolean,
+): UseAvailableHoroscopeMonthsResult {
   const [state, setState] = useState<UseAvailableHoroscopeMonthsResult>({
     months: cache?.months ?? [],
     loading: false,
@@ -84,7 +87,10 @@ export function useAvailableHoroscopeMonths(enabled: boolean): UseAvailableHoros
           setState({
             months: [],
             loading: false,
-            error: err instanceof Error ? err.message : '월 목록을 불러오지 못했습니다.',
+            error:
+              err instanceof Error
+                ? err.message
+                : '월 목록을 불러오지 못했습니다.',
           });
         }
       }

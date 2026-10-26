@@ -615,6 +615,16 @@ export default function SettingsScreen() {
               style={[styles.aboutRow, styles.rowBorder]}
             />
             <SettingsRow
+              title="메자마시 운세"
+              showChevron
+              onPress={() =>
+                Linking.openURL(
+                  'https://www.fujitv.co.jp/meza/uranai/index.html',
+                )
+              }
+              style={[styles.aboutRow, styles.rowBorder]}
+            />
+            <SettingsRow
               title="개발자에게 문의하기"
               showChevron
               onPress={() =>

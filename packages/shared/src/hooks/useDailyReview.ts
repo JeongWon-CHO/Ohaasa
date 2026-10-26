@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 
 import type { ZodiacSign } from '../constants/zodiac';
+import type { HoroscopeSource } from '../types/horoscope';
 import {
   type DailyReview,
   type DailyReviewDraft,
@@ -12,6 +13,7 @@ type Params = {
   date: string | null;
   zodiacSign: ZodiacSign | null;
   horoscopeRank: number | null;
+  horoscopeSource?: HoroscopeSource | null;
 };
 
 type UseDailyReviewResult = {
@@ -29,7 +31,7 @@ const EMPTY_DRAFT: DailyReviewDraft = {
   note: '',
 };
 
-export function useDailyReview({ date, zodiacSign, horoscopeRank }: Params): UseDailyReviewResult {
+export function useDailyReview({ date, zodiacSign, horoscopeRank, horoscopeSource }: Params): UseDailyReviewResult {
   const [form, setForm] = useState<DailyReviewDraft>(EMPTY_DRAFT);
   const [isSaving, setIsSaving] = useState(false);
   const [existingReview, setExistingReview] = useState<DailyReview | null>(null);
@@ -69,13 +71,14 @@ export function useDailyReview({ date, zodiacSign, horoscopeRank }: Params): Use
         date,
         zodiacSign,
         horoscopeRank,
+        horoscopeSource,
       });
       setExistingReview(saved);
       return saved;
     } finally {
       setIsSaving(false);
     }
-  }, [date, zodiacSign, horoscopeRank, form]);
+  }, [date, zodiacSign, horoscopeRank, horoscopeSource, form]);
 
   return { form, setForm, save, isSaving, existingReview, isLoaded };
 }

@@ -1,5 +1,5 @@
 import FontAwesome from '@expo/vector-icons/FontAwesome';
-import { DarkTheme, DefaultTheme, ThemeProvider , Stack } from 'expo-router';
+import { DarkTheme, DefaultTheme, ThemeProvider, Stack } from 'expo-router';
 import { useFonts } from 'expo-font';
 import {
   NotoSansKR_300Light,
@@ -14,7 +14,10 @@ import { useEffect, useState } from 'react';
 import { ActivityIndicator, AppState, View } from 'react-native';
 import { flushCommunityBlocks } from '@/src/lib/communityBlockQueue';
 import { CommunityTermsContext } from '@/src/context/CommunityTermsContext';
-import { acceptCommunityTerms, hasAcceptedCommunityTerms } from '@/src/lib/communityTerms';
+import {
+  acceptCommunityTerms,
+  hasAcceptedCommunityTerms,
+} from '@/src/lib/communityTerms';
 import 'react-native-reanimated';
 
 import { useColorScheme } from '@/components/useColorScheme';
@@ -88,11 +91,20 @@ function RootLayoutNav() {
 
   useEffect(() => {
     if (!accepted) return;
-    const flush = () => { void flushCommunityBlocks().catch(() => {}); };
+    const flush = () => {
+      void flushCommunityBlocks().catch(() => {});
+    };
     flush();
-    const subscription = AppState.addEventListener('change', state => { if (state === 'active') flush(); });
-    const timer = setInterval(() => { if (AppState.currentState === 'active') flush(); }, 30_000);
-    return () => { subscription.remove(); clearInterval(timer); };
+    const subscription = AppState.addEventListener('change', (state) => {
+      if (state === 'active') flush();
+    });
+    const timer = setInterval(() => {
+      if (AppState.currentState === 'active') flush();
+    }, 30_000);
+    return () => {
+      subscription.remove();
+      clearInterval(timer);
+    };
   }, [accepted]);
 
   async function acceptTerms() {
@@ -102,12 +114,24 @@ function RootLayoutNav() {
 
   useEffect(() => {
     let cleanup: (() => void) | undefined;
-    setupForegroundHandler().then(fn => { cleanup = fn; });
+    setupForegroundHandler().then((fn) => {
+      cleanup = fn;
+    });
     return () => cleanup?.();
   }, []);
 
   if (accepted === null) {
-    return <View style={{ flex: 1, backgroundColor: '#FAF6F0', justifyContent: 'center' }}><ActivityIndicator /></View>;
+    return (
+      <View
+        style={{
+          flex: 1,
+          backgroundColor: '#FAF6F0',
+          justifyContent: 'center',
+        }}
+      >
+        <ActivityIndicator />
+      </View>
+    );
   }
 
   return (
@@ -119,24 +143,69 @@ function RootLayoutNav() {
             <StatusBar style="dark" />
             <Stack>
               <Stack.Protected guard={!accepted}>
-                <Stack.Screen name="terms" options={{ headerShown: false, gestureEnabled: false }} />
+                <Stack.Screen
+                  name="terms"
+                  options={{ headerShown: false, gestureEnabled: false }}
+                />
               </Stack.Protected>
               <Stack.Protected guard={accepted}>
                 <Stack.Screen name="index" options={{ headerShown: false }} />
-                <Stack.Screen name="onboarding" options={{ headerShown: false }} />
+                <Stack.Screen
+                  name="onboarding"
+                  options={{ headerShown: false }}
+                />
                 <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-                <Stack.Screen name="zodiac/[sign]" options={{ headerShown: false }} />
-                <Stack.Screen name="daily-review" options={{ headerShown: false }} />
-                <Stack.Screen name="daily-question" options={{ headerShown: false }} />
-                <Stack.Screen name="sketch-prototype" options={{ headerShown: false }} />
-                <Stack.Screen name="sketchbook" options={{ headerShown: false }} />
-                <Stack.Screen name="mood-prototype" options={{ headerShown: false }} />
-                <Stack.Screen name="journal-write" options={{ headerShown: false, gestureEnabled: false }} />
-                <Stack.Screen name="journal-view" options={{ headerShown: false }} />
-                <Stack.Screen name="horoscope" options={{ headerShown: false }} />
-                <Stack.Screen name="rankings" options={{ headerShown: false }} />
+                <Stack.Screen
+                  name="zodiac/[sign]"
+                  options={{ headerShown: false }}
+                />
+                <Stack.Screen
+                  name="daily-review"
+                  options={{ headerShown: false }}
+                />
+                <Stack.Screen
+                  name="daily-question"
+                  options={{ headerShown: false }}
+                />
+                <Stack.Screen
+                  name="sketch-prototype"
+                  options={{ headerShown: false }}
+                />
+                <Stack.Screen
+                  name="sketchbook"
+                  options={{ headerShown: false }}
+                />
+                <Stack.Screen
+                  name="mood-prototype"
+                  options={{ headerShown: false }}
+                />
+                <Stack.Screen
+                  name="journal-write"
+                  options={{ headerShown: false, gestureEnabled: false }}
+                />
+                <Stack.Screen
+                  name="journal-view"
+                  options={{ headerShown: false }}
+                />
+                <Stack.Screen
+                  name="horoscope"
+                  options={{ headerShown: false }}
+                />
+                <Stack.Screen
+                  name="rankings"
+                  options={{ headerShown: false }}
+                />
                 <Stack.Screen name="stats" options={{ headerShown: false }} />
-                <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
+                <Stack.Screen
+                  name="modal"
+                  options={{ presentation: 'modal' }}
+                />
+              </Stack.Protected>
+              <Stack.Protected guard={__DEV__}>
+                <Stack.Screen
+                  name="mezamashi-preview"
+                  options={{ headerShown: false }}
+                />
               </Stack.Protected>
             </Stack>
           </HoroscopeDateProvider>

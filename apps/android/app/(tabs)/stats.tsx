@@ -1,67 +1,85 @@
-import { useEffect, useRef, useState } from "react";
-import { Linking, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
-import { useBottomTabBarHeight } from "expo-router/js-tabs";
-import { useFocusEffect } from "expo-router";
-import { LinearGradient } from "expo-linear-gradient";
+import { useEffect, useRef, useState } from 'react';
+import {
+  Linking,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
+import { useBottomTabBarHeight } from 'expo-router/js-tabs';
+import { useFocusEffect } from 'expo-router';
+import { LinearGradient } from 'expo-linear-gradient';
 
-import { FinalHeader } from "@/src/components/final/FinalHeader";
-import { ResponsiveContainer } from "@/src/components/common/ResponsiveContainer";
-import { MediaDeniedSheet } from "@/src/components/MediaDeniedSheet";
-import { Toast } from "@/src/components/common/Toast";
-import { StatsShareCard } from "@/src/components/share/StatsShareCard";
-import { ChartCard } from "@/src/components/stats/ChartCard";
-import { ErrorState } from "@/src/components/stats/ErrorState";
-import { RankingCard } from "@/src/components/stats/RankingCard";
-import { ReviewHistoryTab } from "@/src/components/stats/ReviewHistoryTab";
-import { StatsLoadingState } from "@/src/components/stats/StatsLoadingState";
-import { SummaryCard } from "@/src/components/stats/SummaryCard";
-import { MonthSelectSheet } from "@/src/components/stats/MonthSelectSheet";
-import { ZodiacSelectBottomSheet } from "@/src/components/stats/ZodiacSelectBottomSheet";
-import { colors, shadows } from "@/src/constants/design";
-import { gradients } from "@/src/constants/design";
-import { ZODIAC_MAP } from "@ohaasa/shared/constants/zodiac";
-import type { ZodiacSign } from "@ohaasa/shared/constants/zodiac";
+import { FinalHeader } from '@/src/components/final/FinalHeader';
+import { ResponsiveContainer } from '@/src/components/common/ResponsiveContainer';
+import { MediaDeniedSheet } from '@/src/components/MediaDeniedSheet';
+import { Toast } from '@/src/components/common/Toast';
+import { StatsShareCard } from '@/src/components/share/StatsShareCard';
+import { ChartCard } from '@/src/components/stats/ChartCard';
+import { ErrorState } from '@/src/components/stats/ErrorState';
+import { RankingCard } from '@/src/components/stats/RankingCard';
+import { ReviewHistoryTab } from '@/src/components/stats/ReviewHistoryTab';
+import { StatsLoadingState } from '@/src/components/stats/StatsLoadingState';
+import { SummaryCard } from '@/src/components/stats/SummaryCard';
+import { MonthSelectSheet } from '@/src/components/stats/MonthSelectSheet';
+import { ZodiacSelectBottomSheet } from '@/src/components/stats/ZodiacSelectBottomSheet';
+import { colors, shadows } from '@/src/constants/design';
+import { gradients } from '@/src/constants/design';
+import { ZODIAC_MAP } from '@ohaasa/shared/constants/zodiac';
+import type { ZodiacSign } from '@ohaasa/shared/constants/zodiac';
 import {
   getPeriodMonth,
   monthPeriod,
   useHoroscopeTrends,
   type TrendsPeriod,
-} from "@/src/hooks/useHoroscopeTrends";
-import { useShareHoroscope } from "@ohaasa/shared/hooks/useShareHoroscope";
-import { useToast } from "@ohaasa/shared/hooks/useToast";
-import { useZodiac } from "@ohaasa/shared/hooks/useZodiac";
+} from '@/src/hooks/useHoroscopeTrends';
+import { useShareHoroscope } from '@ohaasa/shared/hooks/useShareHoroscope';
+import { useToast } from '@ohaasa/shared/hooks/useToast';
+import { useZodiac } from '@ohaasa/shared/hooks/useZodiac';
 
-type StatsTab = "trend" | "history";
+type StatsTab = 'trend' | 'history';
 
 const DAY_PERIODS: { value: TrendsPeriod; label: string }[] = [
-  { value: "7d", label: "7일" },
-  { value: "14d", label: "14일" },
+  { value: '7d', label: '7일' },
+  { value: '14d', label: '14일' },
 ];
 
 // 헤더는 자리가 좁아 "8월"만 쓰지만, 해가 넘어간 달은 연도까지 붙여야 구분된다
 function formatMonthToggleLabel(month: string): string {
-  const [year, monthNum] = month.split("-").map(Number);
-  return year === new Date().getFullYear() ? `${monthNum}월` : `${year}.${monthNum}`;
+  const [year, monthNum] = month.split('-').map(Number);
+  return year === new Date().getFullYear()
+    ? `${monthNum}월`
+    : `${year}.${monthNum}`;
 }
 
 const TAB_OPTIONS: { value: StatsTab; label: string }[] = [
-  { value: "trend", label: "흐름" },
-  { value: "history", label: "기록" },
+  { value: 'trend', label: '흐름' },
+  { value: 'history', label: '기록' },
 ];
 
 export default function StatsScreen() {
   const tabBarHeight = useBottomTabBarHeight();
   const { zodiacSign } = useZodiac();
-  const [activeTab, setActiveTab] = useState<StatsTab>("trend");
-  const [period, setPeriod] = useState<TrendsPeriod>("7d");
+  const [activeTab, setActiveTab] = useState<StatsTab>('trend');
+  const [period, setPeriod] = useState<TrendsPeriod>('7d');
   const [monthSheetOpen, setMonthSheetOpen] = useState(false);
   // 월간을 벗어나도 마지막으로 고른 달을 기억해, 시트를 다시 열면 그 달이 체크돼 있게 한다
   const [lastMonth, setLastMonth] = useState<string | null>(null);
   const [detailMode, setDetailMode] = useState(false);
   const [compareId, setCompareId] = useState<ZodiacSign | null>(null);
   const [compareSheetOpen, setCompareSheetOpen] = useState(false);
-  const { points, comparePoints, averageRank, minRank, maxRank, signAverages, loading, error, refetch } =
-    useHoroscopeTrends(zodiacSign, period, compareId);
+  const {
+    points,
+    comparePoints,
+    averageRank,
+    minRank,
+    maxRank,
+    signAverages,
+    loading,
+    error,
+    refetch,
+  } = useHoroscopeTrends(zodiacSign, period, compareId);
 
   useEffect(() => {
     setCompareId(null);
@@ -73,8 +91,15 @@ export default function StatsScreen() {
   });
 
   const { showToast, toastProps } = useToast();
-  const { cardRef, share, sharing, saveImage, saving, mediaDeniedSheetVisible, closeMediaDeniedSheet } =
-    useShareHoroscope({ showToast });
+  const {
+    cardRef,
+    share,
+    sharing,
+    saveImage,
+    saving,
+    mediaDeniedSheetVisible,
+    closeMediaDeniedSheet,
+  } = useShareHoroscope({ showToast });
 
   const activeMonth = getPeriodMonth(period);
 
@@ -87,9 +112,11 @@ export default function StatsScreen() {
       <ResponsiveContainer>
         <View style={styles.headerSpacer}>
           <FinalHeader
-            subtitle={activeTab === "trend" ? "운세 흐름" : "운세 기록"}
+            subtitle={
+              activeTab === 'trend' ? '오하아사 운세 흐름' : '운세 기록'
+            }
             rightSlot={
-              activeTab === "trend" ? (
+              activeTab === 'trend' ? (
                 <View style={styles.periodToggle}>
                   {DAY_PERIODS.map((option) => (
                     <Pressable
@@ -99,20 +126,33 @@ export default function StatsScreen() {
                     >
                       <Text
                         numberOfLines={1}
-                        style={[styles.periodLabel, period === option.value && styles.periodLabelActive]}
+                        style={[
+                          styles.periodLabel,
+                          period === option.value && styles.periodLabelActive,
+                        ]}
                       >
                         {option.label}
                       </Text>
-                      {period === option.value && <View style={styles.periodDot} />}
+                      {period === option.value && (
+                        <View style={styles.periodDot} />
+                      )}
                     </Pressable>
                   ))}
                   {/* 월간은 기간 선택이 아니라 "어느 달?"을 물어야 해서 누르면 바로 시트를 연다 */}
-                  <Pressable onPress={() => setMonthSheetOpen(true)} style={styles.periodBtn}>
+                  <Pressable
+                    onPress={() => setMonthSheetOpen(true)}
+                    style={styles.periodBtn}
+                  >
                     <Text
                       numberOfLines={1}
-                      style={[styles.periodLabel, activeMonth !== null && styles.periodLabelActive]}
+                      style={[
+                        styles.periodLabel,
+                        activeMonth !== null && styles.periodLabelActive,
+                      ]}
                     >
-                      {activeMonth ? formatMonthToggleLabel(activeMonth) : "월간"}
+                      {activeMonth
+                        ? formatMonthToggleLabel(activeMonth)
+                        : '월간'}
                     </Text>
                     {activeMonth !== null && <View style={styles.periodDot} />}
                   </Pressable>
@@ -133,7 +173,12 @@ export default function StatsScreen() {
                   onPress={() => setActiveTab(opt.value)}
                   style={[styles.segment, active && styles.segmentActive]}
                 >
-                  <Text style={[styles.segmentLabel, active && styles.segmentLabelActive]}>
+                  <Text
+                    style={[
+                      styles.segmentLabel,
+                      active && styles.segmentLabelActive,
+                    ]}
+                  >
                     {opt.label}
                   </Text>
                 </Pressable>
@@ -142,7 +187,7 @@ export default function StatsScreen() {
           </View>
         </View>
 
-        {activeTab === "trend" ? (
+        {activeTab === 'trend' ? (
           loading ? (
             <StatsLoadingState />
           ) : error ? (
@@ -150,7 +195,10 @@ export default function StatsScreen() {
           ) : (
             <ScrollView
               ref={scrollRef}
-              contentContainerStyle={[styles.list, { paddingBottom: tabBarHeight + 16 }]}
+              contentContainerStyle={[
+                styles.list,
+                { paddingBottom: tabBarHeight + 16 },
+              ]}
               showsVerticalScrollIndicator={false}
               style={styles.scroll}
             >
@@ -217,7 +265,13 @@ export default function StatsScreen() {
 
       {canShare && zodiac && (
         <View style={styles.offscreen} pointerEvents="none" collapsable={false}>
-          <StatsShareCard ref={cardRef} zodiac={zodiac} period={period} points={points} averageRank={averageRank!} />
+          <StatsShareCard
+            ref={cardRef}
+            zodiac={zodiac}
+            period={period}
+            points={points}
+            averageRank={averageRank!}
+          />
         </View>
       )}
 
@@ -246,14 +300,14 @@ const styles = StyleSheet.create({
     paddingBottom: 16,
   },
   segmentTrack: {
-    flexDirection: "row",
+    flexDirection: 'row',
     borderRadius: 14,
     backgroundColor: colors.segmentTrack,
     padding: 4,
   },
   segment: {
     flex: 1,
-    alignItems: "center",
+    alignItems: 'center',
     paddingVertical: 8,
     borderRadius: 12,
   },
@@ -265,11 +319,11 @@ const styles = StyleSheet.create({
     fontSize: 13,
     lineHeight: 18,
     includeFontPadding: false,
-    fontFamily: "NotoSansKR_500Medium",
+    fontFamily: 'NotoSansKR_500Medium',
     color: colors.textMid,
   },
   segmentLabelActive: {
-    fontFamily: "NotoSansKR_700Bold",
+    fontFamily: 'NotoSansKR_700Bold',
     color: colors.apricotDark,
   },
   scroll: {
@@ -283,29 +337,29 @@ const styles = StyleSheet.create({
     gap: 20,
   },
   offscreen: {
-    position: "absolute",
+    position: 'absolute',
     left: -9999,
     top: 0,
   },
   periodToggle: {
-    flexDirection: "row",
+    flexDirection: 'row',
     gap: 4,
   },
   periodBtn: {
-    alignItems: "center",
+    alignItems: 'center',
     paddingHorizontal: 6,
     paddingVertical: 2,
     gap: 3,
   },
   periodLabel: {
     fontSize: 12,
-    fontFamily: "NotoSansKR_400Regular",
+    fontFamily: 'NotoSansKR_400Regular',
     color: colors.textSoft,
     lineHeight: 18,
     includeFontPadding: false,
   },
   periodLabelActive: {
-    fontFamily: "NotoSansKR_600SemiBold",
+    fontFamily: 'NotoSansKR_600SemiBold',
     color: colors.apricotDark,
   },
   periodDot: {

@@ -72,12 +72,17 @@ function diffToTrend(diff: number): Trend {
 }
 
 // averageRank 오름차순 정렬된 리스트에 반올림 기준 공동 등수를 부여 (순위 배지와 동일한 규칙)
-function computeRoundedRankMap(sorted: { sign: ZodiacSign; averageRank: number }[]): Map<ZodiacSign, number> {
+function computeRoundedRankMap(
+  sorted: { sign: ZodiacSign; averageRank: number }[],
+): Map<ZodiacSign, number> {
   const map = new Map<ZodiacSign, number>();
   sorted.forEach((item, index) => {
     const exactRank = index + 1;
     const prevSign = index > 0 ? sorted[index - 1].sign : null;
-    const tiedWithPrev = prevSign !== null && Math.round(item.averageRank) === Math.round(sorted[index - 1].averageRank);
+    const tiedWithPrev =
+      prevSign !== null &&
+      Math.round(item.averageRank) ===
+        Math.round(sorted[index - 1].averageRank);
     map.set(item.sign, tiedWithPrev ? map.get(prevSign)! : exactRank);
   });
   return map;
@@ -120,7 +125,9 @@ function getTargetCount(period: TrendsPeriod): number {
 }
 
 function getCutoffDate(period: TrendsPeriod): string {
-  const daysBack = getTargetCount(period) - 1 + CUTOFF_BUFFER_DAYS;
+  // 주말을 제외한 최근 방송일 N개를 확보할 수 있도록 조회 범위를 넓힌다.
+  const daysBack =
+    Math.ceil((getTargetCount(period) * 7) / 5) + CUTOFF_BUFFER_DAYS;
   return format(subDays(new Date(), daysBack), 'yyyy-MM-dd');
 }
 
@@ -132,7 +139,9 @@ function takeWindow<T>(rows: T[], period: TrendsPeriod): T[] {
 }
 
 function getErrorMessage(err: unknown): string {
-  return err instanceof Error ? err.message : '운세 추이를 불러오지 못했습니다.';
+  return err instanceof Error
+    ? err.message
+    : '운세 추이를 불러오지 못했습니다.';
 }
 
 // 지난 달은 행이 더 늘지 않으므로 한 번 받으면 캐시한다(이번 달은 매일 늘어나므로 제외).
@@ -143,7 +152,9 @@ function isPastMonth(month: string): boolean {
   return month < format(new Date(), 'yyyy-MM');
 }
 
-async function fetchRankRows(period: TrendsPeriod): Promise<HoroscopeRankRow[]> {
+async function fetchRankRows(
+  period: TrendsPeriod,
+): Promise<HoroscopeRankRow[]> {
   const month = getPeriodMonth(period);
 
   if (month) {
@@ -155,6 +166,7 @@ async function fetchRankRows(period: TrendsPeriod): Promise<HoroscopeRankRow[]> 
     const { data, error } = await supabase
       .from('horoscopes')
       .select('date, zodiac_sign, rank')
+      .eq('source', 'ohaasa')
       .gte('date', format(addMonths(monthStart, -1), 'yyyy-MM-dd'))
       .lt('date', format(addMonths(monthStart, 1), 'yyyy-MM-dd'))
       .order('date', { ascending: true });
@@ -169,6 +181,7 @@ async function fetchRankRows(period: TrendsPeriod): Promise<HoroscopeRankRow[]> 
   const { data, error } = await supabase
     .from('horoscopes')
     .select('date, zodiac_sign, rank')
+    .eq('source', 'ohaasa')
     .gte('date', getCutoffDate(period))
     .order('date', { ascending: true });
 
@@ -177,7 +190,9 @@ async function fetchRankRows(period: TrendsPeriod): Promise<HoroscopeRankRow[]> 
 }
 
 function seriesFor(rows: HoroscopeRankRow[], sign: ZodiacSign): RankPoint[] {
-  return rows.filter((row) => row.zodiac_sign === sign).map((row) => ({ date: row.date, rank: row.rank }));
+  return rows
+    .filter((row) => row.zodiac_sign === sign)
+    .map((row) => ({ date: row.date, rank: row.rank }));
 }
 
 function groupRanksBySign(rows: HoroscopeRankRow[]): Map<ZodiacSign, number[]> {
@@ -198,9 +213,14 @@ function buildSortedAverages(
   return Array.from(ranksBySign.entries())
     .map(([sign, signRanks]) => {
       const picked = pick(signRanks);
-      return picked.length ? { sign, averageRank: Math.round(average(picked) * 10) / 10 } : null;
+      return picked.length
+        ? { sign, averageRank: Math.round(average(picked) * 10) / 10 }
+        : null;
     })
-    .filter((item): item is { sign: ZodiacSign; averageRank: number } => item !== null)
+    .filter(
+      (item): item is { sign: ZodiacSign; averageRank: number } =>
+        item !== null,
+    )
     .sort((a, b) => a.averageRank - b.averageRank);
 }
 
@@ -220,7 +240,8 @@ export function useHoroscopeTrends(
   period: TrendsPeriod,
   compareSign: ZodiacSign | null = null,
 ): HoroscopeTrendsState {
-  const [state, setState] = useState<Omit<HoroscopeTrendsState, 'refetch'>>(EMPTY_STATE);
+  const [state, setState] =
+    useState<Omit<HoroscopeTrendsState, 'refetch'>>(EMPTY_STATE);
   const [reloadToken, setReloadToken] = useState(0);
 
   useEffect(() => {
@@ -237,43 +258,64 @@ export function useHoroscopeTrends(
 
         // 월간은 받아온 2개월치를 "선택한 달"과 "그 전 달"로 가른다.
         // 일수 기간('7d'·'14d')은 같은 배열을 두 번 쓰되 baseline만 하루 앞당겨 자른다.
-        const windowRows = monthStart ? allRows.filter((row) => row.date >= monthStart) : allRows;
-        const baselineRows = monthStart ? allRows.filter((row) => row.date < monthStart) : allRows;
+        const windowRows = monthStart
+          ? allRows.filter((row) => row.date >= monthStart)
+          : allRows;
+        const baselineRows = monthStart
+          ? allRows.filter((row) => row.date < monthStart)
+          : allRows;
 
-        const pickWindow = <T,>(items: T[]): T[] => (month ? items : takeWindow(items, period));
-        const pickBaseline = (ranks: number[]) => (month ? ranks : takeWindow(ranks.slice(0, -1), period));
+        const pickWindow = <T>(items: T[]): T[] =>
+          month ? items : takeWindow(items, period);
+        const pickBaseline = (ranks: number[]) =>
+          month ? ranks : takeWindow(ranks.slice(0, -1), period);
 
-        const points: RankPoint[] = zodiacSign ? pickWindow(seriesFor(windowRows, zodiacSign)) : [];
-        const comparePoints: RankPoint[] = compareSign ? pickWindow(seriesFor(windowRows, compareSign)) : [];
+        const points: RankPoint[] = zodiacSign
+          ? pickWindow(seriesFor(windowRows, zodiacSign))
+          : [];
+        const comparePoints: RankPoint[] = compareSign
+          ? pickWindow(seriesFor(windowRows, compareSign))
+          : [];
 
         const ranks = points.map((p) => p.rank);
-        const averageRank = ranks.length ? Math.round(average(ranks) * 10) / 10 : null;
+        const averageRank = ranks.length
+          ? Math.round(average(ranks) * 10) / 10
+          : null;
         const minRank = ranks.length ? Math.min(...ranks) : null;
         const maxRank = ranks.length ? Math.max(...ranks) : null;
 
-        const sortedAverages = buildSortedAverages(groupRanksBySign(windowRows), pickWindow);
+        const sortedAverages = buildSortedAverages(
+          groupRanksBySign(windowRows),
+          pickWindow,
+        );
         const currentRoundedRanks = computeRoundedRankMap(sortedAverages);
 
         // 화살표는 "평균 등수 배지가 직전 기준 대비 어떻게 바뀌었는지"다.
         // 일수 기간은 같은 길이 윈도우를 하루 앞당긴 값(전날 대비),
         // 월간은 이전 달 전체 평균(전월 대비)이 기준이다.
-        const baselineAverages = buildSortedAverages(groupRanksBySign(baselineRows), pickBaseline);
+        const baselineAverages = buildSortedAverages(
+          groupRanksBySign(baselineRows),
+          pickBaseline,
+        );
         const baselineRoundedRanks = computeRoundedRankMap(baselineAverages);
 
-        const signAverages: SignAverage[] = sortedAverages.map((item, index) => {
-          const exactRank = index + 1;
-          const roundedRank = currentRoundedRanks.get(item.sign)!;
-          const baselineRank = baselineRoundedRanks.get(item.sign);
-          const diff = baselineRank !== undefined ? baselineRank - roundedRank : 0; // 양수면 등수가 더 작아짐(개선)
-          return {
-            sign: item.sign,
-            averageRank: item.averageRank,
-            roundedRank,
-            exactRank,
-            trend: diffToTrend(diff),
-            rankDiff: Math.abs(diff),
-          };
-        });
+        const signAverages: SignAverage[] = sortedAverages.map(
+          (item, index) => {
+            const exactRank = index + 1;
+            const roundedRank = currentRoundedRanks.get(item.sign)!;
+            const baselineRank = baselineRoundedRanks.get(item.sign);
+            const diff =
+              baselineRank !== undefined ? baselineRank - roundedRank : 0; // 양수면 등수가 더 작아짐(개선)
+            return {
+              sign: item.sign,
+              averageRank: item.averageRank,
+              roundedRank,
+              exactRank,
+              trend: diffToTrend(diff),
+              rankDiff: Math.abs(diff),
+            };
+          },
+        );
 
         if (isMounted) {
           setState({
@@ -289,7 +331,11 @@ export function useHoroscopeTrends(
         }
       } catch (err) {
         if (isMounted) {
-          setState({ ...EMPTY_STATE, loading: false, error: getErrorMessage(err) });
+          setState({
+            ...EMPTY_STATE,
+            loading: false,
+            error: getErrorMessage(err),
+          });
         }
       }
     }

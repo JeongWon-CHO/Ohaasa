@@ -1,3 +1,4 @@
+import { HOROSCOPE_SOURCE_LABELS } from '@ohaasa/shared/types/horoscope';
 import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
 import { router } from 'expo-router';
 import { useState } from 'react';
@@ -28,7 +29,9 @@ interface ReviewDetailSheetProps {
 
 function formatDate(dateStr: string): string {
   const [y, m, d] = dateStr.split('-').map(Number);
-  const dow = ['일', '월', '화', '수', '목', '금', '토'][new Date(y, m - 1, d).getDay()];
+  const dow = ['일', '월', '화', '수', '목', '금', '토'][
+    new Date(y, m - 1, d).getDay()
+  ];
   return `${y}년 ${m}월 ${d}일 (${dow})`;
 }
 
@@ -57,7 +60,10 @@ export function ReviewDetailSheet({
   function handleEditAnswer() {
     if (!date) return;
     onClose();
-    router.push({ pathname: '/daily-question', params: { date, mode: 'edit' } });
+    router.push({
+      pathname: '/daily-question',
+      params: { date, mode: 'edit' },
+    });
   }
 
   async function handleDeleteAnswer() {
@@ -84,120 +90,149 @@ export function ReviewDetailSheet({
         {date && (
           <ScrollView showsVerticalScrollIndicator={false} bounces={false}>
             <View style={styles.content}>
-            <Text style={styles.dateLabel}>{formatDate(date)}</Text>
+              <Text style={styles.dateLabel}>{formatDate(date)}</Text>
 
-            {answer && (
-              <View style={styles.questionBlock}>
-                <View style={styles.metaRow}>
-                  <View style={styles.chip}>
-                    <Text style={styles.chipText}>오늘의 질문</Text>
+              {answer && (
+                <View style={styles.questionBlock}>
+                  <View style={styles.metaRow}>
+                    <View style={styles.chip}>
+                      <Text style={styles.chipText}>오늘의 질문</Text>
+                    </View>
+                  </View>
+
+                  <Text style={styles.questionText}>{answer.questionText}</Text>
+
+                  <View style={styles.noteBox}>
+                    <Text style={styles.noteText}>{answer.body}</Text>
+                  </View>
+
+                  {!answerEditable && (
+                    <Text style={styles.answerLockedText}>
+                      공개한 답변은 올린 날에만 수정할 수 있어요
+                    </Text>
+                  )}
+
+                  <View style={styles.answerActionsRow}>
+                    {answerEditable && (
+                      <Pressable
+                        onPress={handleEditAnswer}
+                        style={({ pressed }) => [
+                          styles.smallBtn,
+                          pressed && { opacity: 0.72 },
+                        ]}
+                      >
+                        <Text style={styles.smallBtnText}>수정하기</Text>
+                      </Pressable>
+                    )}
+                    <Pressable
+                      onPress={() => setDeleteDialogVisible(true)}
+                      style={({ pressed }) => [
+                        styles.smallBtn,
+                        pressed && { opacity: 0.72 },
+                      ]}
+                    >
+                      <Text
+                        style={[styles.smallBtnText, styles.smallBtnDangerText]}
+                      >
+                        삭제하기
+                      </Text>
+                    </Pressable>
                   </View>
                 </View>
+              )}
 
-                <Text style={styles.questionText}>{answer.questionText}</Text>
-
-                <View style={styles.noteBox}>
-                  <Text style={styles.noteText}>{answer.body}</Text>
-                </View>
-
-                {!answerEditable && (
-                  <Text style={styles.answerLockedText}>
-                    공개한 답변은 올린 날에만 수정할 수 있어요
-                  </Text>
-                )}
-
-                <View style={styles.answerActionsRow}>
-                  {answerEditable && (
-                    <Pressable
-                      onPress={handleEditAnswer}
-                      style={({ pressed }) => [styles.smallBtn, pressed && { opacity: 0.72 }]}
-                    >
-                      <Text style={styles.smallBtnText}>수정하기</Text>
-                    </Pressable>
-                  )}
-                  <Pressable
-                    onPress={() => setDeleteDialogVisible(true)}
-                    style={({ pressed }) => [styles.smallBtn, pressed && { opacity: 0.72 }]}
-                  >
-                    <Text style={[styles.smallBtnText, styles.smallBtnDangerText]}>삭제하기</Text>
-                  </Pressable>
-                </View>
-              </View>
-            )}
-
-            {review ? (
-              <>
-                <View style={styles.metaRow}>
-                  {zodiac && (
-                    <View style={styles.chip}>
-                      <Text style={styles.chipText}>
-                        {zodiac.ko}
-                      </Text>
-                    </View>
-                  )}
-                  {review.horoscopeRank != null && (
-                    <View style={styles.chip}>
-                      <Text style={styles.chipText}>운세 {review.horoscopeRank}위</Text>
-                    </View>
-                  )}
-                </View>
-
-                <View style={styles.starsRow}>
-                  {[1, 2, 3, 4, 5].map((n) => (
-                    <FontAwesome5
-                      key={n}
-                      name="star"
-                      size={22}
-                      solid={n <= review.rating}
-                      color={n <= review.rating ? colors.yellow : 'rgba(156,139,120,0.2)'}
-                    />
-                  ))}
-                </View>
-
-                {review.memorableItems.length > 0 && (
-                  <View style={styles.chipsRow}>
-                    {review.memorableItems.map((item) => (
-                      <View key={item} style={[styles.chip, styles.chipActive]}>
-                        <Text style={[styles.chipText, styles.chipTextActive]}>{item}</Text>
+              {review ? (
+                <>
+                  <View style={styles.metaRow}>
+                    {zodiac && (
+                      <View style={styles.chip}>
+                        <Text style={styles.chipText}>{zodiac.ko}</Text>
                       </View>
+                    )}
+                    {review.horoscopeRank != null && (
+                      <View style={styles.chip}>
+                        <Text style={styles.chipText}>
+                          {review.horoscopeSource
+                            ? `${HOROSCOPE_SOURCE_LABELS[review.horoscopeSource]} `
+                            : '운세 '}
+                          {review.horoscopeRank}위
+                        </Text>
+                      </View>
+                    )}
+                  </View>
+
+                  <View style={styles.starsRow}>
+                    {[1, 2, 3, 4, 5].map((n) => (
+                      <FontAwesome5
+                        key={n}
+                        name="star"
+                        size={22}
+                        solid={n <= review.rating}
+                        color={
+                          n <= review.rating
+                            ? colors.yellow
+                            : 'rgba(156,139,120,0.2)'
+                        }
+                      />
                     ))}
                   </View>
-                )}
 
-                {review.note.trim().length > 0 && (
-                  <View style={styles.noteBox}>
-                    <Text style={styles.noteText}>{review.note.trim()}</Text>
-                  </View>
-                )}
+                  {review.memorableItems.length > 0 && (
+                    <View style={styles.chipsRow}>
+                      {review.memorableItems.map((item) => (
+                        <View
+                          key={item}
+                          style={[styles.chip, styles.chipActive]}
+                        >
+                          <Text
+                            style={[styles.chipText, styles.chipTextActive]}
+                          >
+                            {item}
+                          </Text>
+                        </View>
+                      ))}
+                    </View>
+                  )}
 
-                <Pressable
-                  onPress={handleEdit}
-                  style={({ pressed }) => [styles.editBtn, pressed && { opacity: 0.72 }]}
-                >
-                  <Text style={styles.editBtnText}>수정하기</Text>
-                </Pressable>
-              </>
-            ) : (
-              <View style={styles.emptyWrap}>
-                {!answer && (
-                  <Text style={styles.emptyText}>
-                    {isFuture ? '아직 오지 않은 날이에요' : '이날 남긴 운세 리뷰가 없어요'}
-                  </Text>
-                )}
-                {!isFuture && (
+                  {review.note.trim().length > 0 && (
+                    <View style={styles.noteBox}>
+                      <Text style={styles.noteText}>{review.note.trim()}</Text>
+                    </View>
+                  )}
+
                   <Pressable
                     onPress={handleEdit}
                     style={({ pressed }) => [
                       styles.editBtn,
-                      styles.editBtnStretch,
                       pressed && { opacity: 0.72 },
                     ]}
                   >
-                    <Text style={styles.editBtnText}>리뷰 남기기</Text>
+                    <Text style={styles.editBtnText}>수정하기</Text>
                   </Pressable>
-                )}
-              </View>
-            )}
+                </>
+              ) : (
+                <View style={styles.emptyWrap}>
+                  {!answer && (
+                    <Text style={styles.emptyText}>
+                      {isFuture
+                        ? '아직 오지 않은 날이에요'
+                        : '이날 남긴 운세 리뷰가 없어요'}
+                    </Text>
+                  )}
+                  {!isFuture && (
+                    <Pressable
+                      onPress={handleEdit}
+                      style={({ pressed }) => [
+                        styles.editBtn,
+                        styles.editBtnStretch,
+                        pressed && { opacity: 0.72 },
+                      ]}
+                    >
+                      <Text style={styles.editBtnText}>리뷰 남기기</Text>
+                    </Pressable>
+                  )}
+                </View>
+              )}
             </View>
           </ScrollView>
         )}

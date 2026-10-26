@@ -1,3 +1,7 @@
+import {
+  HOROSCOPE_SOURCE_LABELS,
+  type HoroscopeSource,
+} from '@ohaasa/shared/types/horoscope';
 import { isTodayHoroscope } from '@ohaasa/shared/lib/horoscopeDate';
 import { forwardRef } from 'react';
 import { Platform, StyleSheet, Text, View } from 'react-native';
@@ -24,9 +28,9 @@ interface ShareCardProps {
   zodiac: ZodiacInfo;
 }
 
-function formatShareDate(dateStr: string, source: 'ohaasa' | 'gogo'): string {
+function formatShareDate(dateStr: string, source: HoroscopeSource): string {
   const [, month, day] = dateStr.split('-').map(Number);
-  const label = source === 'gogo' ? '고고별자리' : '오하아사';
+  const label = HOROSCOPE_SOURCE_LABELS[source];
   return `${month}월 ${day}일 ${label}`;
 }
 
@@ -70,6 +74,38 @@ function ShareInfoGrid({
   horoscope: Horoscope;
   inline?: boolean;
 }) {
+  if (horoscope.source === 'mezamashi' && horoscope.mezamashi) {
+    if (inline) return null;
+    const m = horoscope.mezamashi;
+    return (
+      <View
+        style={[
+          infoStyles.card,
+          { flexGrow: 0, flexShrink: 0, flexBasis: 'auto', width: '100%' },
+        ]}
+      >
+        <Text style={infoStyles.cardHeader}>오늘의 행운</Text>
+        <LuckyRow
+          label="행운 포인트"
+          value={m.lucky_point_ko ?? m.lucky_point}
+        />
+        <LuckyRow
+          label="행운의 색상"
+          value={m.lucky_color_ko ?? m.lucky_color}
+        />
+        <LuckyRow
+          label={m.rank === 12 ? '행운 행동' : '오늘의 조언'}
+          value={m.extra_advice_ko ?? m.extra_advice}
+        />
+        <LuckyRow
+          label="행운의 인물"
+          value={m.lucky_person_ko ?? m.lucky_person}
+        />
+        <LuckyRow label="행운의 메뉴" value={m.lucky_menu_ko ?? m.lucky_menu} />
+      </View>
+    );
+  }
+
   const luckyItem =
     horoscope.lucky_item_ohaasa_ko ??
     horoscope.lucky_item_ohaasa ??
@@ -88,13 +124,13 @@ function ShareInfoGrid({
   /* 평일 오하아사에는 고고별자리 '오늘의 운'을 표시하지 않는다.
      기존 상시 표시 설정은 주석으로 보관한다. 공유 이미지에도 같은 규칙을 적용한다.
      const showGogoScore = true; */
-  const showGogoScore = horoscope.source === "gogo";
-  const hasScore = showGogoScore && (
-    (horoscope.love_score !== null && horoscope.love_score > 0) ||
-    (horoscope.work_score !== null && horoscope.work_score > 0) ||
-    (horoscope.money_score !== null && horoscope.money_score > 0) ||
-    (horoscope.health_score !== null && horoscope.health_score > 0)
-  );
+  const showGogoScore = horoscope.source === 'gogo';
+  const hasScore =
+    showGogoScore &&
+    ((horoscope.love_score !== null && horoscope.love_score > 0) ||
+      (horoscope.work_score !== null && horoscope.work_score > 0) ||
+      (horoscope.money_score !== null && horoscope.money_score > 0) ||
+      (horoscope.health_score !== null && horoscope.health_score > 0));
 
   if (inline) {
     if (hasScore || !hasLucky) return null;
@@ -166,7 +202,14 @@ export const ShareCard = forwardRef<View, ShareCardProps>(function ShareCard(
   const adviceFontSize = (advice?.length ?? 0) > 55 ? 11 : 12;
 
   return (
-    <View ref={ref} style={styles.wrapper} collapsable={false}>
+    <View
+      ref={ref}
+      style={[
+        styles.wrapper,
+        horoscope.source === 'mezamashi' && { height: CARD_HEIGHT + 160 },
+      ]}
+      collapsable={false}
+    >
       <LinearGradient colors={gradients.screen} style={styles.card}>
         <View style={styles.content}>
           {/* 날짜 */}

@@ -1,3 +1,4 @@
+import { isTodayHoroscope } from '@ohaasa/shared/lib/horoscopeDate';
 import { Feather } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
@@ -31,17 +32,23 @@ export function HoroscopeStrip() {
   // 이 상태가 정상적으로 존재한다.
   if (!zodiacSign) {
     return (
-      <Pressable style={styles.strip} onPress={() => router.push('/(tabs)/settings')}>
+      <Pressable
+        style={styles.strip}
+        onPress={() => router.push('/(tabs)/settings')}
+      >
         <View style={[styles.badge, { backgroundColor: colors.cream2 }]}>
           <ConstellationBadge size={20} />
         </View>
-        <Text style={styles.muted}>별자리를 설정하면 오늘의 운세를 볼 수 있어요</Text>
+        <Text style={styles.muted}>
+          별자리를 설정하면 오늘의 운세를 볼 수 있어요
+        </Text>
         <Feather name="chevron-right" size={14} color={colors.textSoft} />
       </Pressable>
     );
   }
 
-  const horoscope = horoscopes.find((h) => h.zodiac_sign === zodiacSign) ?? null;
+  const horoscope =
+    horoscopes.find((h) => h.zodiac_sign === zodiacSign) ?? null;
   if (loading || !horoscope) return null;
 
   const advice = horoscope.advice_ko ?? horoscope.advice;
@@ -49,11 +56,21 @@ export function HoroscopeStrip() {
   return (
     <Pressable style={styles.strip} onPress={() => router.push('/horoscope')}>
       {/* 이모지는 OS 폰트라 통제가 안 된다 — 앱이 쓰는 별자리 원형 아이콘으로 통일한다. */}
-      <View style={[styles.badge, { backgroundColor: ZODIAC_SIGN_COLORS[zodiacSign] }]}>
+      <View
+        style={[
+          styles.badge,
+          { backgroundColor: ZODIAC_SIGN_COLORS[zodiacSign] },
+        ]}
+      >
         <ConstellationBadge sign={zodiacSign} size={20} />
       </View>
       <View style={styles.rank}>
-        <Text style={styles.rankText}>{horoscope.rank}위</Text>
+        <Text style={styles.rankText}>
+          {!isTodayHoroscope(horoscope.date)
+            ? `${Number(horoscope.date.slice(5, 7))}/${Number(horoscope.date.slice(8))} · `
+            : ''}
+          {horoscope.rank}위
+        </Text>
       </View>
       <Text style={styles.advice} numberOfLines={1}>
         {firstLine(advice)}
