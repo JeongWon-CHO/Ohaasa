@@ -117,10 +117,14 @@ export async function translateAdvice(
 
   // ── 1차 번역 ──────────────────────────────────────────────────
   const first = await callGPT(
-    client, model,
+    client,
+    model,
     [
       { role: "system", content: SYSTEM_PROMPT },
-      { role: "user", content: `다음 일본어 별자리 운세 문장을 한국어로 번역해주세요:\n\n${adviceJa}` },
+      {
+        role: "user",
+        content: `다음 일본어 별자리 운세 문장을 한국어로 번역해주세요:\n\n${adviceJa}`,
+      },
     ],
     label,
   );
@@ -128,10 +132,13 @@ export async function translateAdvice(
   if (!containsJapanese(first)) return first;
 
   // ── 2차 번역 ──────────────────────────────────────────────────
-  console.warn(`[translator] ${label}: attempt 1 — Japanese chars detected: "${extractJapaneseChars(first)}"`);
+  console.warn(
+    `[translator] ${label}: attempt 1 — Japanese chars detected: "${extractJapaneseChars(first)}"`,
+  );
 
   const second = await callGPT(
-    client, model,
+    client,
+    model,
     [
       { role: "system", content: SYSTEM_PROMPT },
       {
@@ -149,10 +156,13 @@ export async function translateAdvice(
   if (!containsJapanese(second)) return second;
 
   // ── 3차 번역 (간소화 프롬프트) ────────────────────────────────
-  console.warn(`[translator] ${label}: attempt 2 — Japanese chars detected: "${extractJapaneseChars(second)}"`);
+  console.warn(
+    `[translator] ${label}: attempt 2 — Japanese chars detected: "${extractJapaneseChars(second)}"`,
+  );
 
   const third = await callGPT(
-    client, model,
+    client,
+    model,
     [
       { role: "system", content: SYSTEM_PROMPT_STRICT },
       { role: "user", content: adviceJa },
@@ -162,7 +172,9 @@ export async function translateAdvice(
   if (!third) return second;
 
   if (containsJapanese(third)) {
-    console.warn(`[translator] ${label}: attempt 3 — Japanese chars still remain: "${extractJapaneseChars(third)}"`);
+    console.warn(
+      `[translator] ${label}: attempt 3 — Japanese chars still remain: "${extractJapaneseChars(third)}"`,
+    );
   }
 
   return third;
@@ -172,16 +184,63 @@ const LUCKY_ITEM_SYSTEM_PROMPT =
   "일본어 행운 아이템 명사구를 한국어 운세 앱 UI에 표시할 짧고 자연스러운 한국어 명사구로 번역하세요. " +
   "번역된 명사구만 출력하고 설명을 붙이지 마세요.";
 
+export type HoroscopePhraseKind =
+  | "color"
+  | "food"
+  | "point"
+  | "person"
+  | "action";
+
+const PHRASE_GUIDANCE: Record<HoroscopePhraseKind, string> = {
+  color:
+    "입력은 색상 이름입니다. 한국어 색상 이름만 출력하세요.\n예시:\nイエロー → 노란색\nブルー → 파란색\nライトグリーン → 연두색",
+  food: "입력은 음식 또는 요리 이름입니다. 한국어 음식 이름만 출력하세요.\n예시:\nラーメン → 라멘\nアイスクリーム → 아이스크림\n栗ようかん → 밤 양갱\nなすの味噌炒め → 가지 된장 볶음",
+  point:
+    "입력은 행운 포인트로, 음식·물건·장소 중 하나일 수 있습니다. 모두 음식으로 취급하지 마세요. 짧은 한국어 이름이나 명사구만 출력하세요.\n예시:\nカップ麺 → 컵라면\nアイスクリーム → 아이스크림\n室内履き → 실내화\n天窓がある場所 → 천창이 있는 곳",
+  person:
+    "입력은 행운의 인물을 설명하는 구절입니다. 짧은 한국어 인물 표현만 출력하세요.\n예시:\n体を鍛えている人 → 운동으로 몸을 단련하는 사람\n物持ちがいい人 → 물건을 오래 아껴 쓰는 사람",
+  action:
+    "입력은 추가 조언 또는 행운 행동입니다. 원문에 있는 행동만 간결하게 번역하세요.\n예시:\n人にお茶を入れる → 다른 사람에게 차 대접하기\nエンタメの話をする → 연예·문화 이야기 나누기",
+};
+
+/** 메자마시의 짧은 항목에 종류와 번역 예시를 함께 제공한다. */
+export async function translateHoroscopePhrase(
+  text: string,
+  kind: HoroscopePhraseKind = "point",
+): Promise<string | null> {
+  const client = getClient();
+  if (!client) return null;
+  return callGPT(
+    client,
+    getModel(),
+    [
+      {
+        role: "system",
+        content:
+          "일본어 단어 또는 짧은 구절을 한국어로 번역하세요.\n" +
+          PHRASE_GUIDANCE[kind] +
+          "\n" +
+          "번역 결과만 출력하세요. 운세나 설명, 조언을 새로 만들지 마세요. 한자와 일본어는 남기지 마세요.",
+      },
+      { role: "user", content: text },
+    ],
+    "mezamashi phrase",
+  );
+}
+
 /**
  * 오하아사 "행운 아이템" 명사구를 한국어로 번역한다 (단발성 호출, 재시도 없음).
  * OPENAI_API_KEY가 없거나 GPT 호출이 실패하면 null을 반환한다.
  */
-export async function translateOhaasaLuckyItem(item: string): Promise<string | null> {
+export async function translateOhaasaLuckyItem(
+  item: string,
+): Promise<string | null> {
   const client = getClient();
   if (!client) return null;
 
   return callGPT(
-    client, getModel(),
+    client,
+    getModel(),
     [
       { role: "system", content: LUCKY_ITEM_SYSTEM_PROMPT },
       { role: "user", content: item },
