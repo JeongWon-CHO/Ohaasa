@@ -4,7 +4,10 @@ import { resolve } from "node:path";
 import { describe, it } from "vitest";
 
 const definition = JSON.parse(
-  readFileSync(resolve(__dirname, "../../../infra/aws/state-machine.asl.json"), "utf8"),
+  readFileSync(
+    resolve(__dirname, "../../../infra/aws/state-machine.asl.json"),
+    "utf8",
+  ),
 );
 const states = definition.States;
 
@@ -37,5 +40,16 @@ describe("crawl state machine dry-run flow", () => {
     assert.deepEqual(states.DispatchDueNotifications.Parameters.Payload, {
       "dryRun.$": "$.dryRun",
     });
+  });
+
+  it("keeps three crawl stages with two 20-minute waits for every source", () => {
+    assert.deepEqual(
+      Object.keys(states).filter(name => name.endsWith("Crawl") && states[name].Type === "Task"),
+      ["FirstCrawl", "SecondCrawl", "ThirdCrawl"],
+    );
+    assert.equal(states.WaitBeforeSecondCrawl.Seconds, 1200);
+    assert.equal(states.WaitBeforeThirdCrawl.Seconds, 1200);
+    for (const choice of states.ThirdResult.Choices)
+      assert.equal(choice.Next, "NoFreshData");
   });
 });

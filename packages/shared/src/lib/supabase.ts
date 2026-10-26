@@ -1,9 +1,9 @@
-import { createClient } from '@supabase/supabase-js';
+import { createClient } from "@supabase/supabase-js";
 
-import type { ZodiacSign } from '../constants/zodiac';
-import type { NotificationTime } from '../constants/notificationTime';
-import type { ReportReason } from '../lib/moderation';
-import { getNotificationTime, getZodiacSign } from './storage';
+import type { ZodiacSign } from "../constants/zodiac";
+import type { NotificationTime } from "../constants/notificationTime";
+import type { ReportReason } from "../lib/moderation";
+import { getNotificationTime, getZodiacSign } from "./storage";
 
 const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL!;
 const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY!;
@@ -15,7 +15,10 @@ let deviceWriteTail: Promise<void> = Promise.resolve();
 
 function queueDeviceWrite<T>(write: () => Promise<T>): Promise<T> {
   const result = deviceWriteTail.then(write);
-  deviceWriteTail = result.then(() => {}, () => {});
+  deviceWriteTail = result.then(
+    () => {},
+    () => {},
+  );
   return result;
 }
 
@@ -23,7 +26,7 @@ export interface UpsertDeviceParams {
   deviceId: string;
   zodiacSign: ZodiacSign;
   pushToken: string | null;
-  platform: 'ios' | 'android' | null;
+  platform: "ios" | "android" | null;
   notificationsEnabled: boolean;
   notificationTime?: NotificationTime;
 }
@@ -35,7 +38,7 @@ export function upsertDevice(params: UpsertDeviceParams): Promise<boolean> {
         params.notificationTime ?? getNotificationTime(),
         getZodiacSign(),
       ]);
-      const { error } = await supabase.from('user_devices').upsert(
+      const { error } = await supabase.from("user_devices").upsert(
         {
           device_id: params.deviceId,
           zodiac_sign: zodiac ?? params.zodiacSign,
@@ -44,17 +47,20 @@ export function upsertDevice(params: UpsertDeviceParams): Promise<boolean> {
           notifications_enabled: params.notificationsEnabled && zodiac !== null,
           notification_time: notificationTime,
         },
-        { onConflict: 'device_id' },
+        { onConflict: "device_id" },
       );
 
       if (error) {
-        console.warn('[supabase] upsertDevice failed:', error.message);
+        console.warn("[supabase] upsertDevice failed:", error.message);
         return false;
       }
 
       return true;
     } catch (error) {
-      console.warn('[supabase] upsertDevice failed:', error instanceof Error ? error.message : String(error));
+      console.warn(
+        "[supabase] upsertDevice failed:",
+        error instanceof Error ? error.message : String(error),
+      );
       return false;
     }
   });
@@ -65,16 +71,22 @@ export function disableDeviceNotifications(deviceId: string): Promise<boolean> {
   return queueDeviceWrite(async () => {
     try {
       const { error } = await supabase
-        .from('user_devices')
+        .from("user_devices")
         .update({ notifications_enabled: false })
-        .eq('device_id', deviceId);
+        .eq("device_id", deviceId);
       if (error) {
-        console.warn('[supabase] disableDeviceNotifications failed:', error.message);
+        console.warn(
+          "[supabase] disableDeviceNotifications failed:",
+          error.message,
+        );
         return false;
       }
       return true;
     } catch (error) {
-      console.warn('[supabase] disableDeviceNotifications failed:', error instanceof Error ? error.message : String(error));
+      console.warn(
+        "[supabase] disableDeviceNotifications failed:",
+        error instanceof Error ? error.message : String(error),
+      );
       return false;
     }
   });
@@ -99,7 +111,7 @@ export interface PublicAnswer {
 }
 
 const PUBLIC_ANSWER_COLUMNS =
-  'id, question_date, zodiac_sign, body, like_count, created_at, author_hash';
+  "id, question_date, zodiac_sign, body, like_count, created_at, author_hash";
 
 /**
  * 하루치 공개 답변을 한 번에 받는 상한.
@@ -112,31 +124,31 @@ const ANSWER_FETCH_LIMIT = 1000;
 
 export async function fetchPublicAnswers(
   date: string,
-  scope: 'all' | ZodiacSign,
-  sort: 'latest' | 'likes',
+  scope: "all" | ZodiacSign,
+  sort: "latest" | "likes",
 ): Promise<PublicAnswer[]> {
   let query = supabase
-    .from('question_answers')
+    .from("question_answers")
     .select(PUBLIC_ANSWER_COLUMNS)
-    .eq('question_date', date)
+    .eq("question_date", date)
     // 신고 임계값에 도달해 자동 숨김 처리된 글은 제외한다.
-    .is('hidden_at', null);
+    .is("hidden_at", null);
 
-  if (scope !== 'all') {
-    query = query.eq('zodiac_sign', scope);
+  if (scope !== "all") {
+    query = query.eq("zodiac_sign", scope);
   }
 
   query =
-    sort === 'likes'
+    sort === "likes"
       ? query
-          .order('like_count', { ascending: false })
-          .order('created_at', { ascending: false })
-      : query.order('created_at', { ascending: false });
+          .order("like_count", { ascending: false })
+          .order("created_at", { ascending: false })
+      : query.order("created_at", { ascending: false });
 
   const { data, error } = await query.limit(ANSWER_FETCH_LIMIT);
 
   if (error) {
-    console.warn('[supabase] fetchPublicAnswers failed:', error.message);
+    console.warn("[supabase] fetchPublicAnswers failed:", error.message);
     return [];
   }
 
@@ -166,18 +178,18 @@ export async function upsertPublicAnswer(
   zodiacSign: ZodiacSign | null,
   body: string,
 ): Promise<boolean> {
-  const { error } = await supabase.from('question_answers').upsert(
+  const { error } = await supabase.from("question_answers").upsert(
     {
       question_date: date,
       device_id: deviceId,
       zodiac_sign: zodiacSign,
       body,
     },
-    { onConflict: 'question_date,device_id' },
+    { onConflict: "question_date,device_id" },
   );
 
   if (error) {
-    console.warn('[supabase] upsertPublicAnswer failed:', error.message);
+    console.warn("[supabase] upsertPublicAnswer failed:", error.message);
     return false;
   }
 
@@ -189,13 +201,13 @@ export async function deletePublicAnswer(
   deviceId: string,
 ): Promise<boolean> {
   const { error } = await supabase
-    .from('question_answers')
+    .from("question_answers")
     .delete()
-    .eq('question_date', date)
-    .eq('device_id', deviceId);
+    .eq("question_date", date)
+    .eq("device_id", deviceId);
 
   if (error) {
-    console.warn('[supabase] deletePublicAnswer failed:', error.message);
+    console.warn("[supabase] deletePublicAnswer failed:", error.message);
     return false;
   }
   return true;
@@ -206,14 +218,14 @@ export async function fetchMyAnswerId(
   deviceId: string,
 ): Promise<string | null> {
   const { data, error } = await supabase
-    .from('question_answers')
-    .select('id')
-    .eq('question_date', date)
-    .eq('device_id', deviceId)
+    .from("question_answers")
+    .select("id")
+    .eq("question_date", date)
+    .eq("device_id", deviceId)
     .maybeSingle();
 
   if (error) {
-    console.warn('[supabase] fetchMyAnswerId failed:', error.message);
+    console.warn("[supabase] fetchMyAnswerId failed:", error.message);
     return null;
   }
 
@@ -227,13 +239,13 @@ export async function fetchMyLikedAnswerIds(
   if (answerIds.length === 0) return new Set();
 
   const { data, error } = await supabase
-    .from('question_answer_likes')
-    .select('answer_id')
-    .eq('device_id', deviceId)
-    .in('answer_id', answerIds);
+    .from("question_answer_likes")
+    .select("answer_id")
+    .eq("device_id", deviceId)
+    .in("answer_id", answerIds);
 
   if (error) {
-    console.warn('[supabase] fetchMyLikedAnswerIds failed:', error.message);
+    console.warn("[supabase] fetchMyLikedAnswerIds failed:", error.message);
     return new Set();
   }
 
@@ -247,16 +259,16 @@ export async function toggleAnswerLike(
 ): Promise<boolean> {
   const { error } = liked
     ? await supabase
-        .from('question_answer_likes')
+        .from("question_answer_likes")
         .insert({ answer_id: answerId, device_id: deviceId })
     : await supabase
-        .from('question_answer_likes')
+        .from("question_answer_likes")
         .delete()
-        .eq('answer_id', answerId)
-        .eq('device_id', deviceId);
+        .eq("answer_id", answerId)
+        .eq("device_id", deviceId);
 
   if (error) {
-    console.warn('[supabase] toggleAnswerLike failed:', error.message);
+    console.warn("[supabase] toggleAnswerLike failed:", error.message);
     return false;
   }
 
@@ -286,19 +298,19 @@ export async function reportAnswer(
 ): Promise<ReportResult> {
   // device_id는 로그에 남기지 않는다 — RLS가 이걸 베어러 토큰처럼 신뢰하므로 사실상 자격증명이다.
   if (__DEV__) {
-    console.log('[supabase] reportAnswer →', { answerId, reason });
+    console.log("[supabase] reportAnswer →", { answerId, reason });
   }
 
   const { error } = await supabase
-    .from('question_answer_reports')
+    .from("question_answer_reports")
     .insert({ answer_id: answerId, device_id: deviceId, reason });
 
   // 23505 = 이미 신고한 글(기기당 1회 제한). 사용자 입장에서는 성공과 같다.
-  if (error && error.code !== '23505') {
-    console.warn('[supabase] reportAnswer failed:', error.code, error.message);
+  if (error && error.code !== "23505") {
+    console.warn("[supabase] reportAnswer failed:", error.code, error.message);
     return {
       ok: false,
-      error: `${error.code ?? '?'} ${error.message}`,
+      error: `${error.code ?? "?"} ${error.message}`,
       offline: !error.code,
     };
   }
@@ -322,7 +334,7 @@ export interface PublicReply {
 }
 
 const PUBLIC_REPLY_COLUMNS =
-  'id, answer_id, zodiac_sign, body, like_count, created_at, author_hash';
+  "id, answer_id, zodiac_sign, body, like_count, created_at, author_hash";
 
 /**
  * 하루치 답글을 한 번에 받는 상한.
@@ -344,16 +356,16 @@ export async function fetchRepliesForAnswers(
   if (answerIds.length === 0) return [];
 
   const { data, error } = await supabase
-    .from('question_answer_replies')
+    .from("question_answer_replies")
     .select(PUBLIC_REPLY_COLUMNS)
-    .in('answer_id', answerIds)
+    .in("answer_id", answerIds)
     // 신고 임계값에 도달해 자동 숨김 처리된 답글은 제외한다.
-    .is('hidden_at', null)
-    .order('created_at', { ascending: true })
+    .is("hidden_at", null)
+    .order("created_at", { ascending: true })
     .limit(REPLY_FETCH_LIMIT);
 
   if (error) {
-    console.warn('[supabase] fetchRepliesForAnswers failed:', error.message);
+    console.warn("[supabase] fetchRepliesForAnswers failed:", error.message);
     return [];
   }
 
@@ -384,7 +396,7 @@ export async function upsertPublicReply(
   body: string,
 ): Promise<PublicReply | null> {
   const { data, error } = await supabase
-    .from('question_answer_replies')
+    .from("question_answer_replies")
     .upsert(
       {
         answer_id: answerId,
@@ -392,13 +404,13 @@ export async function upsertPublicReply(
         zodiac_sign: zodiacSign,
         body,
       },
-      { onConflict: 'answer_id,device_id' },
+      { onConflict: "answer_id,device_id" },
     )
     .select(PUBLIC_REPLY_COLUMNS)
     .single();
 
   if (error) {
-    console.warn('[supabase] upsertPublicReply failed:', error.message);
+    console.warn("[supabase] upsertPublicReply failed:", error.message);
     return null;
   }
 
@@ -411,13 +423,13 @@ export async function deletePublicReply(
   deviceId: string,
 ): Promise<boolean> {
   const { error } = await supabase
-    .from('question_answer_replies')
+    .from("question_answer_replies")
     .delete()
-    .eq('id', replyId)
-    .eq('device_id', deviceId);
+    .eq("id", replyId)
+    .eq("device_id", deviceId);
 
   if (error) {
-    console.warn('[supabase] deletePublicReply failed:', error.message);
+    console.warn("[supabase] deletePublicReply failed:", error.message);
     return false;
   }
 
@@ -437,13 +449,13 @@ export async function fetchMyReplyIds(
   if (answerIds.length === 0) return new Map();
 
   const { data, error } = await supabase
-    .from('question_answer_replies')
-    .select('id, answer_id')
-    .eq('device_id', deviceId)
-    .in('answer_id', answerIds);
+    .from("question_answer_replies")
+    .select("id, answer_id")
+    .eq("device_id", deviceId)
+    .in("answer_id", answerIds);
 
   if (error) {
-    console.warn('[supabase] fetchMyReplyIds failed:', error.message);
+    console.warn("[supabase] fetchMyReplyIds failed:", error.message);
     return new Map();
   }
 
@@ -459,13 +471,13 @@ export async function fetchMyLikedReplyIds(
   if (replyIds.length === 0) return new Set();
 
   const { data, error } = await supabase
-    .from('question_answer_reply_likes')
-    .select('reply_id')
-    .eq('device_id', deviceId)
-    .in('reply_id', replyIds);
+    .from("question_answer_reply_likes")
+    .select("reply_id")
+    .eq("device_id", deviceId)
+    .in("reply_id", replyIds);
 
   if (error) {
-    console.warn('[supabase] fetchMyLikedReplyIds failed:', error.message);
+    console.warn("[supabase] fetchMyLikedReplyIds failed:", error.message);
     return new Set();
   }
 
@@ -479,16 +491,16 @@ export async function toggleReplyLike(
 ): Promise<boolean> {
   const { error } = liked
     ? await supabase
-        .from('question_answer_reply_likes')
+        .from("question_answer_reply_likes")
         .insert({ reply_id: replyId, device_id: deviceId })
     : await supabase
-        .from('question_answer_reply_likes')
+        .from("question_answer_reply_likes")
         .delete()
-        .eq('reply_id', replyId)
-        .eq('device_id', deviceId);
+        .eq("reply_id", replyId)
+        .eq("device_id", deviceId);
 
   if (error) {
-    console.warn('[supabase] toggleReplyLike failed:', error.message);
+    console.warn("[supabase] toggleReplyLike failed:", error.message);
     return false;
   }
 
@@ -502,19 +514,19 @@ export async function reportReply(
 ): Promise<ReportResult> {
   // device_id는 로그에 남기지 않는다 — RLS가 이걸 베어러 토큰처럼 신뢰하므로 사실상 자격증명이다.
   if (__DEV__) {
-    console.log('[supabase] reportReply →', { replyId, reason });
+    console.log("[supabase] reportReply →", { replyId, reason });
   }
 
   const { error } = await supabase
-    .from('question_answer_reply_reports')
+    .from("question_answer_reply_reports")
     .insert({ reply_id: replyId, device_id: deviceId, reason });
 
   // 23505 = 이미 신고한 답글(기기당 1회 제한). 사용자 입장에서는 성공과 같다.
-  if (error && error.code !== '23505') {
-    console.warn('[supabase] reportReply failed:', error.code, error.message);
+  if (error && error.code !== "23505") {
+    console.warn("[supabase] reportReply failed:", error.code, error.message);
     return {
       ok: false,
-      error: `${error.code ?? '?'} ${error.message}`,
+      error: `${error.code ?? "?"} ${error.message}`,
       offline: !error.code,
     };
   }
@@ -523,7 +535,7 @@ export async function reportReply(
 }
 
 /** 한 별자리분만 받으면 하루 1행이라 곧 "데이터가 있는 날짜 목록"이 된다. */
-const DATE_PROBE_SIGN = 'aries';
+const DATE_PROBE_SIGN = "aries";
 
 /**
  * 데이터가 있는 방송일 전체(최신순). 월 선택 목록을 만드는 데 쓴다.
@@ -536,14 +548,15 @@ const DATE_PROBE_SIGN = 'aries';
  */
 export async function fetchHoroscopeDates(): Promise<string[] | null> {
   const { data, error } = await supabase
-    .from('horoscopes')
-    .select('date')
-    .eq('zodiac_sign', DATE_PROBE_SIGN)
-    .order('date', { ascending: false })
+    .from("horoscopes")
+    .select("date")
+    .eq("source", "ohaasa")
+    .eq("zodiac_sign", DATE_PROBE_SIGN)
+    .order("date", { ascending: false })
     .limit(1000);
 
   if (error) {
-    console.warn('[supabase] fetchHoroscopeDates failed:', error.message);
+    console.warn("[supabase] fetchHoroscopeDates failed:", error.message);
     return null;
   }
   return (data ?? []).map((row) => row.date as string);

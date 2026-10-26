@@ -1,3 +1,4 @@
+import { MezamashiFortune } from '@/src/components/MezamashiFortune';
 import { isTodayHoroscope } from '@ohaasa/shared/lib/horoscopeDate';
 import { useCallback, useRef, useState } from 'react';
 import { router } from 'expo-router';
@@ -65,7 +66,7 @@ export default function TodayScreen() {
     showToast,
   });
 
-  const { selectedDate, isLatest, setSelectedDate } = useHoroscopeDateContext();
+  const { selectedDate, setSelectedDate } = useHoroscopeDateContext();
 
   const {
     zodiacSign,
@@ -196,13 +197,21 @@ export default function TodayScreen() {
             <ZodiacHeroCircle zodiac={zodiac} rankPillText={rankPillText} />
 
             {/* Fortune card */}
-            <HoroscopeCard
-              advice={horoscope.advice_ko ?? horoscope.advice}
-              horoscope={horoscope}
-              style={styles.fortuneCard}
-            />
-
-            <GogoInfoGrid horoscope={horoscope} style={styles.infoGrid} />
+            {horoscope.source === 'mezamashi' && horoscope.mezamashi ? (
+              <MezamashiFortune
+                horoscope={horoscope.mezamashi}
+                showHeading={false}
+              />
+            ) : (
+              <>
+                <HoroscopeCard
+                  advice={horoscope.advice_ko ?? horoscope.advice}
+                  horoscope={horoscope}
+                  style={styles.fortuneCard}
+                />
+                <GogoInfoGrid horoscope={horoscope} style={styles.infoGrid} />
+              </>
+            )}
 
             <TodayQuestionSection
               hasAnswered={hasAnswered}

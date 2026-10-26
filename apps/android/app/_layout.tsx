@@ -70,7 +70,9 @@ function RootLayoutNav() {
 
   useEffect(() => {
     let cleanup: (() => void) | undefined;
-    setupForegroundHandler().then(fn => { cleanup = fn; });
+    setupForegroundHandler().then((fn) => {
+      cleanup = fn;
+    });
     return () => cleanup?.();
   }, []);
 
@@ -83,10 +85,25 @@ function RootLayoutNav() {
             <Stack.Screen name="index" options={{ headerShown: false }} />
             <Stack.Screen name="onboarding" options={{ headerShown: false }} />
             <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-            <Stack.Screen name="zodiac/[sign]" options={{ headerShown: false }} />
-            <Stack.Screen name="daily-review" options={{ headerShown: false }} />
-            <Stack.Screen name="daily-question" options={{ headerShown: false }} />
+            <Stack.Screen
+              name="zodiac/[sign]"
+              options={{ headerShown: false }}
+            />
+            <Stack.Screen
+              name="daily-review"
+              options={{ headerShown: false }}
+            />
+            <Stack.Screen
+              name="daily-question"
+              options={{ headerShown: false }}
+            />
             <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
+            <Stack.Protected guard={__DEV__}>
+              <Stack.Screen
+                name="mezamashi-preview"
+                options={{ headerShown: false }}
+              />
+            </Stack.Protected>
           </Stack>
         </HoroscopeDateProvider>
       </ZodiacProvider>

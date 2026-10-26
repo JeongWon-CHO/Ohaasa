@@ -1,3 +1,8 @@
+import {
+  HOROSCOPE_SOURCE_LABELS,
+  type HoroscopeSource,
+} from '@ohaasa/shared/types/horoscope';
+import { MezamashiShareCard } from './MezamashiShareCard';
 import { isTodayHoroscope } from '@ohaasa/shared/lib/horoscopeDate';
 import { forwardRef } from 'react';
 import { Platform, StyleSheet, Text, View } from 'react-native';
@@ -24,9 +29,9 @@ interface ShareCardProps {
   zodiac: ZodiacInfo;
 }
 
-function formatShareDate(dateStr: string, source: 'ohaasa' | 'gogo'): string {
+function formatShareDate(dateStr: string, source: HoroscopeSource): string {
   const [, month, day] = dateStr.split('-').map(Number);
-  const label = source === 'gogo' ? '고고별자리' : '오하아사';
+  const label = HOROSCOPE_SOURCE_LABELS[source];
   return `${month}월 ${day}일 ${label}`;
 }
 
@@ -88,13 +93,13 @@ function ShareInfoGrid({
   /* 평일 오하아사에는 고고별자리 '오늘의 운'을 표시하지 않는다.
      기존 상시 표시 설정은 주석으로 보관한다. 공유 이미지에도 같은 규칙을 적용한다.
      const showGogoScore = true; */
-  const showGogoScore = horoscope.source === "gogo";
-  const hasScore = showGogoScore && (
-    (horoscope.love_score !== null && horoscope.love_score > 0) ||
-    (horoscope.work_score !== null && horoscope.work_score > 0) ||
-    (horoscope.money_score !== null && horoscope.money_score > 0) ||
-    (horoscope.health_score !== null && horoscope.health_score > 0)
-  );
+  const showGogoScore = horoscope.source === 'gogo';
+  const hasScore =
+    showGogoScore &&
+    ((horoscope.love_score !== null && horoscope.love_score > 0) ||
+      (horoscope.work_score !== null && horoscope.work_score > 0) ||
+      (horoscope.money_score !== null && horoscope.money_score > 0) ||
+      (horoscope.health_score !== null && horoscope.health_score > 0));
 
   if (inline) {
     if (hasScore || !hasLucky) return null;
@@ -159,6 +164,16 @@ function ShareInfoGrid({
 
 export const ShareCard = forwardRef<View, ShareCardProps>(
   ({ horoscope, zodiac }, ref) => {
+    if (horoscope.source === 'mezamashi' && horoscope.mezamashi) {
+      return (
+        <MezamashiShareCard
+          ref={ref}
+          horoscope={horoscope.mezamashi}
+          zodiac={zodiac}
+        />
+      );
+    }
+
     const dateLabel = formatShareDate(horoscope.date, horoscope.source);
     const advice = horoscope.advice_ko ?? horoscope.advice;
     const adviceFontSize = (advice?.length ?? 0) > 55 ? 11 : 12;

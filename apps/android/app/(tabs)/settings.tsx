@@ -524,7 +524,10 @@ export default function SettingsScreen() {
                         <Pressable
                           key={time}
                           accessibilityRole="button"
-                          accessibilityState={{ selected, disabled: timeSaving }}
+                          accessibilityState={{
+                            selected,
+                            disabled: timeSaving,
+                          }}
                           disabled={timeSaving}
                           onPress={() => handleNotificationTime(time)}
                           style={({ pressed }) => [
@@ -599,6 +602,16 @@ export default function SettingsScreen() {
               style={[styles.aboutRow, styles.rowBorder]}
             />
             <SettingsRow
+              title="메자마시 운세"
+              showChevron
+              onPress={() =>
+                Linking.openURL(
+                  'https://www.fujitv.co.jp/meza/uranai/index.html',
+                )
+              }
+              style={[styles.aboutRow, styles.rowBorder]}
+            />
+            <SettingsRow
               title="개발자에게 문의하기"
               showChevron
               onPress={() =>
@@ -619,6 +632,13 @@ export default function SettingsScreen() {
           {/* DEV */}
           {__DEV__ && (
             <SettingsSection label="DEV" style={styles.sectionGap}>
+              <SettingsRow
+                title="메자마시 운세 미리보기"
+                description="1위 · 일반 순위 · 12위와 공유 이미지 확인"
+                showChevron
+                onPress={() => router.push('/mezamashi-preview')}
+                style={[styles.aboutRow, styles.rowBorder]}
+              />
               <SettingsRow
                 title="테스트 알림 보내기"
                 description="로컬 알림 즉시 발송"
@@ -697,7 +717,9 @@ export default function SettingsScreen() {
             </View>
             <Text style={styles.footerJa}>おはあさ</Text>
             <Text style={styles.footerCaption}>
-              {Constants.expoConfig?.version ? `v${Constants.expoConfig.version}` : '버전 정보 없음'}
+              {Constants.expoConfig?.version
+                ? `v${Constants.expoConfig.version}`
+                : '버전 정보 없음'}
             </Text>
           </View>
 

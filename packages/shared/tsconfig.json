@@ -1,0 +1,26 @@
+{
+  "compilerOptions": {
+    "allowJs": true,
+    "esModuleInterop": true,
+    "jsx": "react-jsx",
+    "lib": ["DOM", "ESNext"],
+    "module": "preserve",
+    "moduleDetection": "force",
+    "moduleResolution": "bundler",
+    "customConditions": ["react-native"],
+    "noEmit": true,
+    "resolveJsonModule": true,
+    "skipLibCheck": true,
+    "target": "ESNext",
+    "strict": true,
+    "preserveSymlinks": true,
+    "types": ["react", "node"],
+    "typeRoots": ["../../apps/ios/node_modules/@types", "../../@types"],
+    "paths": {
+      "react": ["../../apps/ios/node_modules/@types/react", "../../@types/react"],
+      "react/*": ["../../apps/ios/node_modules/@types/react/*", "../../@types/react/*"],
+      "*": ["../../apps/ios/node_modules/*", "../../*"]
+    }
+  },
+  "include": ["src/**/*.ts", "src/**/*.tsx"]
+}

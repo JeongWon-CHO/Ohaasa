@@ -1,3 +1,4 @@
+import { MezamashiFortune } from '@/src/components/MezamashiFortune';
 import { isTodayHoroscope } from '@ohaasa/shared/lib/horoscopeDate';
 import {
   ActivityIndicator,
@@ -236,14 +237,21 @@ export default function ZodiacDetailScreen() {
               </View>
 
               {/* Fortune card */}
-              <HoroscopeCard
-                advice={horoscope.advice_ko ?? horoscope.advice}
-                horoscope={horoscope}
-                style={styles.fortuneCard}
-              />
-
-              {/* 고고별자리 행운 아이템 · 오늘의 운 */}
-              <GogoInfoGrid horoscope={horoscope} style={styles.infoGrid} />
+              {horoscope.source === 'mezamashi' && horoscope.mezamashi ? (
+                <MezamashiFortune
+                  horoscope={horoscope.mezamashi}
+                  showHeading={false}
+                />
+              ) : (
+                <>
+                  <HoroscopeCard
+                    advice={horoscope.advice_ko ?? horoscope.advice}
+                    horoscope={horoscope}
+                    style={styles.fortuneCard}
+                  />
+                  <GogoInfoGrid horoscope={horoscope} style={styles.infoGrid} />
+                </>
+              )}
             </>
           )}
 

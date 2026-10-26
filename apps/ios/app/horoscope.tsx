@@ -1,3 +1,4 @@
+import { MezamashiFortune } from '@/src/components/MezamashiFortune';
 import { isTodayHoroscope } from '@ohaasa/shared/lib/horoscopeDate';
 import { useCallback, useRef, useState, type ComponentProps } from 'react';
 import { router, useFocusEffect } from 'expo-router';
@@ -197,13 +198,21 @@ export default function TodayScreen() {
             <ZodiacHeroCircle zodiac={zodiac} rankPillText={rankPillText} />
 
             {/* Fortune card */}
-            <HoroscopeCard
-              advice={horoscope.advice_ko ?? horoscope.advice}
-              horoscope={horoscope}
-              style={styles.fortuneCard}
-            />
-
-            <GogoInfoGrid horoscope={horoscope} style={styles.infoGrid} />
+            {horoscope.source === 'mezamashi' && horoscope.mezamashi ? (
+              <MezamashiFortune
+                horoscope={horoscope.mezamashi}
+                showHeading={false}
+              />
+            ) : (
+              <>
+                <HoroscopeCard
+                  advice={horoscope.advice_ko ?? horoscope.advice}
+                  horoscope={horoscope}
+                  style={styles.fortuneCard}
+                />
+                <GogoInfoGrid horoscope={horoscope} style={styles.infoGrid} />
+              </>
+            )}
 
             <FinalCard style={styles.menuCard}>
               <HoroscopeMenuRow

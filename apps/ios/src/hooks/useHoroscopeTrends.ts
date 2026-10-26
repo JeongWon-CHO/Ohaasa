@@ -1,4 +1,11 @@
-import { endOfMonth, format, getDaysInMonth, parseISO, subDays, subMonths } from 'date-fns';
+import {
+  endOfMonth,
+  format,
+  getDaysInMonth,
+  parseISO,
+  subDays,
+  subMonths,
+} from 'date-fns';
 import { useEffect, useMemo, useState } from 'react';
 
 import { supabase } from '@ohaasa/shared/lib/supabase';
@@ -23,7 +30,9 @@ export function monthPeriod(month: MonthKey): TrendsPeriod {
 
 /** 월간이면 `yyyy-MM`, 아니면 null. */
 export function getPeriodMonth(period: TrendsPeriod): MonthKey | null {
-  return period.startsWith(MONTH_PREFIX) ? period.slice(MONTH_PREFIX.length) : null;
+  return period.startsWith(MONTH_PREFIX)
+    ? period.slice(MONTH_PREFIX.length)
+    : null;
 }
 
 function previousMonth(month: MonthKey): MonthKey {
@@ -77,12 +86,17 @@ function diffToTrend(diff: number): Trend {
 }
 
 // averageRank 오름차순 정렬된 리스트에 반올림 기준 공동 등수를 부여 (순위 배지와 동일한 규칙)
-function computeRoundedRankMap(sorted: { sign: ZodiacSign; averageRank: number }[]): Map<ZodiacSign, number> {
+function computeRoundedRankMap(
+  sorted: { sign: ZodiacSign; averageRank: number }[],
+): Map<ZodiacSign, number> {
   const map = new Map<ZodiacSign, number>();
   sorted.forEach((item, index) => {
     const exactRank = index + 1;
     const prevSign = index > 0 ? sorted[index - 1].sign : null;
-    const tiedWithPrev = prevSign !== null && Math.round(item.averageRank) === Math.round(sorted[index - 1].averageRank);
+    const tiedWithPrev =
+      prevSign !== null &&
+      Math.round(item.averageRank) ===
+        Math.round(sorted[index - 1].averageRank);
     map.set(item.sign, tiedWithPrev ? map.get(prevSign)! : exactRank);
   });
   return map;
@@ -93,7 +107,9 @@ export function periodLabel(period: TrendsPeriod): string {
   if (month) {
     const [year, monthNum] = month.split('-').map(Number);
     // 올해면 "8월", 해가 넘어가면 어느 해인지 붙여야 구분된다.
-    return year === new Date().getFullYear() ? `${monthNum}월` : `${year}년 ${monthNum}월`;
+    return year === new Date().getFullYear()
+      ? `${monthNum}월`
+      : `${year}년 ${monthNum}월`;
   }
   return period === '7d' ? '최근 7일' : '최근 14일';
 }
@@ -129,7 +145,10 @@ function getTargetCount(period: TrendsPeriod): number {
  * 조회할 날짜 구간. 월간은 **위쪽도 막아야** 한다 — `gte`만 걸면 지난 달을 고를 때
  * 그 달부터 오늘까지가 전부 딸려와 egress가 달 수만큼 늘어난다.
  */
-function getDateRange(period: TrendsPeriod): { from: string; to: string | null } {
+function getDateRange(period: TrendsPeriod): {
+  from: string;
+  to: string | null;
+} {
   const month = getPeriodMonth(period);
   if (month) {
     const first = parseISO(`${month}-01`);
@@ -140,8 +159,13 @@ function getDateRange(period: TrendsPeriod): { from: string; to: string | null }
       to: format(endOfMonth(first), 'yyyy-MM-dd'),
     };
   }
-  const daysBack = getTargetCount(period) - 1 + CUTOFF_BUFFER_DAYS;
-  return { from: format(subDays(new Date(), daysBack), 'yyyy-MM-dd'), to: null };
+  // 주말을 제외한 최근 방송일 N개를 확보할 수 있도록 조회 범위를 넓힌다.
+  const daysBack =
+    Math.ceil((getTargetCount(period) * 7) / 5) + CUTOFF_BUFFER_DAYS;
+  return {
+    from: format(subDays(new Date(), daysBack), 'yyyy-MM-dd'),
+    to: null,
+  };
 }
 
 /**
@@ -154,7 +178,9 @@ function getDateRange(period: TrendsPeriod): { from: string; to: string | null }
 const rangeCache = new Map<string, TrendRow[]>();
 
 function getErrorMessage(err: unknown): string {
-  return err instanceof Error ? err.message : '운세 추이를 불러오지 못했습니다.';
+  return err instanceof Error
+    ? err.message
+    : '운세 추이를 불러오지 못했습니다.';
 }
 
 type TrendRow = { date: string; zodiac_sign: ZodiacSign; rank: number };
@@ -171,7 +197,12 @@ function ranksBySignOf(rows: TrendRow[]): Map<ZodiacSign, number[]> {
 
 type TrendsDerived = Pick<
   HoroscopeTrendsState,
-  'points' | 'comparePoints' | 'averageRank' | 'minRank' | 'maxRank' | 'signAverages'
+  | 'points'
+  | 'comparePoints'
+  | 'averageRank'
+  | 'minRank'
+  | 'maxRank'
+  | 'signAverages'
 >;
 
 const EMPTY_DERIVED: TrendsDerived = {
@@ -214,7 +245,9 @@ function computeTrends(
     : [];
 
   const ranks = points.map((p) => p.rank);
-  const averageRank = ranks.length ? Math.round(average(ranks) * 10) / 10 : null;
+  const averageRank = ranks.length
+    ? Math.round(average(ranks) * 10) / 10
+    : null;
   const minRank = ranks.length ? Math.min(...ranks) : null;
   const maxRank = ranks.length ? Math.max(...ranks) : null;
 
@@ -244,9 +277,14 @@ function computeTrends(
 
   const baselineAverages = Array.from(baselineRanksBySign.entries())
     .map(([sign, signRanks]) =>
-      signRanks.length ? { sign, averageRank: Math.round(average(signRanks) * 10) / 10 } : null,
+      signRanks.length
+        ? { sign, averageRank: Math.round(average(signRanks) * 10) / 10 }
+        : null,
     )
-    .filter((item): item is { sign: ZodiacSign; averageRank: number } => item !== null)
+    .filter(
+      (item): item is { sign: ZodiacSign; averageRank: number } =>
+        item !== null,
+    )
     .sort((a, b) => a.averageRank - b.averageRank);
 
   const yesterdayRoundedRanks = computeRoundedRankMap(baselineAverages);
@@ -294,9 +332,10 @@ export function useHoroscopeTrends(
       try {
         const range = getDateRange(period);
         const cacheKey = `${range.from}|${range.to ?? ''}`;
-        const cached = range.to && range.to < format(new Date(), 'yyyy-MM-dd')
-          ? rangeCache.get(cacheKey)
-          : undefined;
+        const cached =
+          range.to && range.to < format(new Date(), 'yyyy-MM-dd')
+            ? rangeCache.get(cacheKey)
+            : undefined;
 
         if (cached) {
           setRows(cached);
@@ -308,10 +347,13 @@ export function useHoroscopeTrends(
         let query = supabase
           .from('horoscopes')
           .select('date, zodiac_sign, rank')
+          .eq('source', 'ohaasa')
           .gte('date', range.from);
         if (range.to) query = query.lte('date', range.to);
 
-        const { data, error: fetchError } = await query.order('date', { ascending: true });
+        const { data, error: fetchError } = await query.order('date', {
+          ascending: true,
+        });
 
         if (fetchError) throw fetchError;
         if (!isMounted) return;
@@ -341,9 +383,17 @@ export function useHoroscopeTrends(
   }, [period, reloadToken]);
 
   const derived = useMemo(
-    () => (rows ? computeTrends(rows, zodiacSign, compareSign, period) : EMPTY_DERIVED),
+    () =>
+      rows
+        ? computeTrends(rows, zodiacSign, compareSign, period)
+        : EMPTY_DERIVED,
     [rows, zodiacSign, compareSign, period],
   );
 
-  return { ...derived, loading, error, refetch: () => setReloadToken((t) => t + 1) };
+  return {
+    ...derived,
+    loading,
+    error,
+    refetch: () => setReloadToken((t) => t + 1),
+  };
 }

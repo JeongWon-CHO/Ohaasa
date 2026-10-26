@@ -5,10 +5,17 @@ import "dotenv/config";
 import { fetchJson } from "./crawler/fetcher";
 import { parse, type HoroscopeEntry } from "./crawler/parser";
 import { createAdminClient } from "./db/supabase";
-import { translateAdvice, translateOhaasaLuckyItem, containsJapanese } from "./translator/translate";
+import {
+  translateAdvice,
+  translateOhaasaLuckyItem,
+  containsJapanese,
+} from "./translator/translate";
 import { fetchHtml as fetchGogoHtml } from "./gogo/fetcher";
 import { parse as parseGogo, type GogoEntry } from "./gogo/parser";
 import { translateGogoEntries, type GogoKoEntry } from "./gogo/translator";
+import { collectAndSave as collectMezamashi } from "./mezamashi/pipeline";
+import { fetchJson as fetchMezamashi } from "./mezamashi/fetcher";
+import { parse as parseMezamashi } from "./mezamashi/parser";
 
 // ============================================================
 // Types
@@ -19,19 +26,19 @@ type SupabaseClient = ReturnType<typeof createAdminClient>;
 type HoroscopeSource = "ohaasa" | "gogo";
 
 interface HoroscopeUpsertRow extends HoroscopeEntry {
-  advice_ko:      string | null;
-  source:         HoroscopeSource;
-  lucky_place:    string | null;
+  advice_ko: string | null;
+  source: HoroscopeSource;
+  lucky_place: string | null;
   lucky_place_ko: string | null;
-  lucky_color:    string | null;
-  lucky_item:     string | null;
+  lucky_color: string | null;
+  lucky_item: string | null;
   lucky_color_ko: string | null;
-  lucky_item_ko:  string | null;
+  lucky_item_ko: string | null;
   lucky_item_ohaasa_ko: string | null;
-  money_score:    number | null;
-  love_score:     number | null;
-  work_score:     number | null;
-  health_score:   number | null;
+  money_score: number | null;
+  love_score: number | null;
+  work_score: number | null;
+  health_score: number | null;
 }
 
 // ============================================================
@@ -41,18 +48,18 @@ interface HoroscopeUpsertRow extends HoroscopeEntry {
 // HoroscopeEntry.zodiac_name 과 일치하는 오하아사 표기 기준 일본어 별자리명.
 // 주말 모드에서 고고 데이터로 row를 구성할 때 사용한다.
 const ZODIAC_NAME_MAP: Record<string, string> = {
-  aries:       "おひつじ座",
-  taurus:      "おうし座",
-  gemini:      "ふたご座",
-  cancer:      "かに座",
-  leo:         "しし座",
-  virgo:       "おとめ座",
-  libra:       "てんびん座",
-  scorpio:     "さそり座",
+  aries: "おひつじ座",
+  taurus: "おうし座",
+  gemini: "ふたご座",
+  cancer: "かに座",
+  leo: "しし座",
+  virgo: "おとめ座",
+  libra: "てんびん座",
+  scorpio: "さそり座",
   sagittarius: "いて座",
-  capricorn:   "やぎ座",
-  aquarius:    "みずがめ座",
-  pisces:      "うお座",
+  capricorn: "やぎ座",
+  aquarius: "みずがめ座",
+  pisces: "うお座",
 };
 
 // ============================================================
@@ -91,18 +98,20 @@ export function isWeekendJST(today: string): boolean {
  */
 async function attachTranslations(
   supabase: SupabaseClient,
-  entries: HoroscopeEntry[]
+  entries: HoroscopeEntry[],
 ): Promise<HoroscopeUpsertRow[]> {
   const date = entries[0].date;
 
   const { data: existingRows, error: queryError } = await supabase
     .from("horoscopes")
-    .select("zodiac_sign, advice, advice_ko, lucky_item_ohaasa, lucky_item_ohaasa_ko")
+    .select(
+      "zodiac_sign, advice, advice_ko, lucky_item_ohaasa, lucky_item_ohaasa_ko",
+    )
     .eq("date", date);
 
   if (queryError) {
     console.warn(
-      `[translator] Failed to query existing rows: ${queryError.message}. Translating all entries.`
+      `[translator] Failed to query existing rows: ${queryError.message}. Translating all entries.`,
     );
   }
 
@@ -114,7 +123,7 @@ async function attachTranslations(
     lucky_item_ohaasa_ko: string | null;
   };
   const existingMap = new Map<string, ExistingRow>(
-    (existingRows ?? []).map((r: ExistingRow) => [r.zodiac_sign, r])
+    (existingRows ?? []).map((r: ExistingRow) => [r.zodiac_sign, r]),
   );
 
   const results: HoroscopeUpsertRow[] = [];
@@ -134,10 +143,16 @@ async function attachTranslations(
       if (canSkipItem) {
         lucky_item_ohaasa_ko = existing.lucky_item_ohaasa_ko;
       } else {
-        console.log(`[translator] ${entry.zodiac_sign}: translating ohaasa item "${entry.lucky_item_ohaasa}"`);
-        lucky_item_ohaasa_ko = await translateOhaasaLuckyItem(entry.lucky_item_ohaasa);
+        console.log(
+          `[translator] ${entry.zodiac_sign}: translating ohaasa item "${entry.lucky_item_ohaasa}"`,
+        );
+        lucky_item_ohaasa_ko = await translateOhaasaLuckyItem(
+          entry.lucky_item_ohaasa,
+        );
         if (lucky_item_ohaasa_ko === null) {
-          console.warn(`[translator] ${entry.zodiac_sign}: ohaasa item translation failed, lucky_item_ohaasa_ko=null`);
+          console.warn(
+            `[translator] ${entry.zodiac_sign}: ohaasa item translation failed, lucky_item_ohaasa_ko=null`,
+          );
         }
       }
     }
@@ -149,18 +164,20 @@ async function attachTranslations(
       !containsJapanese(existing.advice_ko);
 
     const nullGogoItemFields = {
-      lucky_color:    null,
-      lucky_item:     null,
+      lucky_color: null,
+      lucky_item: null,
       lucky_color_ko: null,
-      lucky_item_ko:  null,
-      money_score:    null,
-      love_score:     null,
-      work_score:     null,
-      health_score:   null,
+      lucky_item_ko: null,
+      money_score: null,
+      love_score: null,
+      work_score: null,
+      health_score: null,
     } as const;
 
     if (canSkip) {
-      console.log(`[translator] ${entry.zodiac_sign}: skip (same advice, already translated)`);
+      console.log(
+        `[translator] ${entry.zodiac_sign}: skip (same advice, already translated)`,
+      );
       results.push({
         ...entry,
         advice_ko: existing.advice_ko,
@@ -180,7 +197,9 @@ async function attachTranslations(
 
     const advice_ko = await translateAdvice(entry.advice, entry.zodiac_sign);
     if (advice_ko === null) {
-      console.warn(`[translator] ${entry.zodiac_sign}: translation failed, advice_ko=null`);
+      console.warn(
+        `[translator] ${entry.zodiac_sign}: translation failed, advice_ko=null`,
+      );
     }
     results.push({
       ...entry,
@@ -204,31 +223,44 @@ async function attachTranslations(
  * 고고별자리 HTML을 fetch/parse하고 오늘 날짜(JST)와 일치하는 경우에만 entries를 반환한다.
  * 실패 또는 날짜 불일치 시 null을 반환하며, 파이프라인을 중단하지 않는다.
  */
-async function fetchGogoEntries(today: string, force = false): Promise<GogoEntry[] | null> {
+async function fetchGogoEntries(
+  today: string,
+  force = false,
+): Promise<GogoEntry[] | null> {
   try {
-    const html   = await fetchGogoHtml();
+    const html = await fetchGogoHtml();
     const result = parseGogo(html);
+
+    if (
+      new Set(result.entries.map((e) => e.zodiac_sign)).size !== 12 ||
+      new Set(result.entries.map((e) => e.rank)).size !== 12 ||
+      result.entries.some((e) => !e.advice.trim() || e.rank < 1 || e.rank > 12)
+    ) {
+      throw new Error("Incomplete gogo rankings");
+    }
 
     if (result.date !== today) {
       if (!force) {
         console.warn(
           `[gogo] Date mismatch: gogo=${result.date}, today=${today}.` +
-          ` Skipping gogo.`
+            ` Skipping gogo.`,
         );
         return null;
       }
       console.warn(
         `[gogo] Date mismatch (force): gogo=${result.date}, today=${today}.` +
-        ` Proceeding anyway.`
+          ` Proceeding anyway.`,
       );
     }
 
-    console.log(`[gogo] Parsed ${result.entries.length} entries  date=${result.date}`);
+    console.log(
+      `[gogo] Parsed ${result.entries.length} entries  date=${result.date}`,
+    );
     return result.entries;
   } catch (err) {
     console.warn(
       `[gogo] Failed: ${err instanceof Error ? err.message : String(err)}.` +
-      ` gogo fields will be null.`
+        ` gogo fields will be null.`,
     );
     return null;
   }
@@ -248,7 +280,7 @@ async function fetchGogoKo(
   } catch (err) {
     console.warn(
       `[gogo-ko] Failed: ${err instanceof Error ? err.message : String(err)}.` +
-      ` lucky_color_ko${includeItems ? " / lucky_item_ko" : ""} will be null.`
+        ` lucky_color_ko${includeItems ? " / lucky_item_ko" : ""} will be null.`,
     );
     return null;
   }
@@ -261,25 +293,25 @@ async function fetchGogoKo(
 function mergeGogo(
   rows: HoroscopeUpsertRow[],
   gogoEntries: GogoEntry[] | null,
-  gogoKoMap:   Map<string, GogoKoEntry> | null,
+  gogoKoMap: Map<string, GogoKoEntry> | null,
 ): HoroscopeUpsertRow[] {
   const gogoMap = gogoEntries
     ? new Map(gogoEntries.map((e) => [e.zodiac_sign, e]))
     : null;
 
   return rows.map((row) => {
-    const gogo   = gogoMap?.get(row.zodiac_sign)   ?? null;
+    const gogo = gogoMap?.get(row.zodiac_sign) ?? null;
     const gogoKo = gogoKoMap?.get(row.zodiac_sign) ?? null;
     return {
       ...row,
-      lucky_color:    gogo?.lucky_color   ?? null,
-      lucky_item:     null,
+      lucky_color: gogo?.lucky_color ?? null,
+      lucky_item: null,
       lucky_color_ko: gogoKo?.lucky_color_ko ?? null,
-      lucky_item_ko:  null,
-      money_score:    gogo?.money_score   ?? null,
-      love_score:     gogo?.love_score    ?? null,
-      work_score:     gogo?.work_score    ?? null,
-      health_score:   gogo?.health_score  ?? null,
+      lucky_item_ko: null,
+      money_score: gogo?.money_score ?? null,
+      love_score: gogo?.love_score ?? null,
+      work_score: gogo?.work_score ?? null,
+      health_score: gogo?.health_score ?? null,
     };
   });
 }
@@ -311,13 +343,17 @@ async function buildWeekendRows(
 
   if (queryError) {
     console.warn(
-      `[translator] Failed to query existing gogo rows: ${queryError.message}. Translating all entries.`
+      `[translator] Failed to query existing gogo rows: ${queryError.message}. Translating all entries.`,
     );
   }
 
-  type ExistingRow = { zodiac_sign: string; advice: string; advice_ko: string | null };
+  type ExistingRow = {
+    zodiac_sign: string;
+    advice: string;
+    advice_ko: string | null;
+  };
   const existingMap = new Map<string, ExistingRow>(
-    (existingRows ?? []).map((r: ExistingRow) => [r.zodiac_sign, r])
+    (existingRows ?? []).map((r: ExistingRow) => [r.zodiac_sign, r]),
   );
 
   const rows: HoroscopeUpsertRow[] = [];
@@ -332,7 +368,9 @@ async function buildWeekendRows(
 
     let advice_ko: string | null;
     if (canSkip) {
-      console.log(`[translator] ${entry.zodiac_sign}: skip gogo advice (already translated)`);
+      console.log(
+        `[translator] ${entry.zodiac_sign}: skip gogo advice (already translated)`,
+      );
       advice_ko = existing.advice_ko;
     } else {
       const label = existing
@@ -341,31 +379,33 @@ async function buildWeekendRows(
       console.log(`[translator] ${label}`);
       advice_ko = await translateAdvice(entry.advice, entry.zodiac_sign);
       if (advice_ko === null) {
-        console.warn(`[translator] ${entry.zodiac_sign}: translation failed, advice_ko=null`);
+        console.warn(
+          `[translator] ${entry.zodiac_sign}: translation failed, advice_ko=null`,
+        );
       }
     }
 
     const gogoKo = gogoKoMap?.get(entry.zodiac_sign) ?? null;
     rows.push({
-      date:           today,
-      zodiac_sign:    entry.zodiac_sign,
-      zodiac_name:    ZODIAC_NAME_MAP[entry.zodiac_sign] ?? entry.zodiac_sign,
-      rank:           entry.rank,
-      advice:         entry.advice,
+      date: today,
+      zodiac_sign: entry.zodiac_sign,
+      zodiac_name: ZODIAC_NAME_MAP[entry.zodiac_sign] ?? entry.zodiac_sign,
+      rank: entry.rank,
+      advice: entry.advice,
       advice_ko,
-      source:         "gogo",
-      lucky_place:    null,
+      source: "gogo",
+      lucky_place: null,
       lucky_place_ko: null,
-      lucky_color:    entry.lucky_color,
-      lucky_item:     entry.lucky_item,
+      lucky_color: entry.lucky_color,
+      lucky_item: entry.lucky_item,
       lucky_color_ko: gogoKo?.lucky_color_ko ?? null,
-      lucky_item_ko:  gogoKo?.lucky_item_ko  ?? null,
-      lucky_item_ohaasa:    null,
+      lucky_item_ko: gogoKo?.lucky_item_ko ?? null,
+      lucky_item_ohaasa: null,
       lucky_item_ohaasa_ko: null,
-      money_score:    entry.money_score,
-      love_score:     entry.love_score,
-      work_score:     entry.work_score,
-      health_score:   entry.health_score,
+      money_score: entry.money_score,
+      love_score: entry.love_score,
+      work_score: entry.work_score,
+      health_score: entry.health_score,
     });
   }
 
@@ -378,9 +418,9 @@ async function buildWeekendRows(
 
 /** 평일 dry-run: ohaasa rank 순서로 고고 컬러/점수 병합 결과를 출력한다. */
 function printGogoPreview(
-  sorted:      HoroscopeEntry[],
+  sorted: HoroscopeEntry[],
   gogoEntries: GogoEntry[] | null,
-  gogoKoMap:   Map<string, GogoKoEntry> | null,
+  gogoKoMap: Map<string, GogoKoEntry> | null,
 ): void {
   console.log("[crawl] dry-run weekday gogo color/score supplement preview:");
   const gogoMap = gogoEntries
@@ -388,7 +428,7 @@ function printGogoPreview(
     : null;
 
   for (const e of sorted) {
-    const g  = gogoMap?.get(e.zodiac_sign);
+    const g = gogoMap?.get(e.zodiac_sign);
     const ko = gogoKoMap?.get(e.zodiac_sign);
     if (g) {
       const colorDisplay = ko?.lucky_color_ko
@@ -396,9 +436,9 @@ function printGogoPreview(
         : g.lucky_color;
       console.log(
         `  ${e.zodiac_sign.padEnd(12)}` +
-        `  color=${colorDisplay}` +
-        `  money=${g.money_score} love=${g.love_score}` +
-        `  work=${g.work_score} health=${g.health_score}`
+          `  color=${colorDisplay}` +
+          `  money=${g.money_score} love=${g.love_score}` +
+          `  work=${g.work_score} health=${g.health_score}`,
       );
     } else {
       console.log(`  ${e.zodiac_sign.padEnd(12)}  (gogo: null)`);
@@ -409,7 +449,7 @@ function printGogoPreview(
 /** 주말 dry-run: gogo rank 순서로 메인 데이터를 출력한다. */
 function printWeekendPreview(
   gogoEntries: GogoEntry[],
-  gogoKoMap:   Map<string, GogoKoEntry> | null,
+  gogoKoMap: Map<string, GogoKoEntry> | null,
 ): void {
   console.log("[crawl] dry-run weekend mode — gogo as main source:");
   const sorted = [...gogoEntries].sort((a, b) => a.rank - b.rank);
@@ -421,13 +461,14 @@ function printWeekendPreview(
     const itemDisplay = ko?.lucky_item_ko
       ? `${e.lucky_item}(${ko.lucky_item_ko})`
       : e.lucky_item;
-    const advicePreview = e.advice.slice(0, 30) + (e.advice.length > 30 ? "…" : "");
+    const advicePreview =
+      e.advice.slice(0, 30) + (e.advice.length > 30 ? "…" : "");
     console.log(
       `  ${String(e.rank).padStart(2)}. ${e.zodiac_sign.padEnd(12)}` +
-      `  advice="${advicePreview}"` +
-      `  color=${colorDisplay}  item=${itemDisplay}` +
-      `  money=${e.money_score} love=${e.love_score}` +
-      `  work=${e.work_score} health=${e.health_score}`
+        `  advice="${advicePreview}"` +
+        `  color=${colorDisplay}  item=${itemDisplay}` +
+        `  money=${e.money_score} love=${e.love_score}` +
+        `  work=${e.work_score} health=${e.health_score}`,
     );
   }
 }
@@ -451,20 +492,38 @@ export async function crawlAndSave(
   isDryRun: boolean,
   isForce: boolean,
 ): Promise<boolean> {
-  const today   = getTodayJST();
+  const today = getTodayJST();
   const weekend = isWeekendJST(today);
 
   // ── WEEKEND MODE ──────────────────────────────────────────────
   if (weekend) {
     console.log(`[main] Weekend mode  today=${today}`);
 
-    const gogoEntries = await fetchGogoEntries(today, isForce);
+    // 주말에는 오래된 고고 데이터를 오늘 날짜로 저장하지 않는다 (--force도 동일).
+    const gogoEntries = await fetchGogoEntries(today);
     if (!gogoEntries) {
       console.warn(
-        `[main] Weekend: no fresh gogo data for today=${today}.` +
-        ` Skipping upsert/notification.`
+        `[main] No complete gogo data for ${today}; trying mezamashi.`,
       );
-      return false;
+      try {
+        if (isDryRun) {
+          const result = parseMezamashi(await fetchMezamashi());
+          console.log(
+            `[main] Mezamashi preview date=${result.date}, entries=${result.entries.length}`,
+          );
+          return result.date === today;
+        }
+        const result = await collectMezamashi(supabase, today);
+        console.log(
+          `[main] Mezamashi ${result.status} date=${result.date}, count=${result.count}`,
+        );
+        return result.status === "saved";
+      } catch (error) {
+        console.warn(
+          `[main] Mezamashi unavailable: ${error instanceof Error ? error.message : String(error)}`,
+        );
+        return false;
+      }
     }
 
     const gogoKoMap = await fetchGogoKo(gogoEntries);
@@ -475,7 +534,12 @@ export async function crawlAndSave(
       return true;
     }
 
-    const rows = await buildWeekendRows(supabase, today, gogoEntries, gogoKoMap);
+    const rows = await buildWeekendRows(
+      supabase,
+      today,
+      gogoEntries,
+      gogoKoMap,
+    );
 
     const { error } = await supabase
       .from("horoscopes")
@@ -483,18 +547,18 @@ export async function crawlAndSave(
 
     if (error) throw new Error(`[upsert] ${error.message}`);
 
-    const translated = rows.filter((r) => r.advice_ko   !== null).length;
+    const translated = rows.filter((r) => r.advice_ko !== null).length;
     const withGogoKo = rows.filter((r) => r.lucky_color_ko !== null).length;
     console.log(
       `[main] ✓ Upserted ${rows.length} rows  date=${today}  source=gogo` +
-      `  translated=${translated}/${rows.length}` +
-      `  gogo-ko=${withGogoKo}/${rows.length}`
+        `  translated=${translated}/${rows.length}` +
+        `  gogo-ko=${withGogoKo}/${rows.length}`,
     );
     return true;
   }
 
   // ── WEEKDAY MODE ──────────────────────────────────────────────
-  const data    = await fetchJson();
+  const data = await fetchJson();
   const entries = parse(data);
 
   if (entries.length === 0) {
@@ -502,18 +566,18 @@ export async function crawlAndSave(
   }
   if (entries.length < 12) {
     console.warn(
-      `[main] Expected 12 entries but got ${entries.length}. Proceeding anyway.`
+      `[main] Expected 12 entries but got ${entries.length}. Proceeding anyway.`,
     );
   }
 
   const ohaasaDate = entries[0].date;
-  const sorted     = [...entries].sort((a, b) => a.rank - b.rank);
+  const sorted = [...entries].sort((a, b) => a.rank - b.rank);
 
   console.log(`[main] Weekday mode  today=${today}  ohaasa=${ohaasaDate}`);
   for (const e of sorted) {
     const preview = e.advice.split("\n")[0];
     console.log(
-      `  ${String(e.rank).padStart(2)}. ${e.zodiac_name.padEnd(6)} (${e.zodiac_sign.padEnd(11)})  ${preview}`
+      `  ${String(e.rank).padStart(2)}. ${e.zodiac_name.padEnd(6)} (${e.zodiac_sign.padEnd(11)})  ${preview}`,
     );
   }
 
@@ -521,23 +585,25 @@ export async function crawlAndSave(
     if (!isForce) {
       console.warn(
         `[main] Weekday but ohaasa date stale (ohaasa=${ohaasaDate}, today=${today}).` +
-        ` Skipping upsert/notification.`
+          ` Skipping upsert/notification.`,
       );
       return false;
     }
     console.warn(
       `[main] Weekday ohaasa date stale (force): ohaasa=${ohaasaDate}, today=${today}.` +
-      ` Proceeding anyway.`
+        ` Proceeding anyway.`,
     );
   }
 
   // ── Step 2: gogo fetch (best-effort) ──────────────────────────
   const gogoEntries = await fetchGogoEntries(today, isForce);
-  const gogoKoMap   = await fetchGogoKo(gogoEntries, false);
+  const gogoKoMap = await fetchGogoKo(gogoEntries, false);
 
   if (isDryRun) {
     printGogoPreview(sorted, gogoEntries, gogoKoMap);
-    console.log("[crawl] dry-run: advice translation, database upsert, notification skipped");
+    console.log(
+      "[crawl] dry-run: advice translation, database upsert, notification skipped",
+    );
     return true;
   }
 
@@ -554,14 +620,14 @@ export async function crawlAndSave(
 
   if (error) throw new Error(`[upsert] ${error.message}`);
 
-  const translated = rows.filter((r) => r.advice_ko    !== null).length;
-  const withGogoColor   = rows.filter((r) => r.lucky_color  !== null).length;
+  const translated = rows.filter((r) => r.advice_ko !== null).length;
+  const withGogoColor = rows.filter((r) => r.lucky_color !== null).length;
   const withGogoColorKo = rows.filter((r) => r.lucky_color_ko !== null).length;
   console.log(
     `[main] ✓ Upserted ${rows.length} rows  date=${ohaasaDate}  source=ohaasa` +
-    `  translated=${translated}/${rows.length}` +
-    `  gogo-color=${withGogoColor}/${rows.length}` +
-    `  gogo-color-ko=${withGogoColorKo}/${rows.length}`
+      `  translated=${translated}/${rows.length}` +
+      `  gogo-color=${withGogoColor}/${rows.length}` +
+      `  gogo-color-ko=${withGogoColorKo}/${rows.length}`,
   );
   return true;
 }
@@ -572,10 +638,10 @@ export async function crawlAndSave(
 
 export async function main(): Promise<void> {
   const isDryRun = process.argv.includes("--dry-run");
-  const isForce  = process.argv.includes("--force");
+  const isForce = process.argv.includes("--force");
 
   if (isDryRun) console.log("[main] ========== DRY RUN ==========");
-  if (isForce)  console.log("[main] ========== FORCE MODE ==========");
+  if (isForce) console.log("[main] ========== FORCE MODE ==========");
 
   const supabase = createAdminClient();
 
@@ -586,7 +652,9 @@ export async function main(): Promise<void> {
       process.exit(2);
     }
   } catch (err) {
-    console.error(`[main] Crawl failed: ${err instanceof Error ? err.message : String(err)}`);
+    console.error(
+      `[main] Crawl failed: ${err instanceof Error ? err.message : String(err)}`,
+    );
     process.exit(1);
   }
 }

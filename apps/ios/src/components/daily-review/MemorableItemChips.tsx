@@ -1,28 +1,43 @@
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import type { HoroscopeSource } from '@ohaasa/shared/types/horoscope';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { colors, radius, spacing } from "@/src/constants/design";
+import { colors, radius, spacing } from '@/src/constants/design';
 
-const BASE_ITEMS = ["한 줄 운세", "오늘의 운", "행운 장소", "행운 컬러", "행운 아이템"] as const;
-const CARD_ITEM = "오늘의 카드";
+const BASE_ITEMS = [
+  '한 줄 운세',
+  '오늘의 운',
+  '행운 장소',
+  '행운 컬러',
+  '행운 아이템',
+] as const;
+const CARD_ITEM = '오늘의 카드';
 
 interface MemorableItemChipsProps {
   selected: string[];
   onChange: (items: string[]) => void;
   showCardChip?: boolean;
+  source?: HoroscopeSource;
 }
 
 export function MemorableItemChips({
   selected,
   onChange,
   showCardChip = false,
+  source,
 }: MemorableItemChipsProps) {
-  const items = showCardChip ? [...BASE_ITEMS, CARD_ITEM] : [...BASE_ITEMS];
+  const baseItems =
+    source === 'mezamashi'
+      ? ['한 줄 운세', '행운 포인트', '행운 컬러', '추가 조언']
+      : source === 'ohaasa'
+        ? ['한 줄 운세', '행운 아이템']
+        : [...BASE_ITEMS];
+  const items = showCardChip ? [...baseItems, CARD_ITEM] : baseItems;
 
   function toggle(item: string) {
     onChange(
       selected.includes(item)
         ? selected.filter((i) => i !== item)
-        : [...selected, item]
+        : [...selected, item],
     );
   }
 
@@ -55,13 +70,13 @@ const styles = StyleSheet.create({
   },
   question: {
     fontSize: 12,
-    fontFamily: "NotoSansKR_400Regular",
+    fontFamily: 'NotoSansKR_400Regular',
     color: colors.textMid,
     lineHeight: 18,
   },
   chips: {
-    flexDirection: "row",
-    flexWrap: "wrap",
+    flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: spacing.sm,
   },
   chip: {
@@ -73,17 +88,17 @@ const styles = StyleSheet.create({
     backgroundColor: colors.cardSolid,
   },
   chipActive: {
-    backgroundColor: "rgba(240,184,154,0.18)",
+    backgroundColor: 'rgba(240,184,154,0.18)',
     borderColor: colors.apricot,
   },
   chipText: {
     fontSize: 12,
-    fontFamily: "NotoSansKR_400Regular",
+    fontFamily: 'NotoSansKR_400Regular',
     color: colors.textSoft,
     lineHeight: 18,
   },
   chipTextActive: {
-    fontFamily: "NotoSansKR_500Medium",
+    fontFamily: 'NotoSansKR_500Medium',
     color: colors.apricotDark,
   },
 });

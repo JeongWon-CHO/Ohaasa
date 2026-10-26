@@ -1,19 +1,19 @@
-import { forwardRef, type ReactNode } from "react";
-import { StyleSheet, Text, View } from "react-native";
-import { LinearGradient } from "expo-linear-gradient";
-import { format, parseISO } from "date-fns";
+import { forwardRef, type ReactNode } from 'react';
+import { StyleSheet, Text, View } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { format, parseISO } from 'date-fns';
 
-import { ConstellationBadge } from "@/src/components/final/ConstellationBadge";
-import { RankTrendChart } from "@/src/components/stats/RankTrendChart";
-import { colors, gradients } from "@/src/constants/design";
-import type { ZodiacInfo } from "@ohaasa/shared/constants/zodiac";
+import { ConstellationBadge } from '@/src/components/final/ConstellationBadge';
+import { RankTrendChart } from '@/src/components/stats/RankTrendChart';
+import { colors, gradients } from '@/src/constants/design';
+import type { ZodiacInfo } from '@ohaasa/shared/constants/zodiac';
 import {
   getPeriodMonth,
   getSummaryComment,
   periodLabel,
   type RankPoint,
   type TrendsPeriod,
-} from "@/src/hooks/useHoroscopeTrends";
+} from '@/src/hooks/useHoroscopeTrends';
 
 export const CARD_WIDTH = 360;
 export const CARD_HEIGHT = 640;
@@ -32,7 +32,7 @@ interface StatsShareCardProps {
 function formatShareDateRange(points: RankPoint[]): string {
   const start = parseISO(points[0].date);
   const end = parseISO(points[points.length - 1].date);
-  return `${format(start, "MM.dd")} – ${format(end, "MM.dd")}`;
+  return `${format(start, 'MM.dd')} – ${format(end, 'MM.dd')}`;
 }
 
 function HairlineLabel({ children }: { children: ReactNode }) {
@@ -50,10 +50,14 @@ function HairlineLabel({ children }: { children: ReactNode }) {
 export const StatsShareCard = forwardRef<View, StatsShareCardProps>(
   ({ zodiac, period, points, averageRank }, ref) => {
     const lastPoint = points[points.length - 1];
-    const isLatestToday = lastPoint.date === format(new Date(), "yyyy-MM-dd");
-    const latestLabel = isLatestToday ? "오늘" : getPeriodMonth(period) ? "마지막" : "최근";
+    const isLatestToday = lastPoint.date === format(new Date(), 'yyyy-MM-dd');
+    const latestLabel = isLatestToday
+      ? '오늘'
+      : getPeriodMonth(period)
+        ? '마지막'
+        : '최근';
     // 월간은 일수가 고정이 아니라 periodLabel을 그대로 쓴다 ("최근 7일" · "최근 14일" · "2026년 8월")
-    const periodHeadline = `${periodLabel(period)} 운세 흐름`;
+    const periodHeadline = `${periodLabel(period)} 오하아사 흐름`;
     const comment = getSummaryComment(averageRank);
     const dateRangeLabel = formatShareDateRange(points);
 
@@ -86,7 +90,10 @@ export const StatsShareCard = forwardRef<View, StatsShareCardProps>(
                   평균
                 </Text>
                 <View style={styles.metricValueRow}>
-                  <Text style={[styles.metricValue, styles.metricValueAccent]} allowFontScaling={false}>
+                  <Text
+                    style={[styles.metricValue, styles.metricValueAccent]}
+                    allowFontScaling={false}
+                  >
                     {Math.round(averageRank)}
                   </Text>
                   <Text style={styles.metricUnit} allowFontScaling={false}>
@@ -115,17 +122,28 @@ export const StatsShareCard = forwardRef<View, StatsShareCardProps>(
               <Text style={styles.calloutEmoji} allowFontScaling={false}>
                 🌤️
               </Text>
-              <Text style={styles.calloutText} allowFontScaling={false} numberOfLines={2}>
+              <Text
+                style={styles.calloutText}
+                allowFontScaling={false}
+                numberOfLines={2}
+              >
                 {comment}
               </Text>
-              <Text style={[styles.calloutEmoji, styles.calloutEmojiSpacer]} allowFontScaling={false}>
+              <Text
+                style={[styles.calloutEmoji, styles.calloutEmojiSpacer]}
+                allowFontScaling={false}
+              >
                 🌤️
               </Text>
             </View>
 
             {/* 그래프 카드 */}
             <View style={styles.chartCard}>
-              <RankTrendChart points={points} width={CHART_WIDTH} height={CHART_HEIGHT} />
+              <RankTrendChart
+                points={points}
+                width={CHART_WIDTH}
+                height={CHART_HEIGHT}
+              />
             </View>
 
             {/* 기간 */}
@@ -135,7 +153,8 @@ export const StatsShareCard = forwardRef<View, StatsShareCardProps>(
 
             {/* 하단 문구 */}
             <HairlineLabel>
-              매일 아침 만나는 별자리 운세, <Text style={styles.footerAccent}>ohaasa</Text>
+              매일 아침 만나는 별자리 운세,{' '}
+              <Text style={styles.footerAccent}>ohaasa</Text>
             </HairlineLabel>
           </View>
         </LinearGradient>
@@ -157,25 +176,25 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: 'center',
+    justifyContent: 'center',
     gap: 18,
   },
   brandBlock: {
-    alignItems: "center",
+    alignItems: 'center',
     gap: 6,
   },
   brand: {
     fontSize: 24,
     lineHeight: 30,
-    fontFamily: "NotoSansKR_300Light",
+    fontFamily: 'NotoSansKR_300Light',
     includeFontPadding: false,
     color: colors.text,
     letterSpacing: 3.4,
   },
   hairlineRow: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: 10,
   },
   hairline: {
@@ -186,46 +205,46 @@ const styles = StyleSheet.create({
   hairlineText: {
     fontSize: 11,
     lineHeight: 15,
-    fontFamily: "NotoSansKR_400Regular",
+    fontFamily: 'NotoSansKR_400Regular',
     includeFontPadding: false,
     color: colors.textSoft,
     letterSpacing: 1,
-    textAlign: "center",
+    textAlign: 'center',
   },
   footerAccent: {
-    fontFamily: "NotoSansKR_500Medium",
+    fontFamily: 'NotoSansKR_500Medium',
     color: colors.apricotDark,
     letterSpacing: 0,
   },
   nameTag: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: 8,
     borderRadius: 999,
-    backgroundColor: "rgba(255,253,249,0.7)",
+    backgroundColor: 'rgba(255,253,249,0.7)',
     paddingHorizontal: 14,
     paddingVertical: 5,
   },
   nameTagBadge: {
     width: BADGE_SIZE,
     height: BADGE_SIZE,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   zodiacName: {
     fontSize: 14,
     lineHeight: 19,
-    fontFamily: "NotoSansKR_300Light",
+    fontFamily: 'NotoSansKR_300Light',
     includeFontPadding: false,
     color: colors.textMid,
   },
   metricsRow: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: 20,
   },
   metricCol: {
-    alignItems: "center",
+    alignItems: 'center',
   },
   metricDivider: {
     width: 1,
@@ -235,19 +254,19 @@ const styles = StyleSheet.create({
   metricLabel: {
     fontSize: 11,
     lineHeight: 15,
-    fontFamily: "NotoSansKR_400Regular",
+    fontFamily: 'NotoSansKR_400Regular',
     includeFontPadding: false,
     color: colors.textSoft,
   },
   metricValueRow: {
-    flexDirection: "row",
-    alignItems: "flex-end",
+    flexDirection: 'row',
+    alignItems: 'flex-end',
     gap: 2,
   },
   metricValue: {
     fontSize: 46,
     lineHeight: 52,
-    fontFamily: "NotoSansKR_700Bold",
+    fontFamily: 'NotoSansKR_700Bold',
     includeFontPadding: false,
     color: colors.textMid,
   },
@@ -257,22 +276,22 @@ const styles = StyleSheet.create({
   metricUnit: {
     fontSize: 13,
     lineHeight: 18,
-    fontFamily: "NotoSansKR_400Regular",
+    fontFamily: 'NotoSansKR_400Regular',
     includeFontPadding: false,
     color: colors.textMid,
     marginBottom: 6,
   },
   callout: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: 8,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: "rgba(217,138,104,0.16)",
-    backgroundColor: "rgba(245,217,139,0.18)",
+    borderColor: 'rgba(217,138,104,0.16)',
+    backgroundColor: 'rgba(245,217,139,0.18)',
     paddingHorizontal: 16,
     paddingVertical: 9,
-    maxWidth: "100%",
+    maxWidth: '100%',
   },
   calloutEmoji: {
     fontSize: 14,
@@ -284,23 +303,23 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 11,
     lineHeight: 16,
-    fontFamily: "NotoSansKR_400Regular",
+    fontFamily: 'NotoSansKR_400Regular',
     color: colors.textMid,
-    textAlign: "center",
+    textAlign: 'center',
   },
   chartCard: {
-    width: "100%",
+    width: '100%',
     borderRadius: 20,
-    backgroundColor: "rgba(255,253,249,0.62)",
+    backgroundColor: 'rgba(255,253,249,0.62)',
     paddingTop: 14,
     paddingHorizontal: 12,
     paddingBottom: 8,
-    alignItems: "center",
+    alignItems: 'center',
   },
   period: {
     fontSize: 11,
     lineHeight: 15,
-    fontFamily: "NotoSansKR_400Regular",
+    fontFamily: 'NotoSansKR_400Regular',
     includeFontPadding: false,
     color: colors.textMid,
     letterSpacing: 0.4,
