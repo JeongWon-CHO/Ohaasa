@@ -21,6 +21,7 @@ import { MezamashiFortune } from '@/src/components/MezamashiFortune';
 import { ShareCard } from '@/src/components/share/ShareCard';
 import { MediaDeniedSheet } from '@/src/components/MediaDeniedSheet';
 import { Toast } from '@/src/components/common/Toast';
+import { BottomSheet } from '@/src/components/common/BottomSheet';
 import { colors, gradients, layout } from '@/src/constants/design';
 
 function goBack() {
@@ -47,6 +48,7 @@ function BroadcastFortune({ source }: { source: HoroscopeSource }) {
   const insets = useSafeAreaInsets();
   const { zodiacSign, loading: zodiacLoading } = useZodiac();
   const [pickedSign, setPickedSign] = useState<ZodiacSign | null>(null);
+  const [signSheetVisible, setSignSheetVisible] = useState(false);
   const { horoscopes, loading, error, retry } = useBroadcastHoroscopes(source);
   const sign = pickedSign ?? zodiacSign ?? horoscopes[0]?.zodiac_sign;
   const horoscope = horoscopes.find(row => row.zodiac_sign === sign);
@@ -80,16 +82,22 @@ function BroadcastFortune({ source }: { source: HoroscopeSource }) {
           </View>
         ) : horoscope && zodiac ? (
           <>
-            <View style={styles.date}><DatePill dateText={formatBroadcastDate(horoscope.date, source)} /></View>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.signs}>
-              {ZODIAC_LIST.map(item => (
-                <Pressable key={item.sign} accessibilityRole="button" accessibilityState={{ selected: sign === item.sign }}
-                  disabled={busy} onPress={() => setPickedSign(item.sign)}
-                  style={[styles.sign, sign === item.sign && styles.selectedSign]}>
-                  <Text style={[styles.signLabel, sign === item.sign && styles.selectedSignLabel]}>{item.ko}</Text>
-                </Pressable>
-              ))}
-            </ScrollView>
+            <View style={styles.dateRow}>
+              <View style={styles.dateBadge}>
+                <DatePill dateText={formatBroadcastDate(horoscope.date, source)} />
+              </View>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={`별자리 변경, 현재 ${zodiac.ko}`}
+                accessibilityState={{ expanded: signSheetVisible, disabled: busy }}
+                disabled={busy}
+                onPress={() => setSignSheetVisible(true)}
+                style={({ pressed }) => [styles.changeSign, pressed && styles.pressed]}
+              >
+                <Text style={styles.changeSignLabel}>별자리 변경</Text>
+                <Feather name="chevron-down" size={12} color={colors.textSoft} />
+              </Pressable>
+            </View>
             <ZodiacHeroCircle zodiac={zodiac} rankPillText={`${isTodayHoroscope(horoscope.date) ? '오늘의 운세' : '그날의 운세'} ${horoscope.rank}위`} />
             {source === 'mezamashi' && horoscope.mezamashi ? (
               <MezamashiFortune horoscope={horoscope.mezamashi} showHeading={false} />
@@ -109,6 +117,33 @@ function BroadcastFortune({ source }: { source: HoroscopeSource }) {
           <ShareCard ref={cardRef} horoscope={horoscope} zodiac={zodiac} />
         </View>
       )}
+      <BottomSheet visible={signSheetVisible} onClose={() => setSignSheetVisible(false)}>
+        <View style={styles.sheetHandle} />
+        <Text style={styles.sheetTitle}>별자리 선택</Text>
+        <View style={styles.signGrid}>
+          {ZODIAC_LIST.map(item => (
+            <Pressable
+              key={item.sign}
+              accessibilityRole="button"
+              accessibilityState={{ selected: sign === item.sign, disabled: busy }}
+              disabled={busy}
+              onPress={() => {
+                setPickedSign(item.sign);
+                setSignSheetVisible(false);
+              }}
+              style={({ pressed }) => [
+                styles.sign,
+                sign === item.sign && styles.selectedSign,
+                pressed && styles.pressed,
+              ]}
+            >
+              <Text style={[styles.signLabel, sign === item.sign && styles.selectedSignLabel]}>
+                {item.ko}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
+      </BottomSheet>
       <MediaDeniedSheet visible={mediaDeniedSheetVisible} onClose={closeMediaDeniedSheet} onOpenSettings={() => { Linking.openSettings(); closeMediaDeniedSheet(); }} />
       <Toast {...toastProps} />
     </LinearGradient>
@@ -122,11 +157,17 @@ const styles = StyleSheet.create({
   iconButton: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   title: { flex: 1, fontFamily: 'NotoSansKR_400Regular', fontSize: 17, color: colors.textMid },
   scroll: { width: '100%', maxWidth: layout.maxContentWidth, alignSelf: 'center', flex: 1 },
-  date: { marginHorizontal: 28, marginTop: 16 },
-  signs: { paddingHorizontal: 24, paddingVertical: 18, gap: 8 },
-  sign: { borderRadius: 18, paddingHorizontal: 14, paddingVertical: 10, backgroundColor: 'rgba(255,253,249,0.55)' },
+  dateRow: { marginHorizontal: 28, marginTop: 16, flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', columnGap: 8 },
+  dateBadge: { minHeight: 44, justifyContent: 'center' },
+  changeSign: { minHeight: 44, flexDirection: 'row', alignItems: 'center', gap: 4 },
+  changeSignLabel: { fontFamily: 'NotoSansKR_400Regular', fontSize: 11, color: colors.textSoft },
+  pressed: { opacity: 0.65 },
+  sheetHandle: { width: 32, height: 4, borderRadius: 2, backgroundColor: colors.cream3, alignSelf: 'center', marginTop: -12, marginBottom: 20 },
+  sheetTitle: { fontFamily: 'NotoSansKR_500Medium', fontSize: 16, lineHeight: 24, color: colors.textMid, marginBottom: 16 },
+  signGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, paddingBottom: 8 },
+  sign: { width: '30%', flexGrow: 1, alignItems: 'center', borderRadius: 14, paddingHorizontal: 8, paddingVertical: 14, backgroundColor: colors.cream2 },
   selectedSign: { backgroundColor: colors.cream3 },
-  signLabel: { fontFamily: 'NotoSansKR_400Regular', fontSize: 12, color: colors.textSoft },
+  signLabel: { fontFamily: 'NotoSansKR_400Regular', fontSize: 12, lineHeight: 18, color: colors.textSoft },
   selectedSignLabel: { color: colors.textMid },
   fortune: { marginHorizontal: 24, marginTop: 24 },
   info: { marginHorizontal: 24, marginTop: 12 },
