@@ -1,4 +1,5 @@
 import "dotenv/config";
+import { logRuntimeVersions } from "./runtime";
 
 import { crawlAndSave, getTodayJST, isWeekendJST } from "../main";
 import { createAdminClient } from "../db/supabase";
@@ -19,6 +20,7 @@ export interface CrawlLambdaResult {
 export async function handler(
   event: CrawlLambdaEvent = {},
 ): Promise<CrawlLambdaResult> {
+  logRuntimeVersions();
   const date = getTodayJST();
   const source = isWeekendJST(date) ? "gogo" : "ohaasa";
   const supabase = createAdminClient();

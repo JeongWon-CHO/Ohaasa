@@ -30,7 +30,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Dump all tables
         env:
@@ -42,7 +42,7 @@ jobs:
         run: python3 .github/scripts/backup-tables.py
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: ohaasa-db-backup-${{ github.run_id }}
           path: backup.tar.gz
