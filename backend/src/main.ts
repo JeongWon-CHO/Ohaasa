@@ -10,8 +10,8 @@ import {
   translateOhaasaLuckyItem,
   containsJapanese,
 } from "./translator/translate";
-import { fetchHtml as fetchGogoHtml } from "./gogo/fetcher";
-import { parse as parseGogo, type GogoEntry } from "./gogo/parser";
+import { fetchGogo } from "./gogo/source";
+import type { GogoEntry } from "./gogo/parser";
 import { translateGogoEntries, type GogoKoEntry } from "./gogo/translator";
 import { collectAndSave as collectMezamashi } from "./mezamashi/pipeline";
 import { fetchJson as fetchMezamashi } from "./mezamashi/fetcher";
@@ -228,16 +228,7 @@ async function fetchGogoEntries(
   force = false,
 ): Promise<GogoEntry[] | null> {
   try {
-    const html = await fetchGogoHtml();
-    const result = parseGogo(html);
-
-    if (
-      new Set(result.entries.map((e) => e.zodiac_sign)).size !== 12 ||
-      new Set(result.entries.map((e) => e.rank)).size !== 12 ||
-      result.entries.some((e) => !e.advice.trim() || e.rank < 1 || e.rank > 12)
-    ) {
-      throw new Error("Incomplete gogo rankings");
-    }
+    const result = await fetchGogo(today, { allowStaleOfficial: force });
 
     if (result.date !== today) {
       if (!force) {

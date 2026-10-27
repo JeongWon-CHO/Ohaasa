@@ -20,6 +20,14 @@ TV 버튼에서 고고별자리·메자마시의 최신 저장 운세를 직접 
 
 ## 수집 동작
 
+- 고고는 공식 사이트를 먼저 읽고, 네트워크·HTTP·파싱·완전성 검증 실패 또는 운세 날짜 불일치 시
+  `https://todays-cat.net/tv/tv-asahi/?date=YYYY-MM-DD`를 한 번 시도한다 (#75).
+  기존 메인 수집과 방송별 전용 수집이 같은 소스 선택 로직을 사용한다.
+- Today's Cat은 본문 업데이트 날짜와 12개 카드만 파싱한다. 광고 이미지는 점수에서 제외한다.
+  예비 소스도 당일 데이터가 아니면 저장하지 않는다. 양쪽 모두 실패하면 기존 대체/실패 처리를 따른다.
+- 수집처는 `source=official` 또는 `source=todays-cat`으로 로그에 남긴다.
+  앱의 운세 출처와 저장 테이블은 계속 고고별자리이며, 번역 재사용 규칙도 동일하다.
+  `input`으로 제공한 공식 HTML은 외부 fallback 없이 검증하고, `--force`의 날짜 무시는 기존 공식 소스에만 적용한다.
 - 핸들러: `backend/src/lambda/broadcast-crawl-handler.ts`
 - 평일·주말 모두 두 방송을 독립적으로 시도한다. 한쪽 실패가 다른 쪽 수집을 취소하지 않는다.
 - 원문 날짜가 JST/KST 오늘과 다르면 저장하지 않는다. 일요일에 토요일 운세가 남아 있어도 날짜를 바꾸지 않는다.
@@ -99,3 +107,30 @@ TV 버튼에서 고고별자리·메자마시의 최신 저장 운세를 직접 
 - 이번 작업에서 푸시 요청은 보내지 않았다. 새 수집기에는 알림 발송 기능이 없지만 저장된 메자마시 자료는 기존 주말 대체 규칙에 따라 기존 알림에서 사용할 수 있다.
 - 템플릿의 신규 스택 기본값은 계속 `DISABLED`다. 이후 운영 스택 배포에서는 현재 `ENABLED` 파라미터를 유지할지 명시적으로 확인한다.
 - 검증 기록: `/private/tmp/ohaasa-74-enable-swokw1x3` (임시 경로).
+
+### 같은 날 Today's Cat fallback 배포 (#75)
+
+- `feat/#75/gogo-todays-cat-fallback` 작업 트리에서 방송별 수집기만 빌드·배포했다.
+  스택 `ohaasa-broadcast-collector`는 `UPDATE_COMPLETE`, Lambda는 `Active` / `Successful`이다.
+- 운영/제안 처리 완료 템플릿을 비교해 `BroadcastCrawlerFunction.Code`만 다른 것을 확인했다.
+  변경 세트의 예약·역할 항목은 ARN 종속성 재평가였고, 리소스 교체는 없었다.
+- 배포 ZIP의 JS·소스맵이 빌드 결과와 바이트 단위로 일치했다.
+  코드 SHA256: `LHpTIOc08RbkeXbGFu7KAphSpV13yt+yzRo48nclISA=`.
+- 방송별 예약은 기존 `ENABLED` 상태와 시간·대상·재시도 설정을 유지했다.
+  기존 메인 수집기·알림 발송기의 코드 체크섬, 기존 예약, Step Functions 정의가 배포 전후 동일했다.
+- 배포 Lambda를 `dryRun=true`로 한 번 호출했다. 2026-10-27 고고 12개와 메자마시 12개 모두
+  `dry_run`으로 반환됐고, 고고의 `source=todays-cat` 로그를 확인했다.
+  DB 저장·번역 API·푸시는 실행하지 않았다. 실제 저장 확인은 이후 자연 예약 실행에서 필요하다.
+- 배포 전 코드 ZIP·템플릿 백업과 검증 기록: `/private/tmp/ohaasa-75-deploy-2CrBLu` (임시 경로).
+  기존 메인 수집기는 아직 이번 fallback 코드로 배포하지 않았다.
+
+### 같은 날 고고 운세 수동 저장 확인
+
+- 사용자 요청으로 2026-10-27 고고 운세만 기존 전용 파이프라인으로 번역·저장했다.
+  `gogo_horoscopes`의 별자리·순위 12개와 본문·색상·아이템 한국어 번역 12개를 확인했다.
+- 저장 전 운영 DB에서 고고 테이블의 활성 사용자 트리거가 0개이며,
+  `resolved_horoscopes`가 고고 전용 테이블을 참조하지 않는 것을 확인했다.
+- 이번 실행에서는 고고 전용 테이블 외 HTTP 쓰기와 푸시 대상 요청을 차단했다.
+  저장 전후 당일 `horoscopes`와 `notification_log`의 데이터 해시가 같았다.
+  메자마시는 수동 재수집하지 않았고, 알림 발송도 요청하지 않았다.
+- 검증 결과: `/private/tmp/ohaasa-75-deploy-2CrBLu/gogo-saved.json` (임시 경로).

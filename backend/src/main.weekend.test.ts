@@ -2,11 +2,18 @@ import { beforeEach, afterEach, describe, expect, it, vi } from "vitest";
 import { crawlAndSave } from "./main";
 import { fetchHtml } from "./gogo/fetcher";
 import { parse as parseGogo } from "./gogo/parser";
+import { fetchHtml as fetchCat, parse as parseCat } from "./gogo/todays-cat";
 import { collectAndSave } from "./mezamashi/pipeline";
 import { fetchJson } from "./mezamashi/fetcher";
 import { parse as parseMezamashi } from "./mezamashi/parser";
 
 vi.mock("./gogo/fetcher", () => ({ fetchHtml: vi.fn() }));
+vi.mock("./gogo/todays-cat", () => ({
+  fetchHtml: vi.fn(async () => {
+    throw new Error("fallback offline");
+  }),
+  parse: vi.fn(),
+}));
 vi.mock("./gogo/parser", () => ({ parse: vi.fn() }));
 vi.mock("./gogo/translator", () => ({
   translateGogoEntries: vi.fn(async () => new Map()),
@@ -71,6 +78,17 @@ afterEach(() => {
 });
 
 describe("주말 수집 대체 흐름", () => {
+  it("공식 실패 후 Today's Cat이 정상이면 고고로 저장하고 메자마시를 호출하지 않는다", async () => {
+    vi.mocked(fetchHtml).mockRejectedValueOnce(new Error("official offline"));
+    vi.mocked(fetchCat).mockResolvedValueOnce("cat HTML");
+    vi.mocked(parseCat).mockReturnValueOnce({ date: "2026-10-24", entries });
+    expect(await crawlAndSave(db, false, false)).toBe(true);
+    expect(collectAndSave).not.toHaveBeenCalled();
+    expect(upsert).toHaveBeenCalledWith(
+      expect.arrayContaining([expect.objectContaining({ source: "gogo" })]),
+      { onConflict: "date,zodiac_sign" },
+    );
+  });
   it("고고 정상 시 기존 테이블에 저장하고 메자마시를 호출하지 않는다", async () => {
     expect(await crawlAndSave(db, false, false)).toBe(true);
     expect(collectAndSave).not.toHaveBeenCalled();
