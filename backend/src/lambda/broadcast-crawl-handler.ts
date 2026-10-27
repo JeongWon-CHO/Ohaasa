@@ -1,4 +1,5 @@
 import "dotenv/config";
+import { logRuntimeVersions } from "./runtime";
 import { createAdminClient } from "../db/supabase";
 import { collectAndSave as collectGogo } from "../gogo/pipeline";
 import { collectAndSave as collectMezamashi } from "../mezamashi/pipeline";
@@ -11,6 +12,7 @@ export interface BroadcastCrawlEvent {
 
 /** 방송별 조회용 수집만 수행한다. 알림 발송기/상태 머신은 호출하지 않는다. */
 export async function handler(event: BroadcastCrawlEvent = {}) {
+  logRuntimeVersions();
   const today = new Date(Date.now() + 9 * 3600000).toISOString().slice(0, 10);
   const supabase = createAdminClient();
   // 각 소스를 별도로 기다려 한쪽 실패가 다른 쪽 수집을 막지 않도록 한다.

@@ -1,4 +1,5 @@
 import "dotenv/config";
+import { logRuntimeVersions } from "./runtime";
 
 const FIRST_SLOT_MINUTES = 6 * 60;
 const LAST_SLOT_MINUTES = 10 * 60;
@@ -72,7 +73,10 @@ export function getDueSlots(throughTime: string): string[] {
   return slots;
 }
 
-export async function handler(event: DispatchEvent = {}): Promise<DispatchResult> {
+export async function handler(
+  event: DispatchEvent = {},
+): Promise<DispatchResult> {
+  logRuntimeVersions();
   const now = getKstParts();
   const date = event.date ?? now.date;
   const throughTime = event.throughTime ?? now.time;
@@ -111,14 +115,19 @@ export async function handler(event: DispatchEvent = {}): Promise<DispatchResult
       // 진단을 위해 JSON이 아닌 응답 원문을 보존한다.
     }
 
-    slots.push({ scheduledTime, ok: response.ok, status: response.status, body });
+    slots.push({
+      scheduledTime,
+      ok: response.ok,
+      status: response.status,
+      body,
+    });
   }
 
   const failed = slots.filter((slot) => !slot.ok);
   if (failed.length > 0) {
     throw new Error(
       `[dispatcher] ${failed.length}/${slots.length} slot(s) failed: ` +
-      failed.map((slot) => `${slot.scheduledTime}=${slot.status}`).join(", "),
+        failed.map((slot) => `${slot.scheduledTime}=${slot.status}`).join(", "),
     );
   }
 

@@ -134,3 +134,11 @@ TV 버튼에서 고고별자리·메자마시의 최신 저장 운세를 직접 
   저장 전후 당일 `horoscopes`와 `notification_log`의 데이터 해시가 같았다.
   메자마시는 수동 재수집하지 않았고, 알림 발송도 요청하지 않았다.
 - 검증 결과: `/private/tmp/ohaasa-75-deploy-2CrBLu/gogo-saved.json` (임시 경로).
+
+### 같은 날 Node 보안 패치 확인 배포 (#76)
+
+- 사용자 승인 후 방송별 수집기·메인 수집기·발송기를 순서대로 배포했다.
+  세 함수 모두 실제 실행 로그에서 Node v22.23.4를 확인했다.
+- 메인 수집기에도 #75 Today's Cat fallback이 반영됐으며, 저장 없는 dry-run에서 동작을 확인했다.
+- 예약 상태·시간·대상과 상태 머신 정의는 유지했고, 검증 중 실제 푸시는 요청하지 않았다.
+  상세 기록은 [`node-security-maintenance.md`](./node-security-maintenance.md)에 남겼다.
