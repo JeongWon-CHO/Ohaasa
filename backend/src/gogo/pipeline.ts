@@ -1,23 +1,10 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { fetchHtml } from "./fetcher";
-import { parse, type GogoEntry, type GogoParseResult } from "./parser";
+import { fetchGogo } from "./source";
+import { SIGN_NAMES, validate } from "./validation";
+import { parse, type GogoEntry } from "./parser";
 import { translateGogoEntries } from "./translator";
 import { containsJapanese, translateAdvice } from "../translator/translate";
 
-const SIGN_NAMES: Record<string, string> = {
-  aries: "おひつじ座",
-  taurus: "おうし座",
-  gemini: "ふたご座",
-  cancer: "かに座",
-  leo: "しし座",
-  virgo: "おとめ座",
-  libra: "てんびん座",
-  scorpio: "さそり座",
-  sagittarius: "いて座",
-  capricorn: "やぎ座",
-  aquarius: "みずがめ座",
-  pisces: "うお座",
-};
 const FIELDS = ["advice", "lucky_color", "lucky_item"] as const;
 type Field = (typeof FIELDS)[number];
 export type GogoRow = GogoEntry & {
@@ -90,28 +77,6 @@ export async function translateEntries(
   return rows;
 }
 
-function validate(result: GogoParseResult): void {
-  const entries = result.entries;
-  if (
-    entries.length !== 12 ||
-    new Set(entries.map((e) => e.zodiac_sign)).size !== 12 ||
-    new Set(entries.map((e) => e.rank)).size !== 12 ||
-    entries.some(
-      (e) =>
-        !Object.hasOwn(SIGN_NAMES, e.zodiac_sign) ||
-        !Number.isInteger(e.rank) ||
-        e.rank < 1 ||
-        e.rank > 12 ||
-        FIELDS.some((field) => !e[field]?.trim()) ||
-        [e.money_score, e.love_score, e.work_score, e.health_score].some(
-          (score) => !Number.isInteger(score) || score < 1 || score > 6,
-        ),
-    )
-  ) {
-    throw new Error("[gogo] Incomplete horoscope data");
-  }
-}
-
 /** 기존 horoscopes에는 쓰지 않는 고고 전용 일일 수집 경로. */
 export async function collectAndSave(
   supabase: SupabaseClient,
@@ -122,10 +87,10 @@ export async function collectAndSave(
   date: string;
   count: number;
 }> {
-  const result = parse(
-    options.input ?? (await fetchHtml()),
-    Number(today.slice(0, 4)),
-  );
+  const result =
+    options.input !== undefined
+      ? parse(options.input, Number(today.slice(0, 4)))
+      : await fetchGogo(today);
   validate(result);
   if (result.date !== today)
     return { status: "stale", date: result.date, count: 0 };
