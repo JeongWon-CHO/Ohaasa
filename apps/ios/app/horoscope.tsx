@@ -1,3 +1,4 @@
+import { BroadcastPicker } from '@/src/components/BroadcastPicker';
 import { MezamashiFortune } from '@/src/components/MezamashiFortune';
 import { isTodayHoroscope } from '@ohaasa/shared/lib/horoscopeDate';
 import { useCallback, useRef, useState, type ComponentProps } from 'react';
@@ -168,6 +169,7 @@ export default function TodayScreen() {
       >
         {/* Header */}
         <FinalHeader
+          leadingAction={<BroadcastPicker currentSource={horoscope?.source} />}
           onBackPress={() => router.back()}
           title="ohaasa"
           subtitle={!horoscope || isToday ? COPY.headerToday : COPY.headerPast}
