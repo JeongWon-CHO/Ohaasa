@@ -1,28 +1,50 @@
-import type { SupabaseClient } from '@supabase/supabase-js';
-import { ZODIAC_MAP } from '../constants/zodiac';
-import type { Horoscope, HoroscopeSource } from '../types/horoscope';
-import type { MezamashiHoroscope } from '../types/mezamashi';
-import { mezamashiToHoroscope } from './mezamashi';
+import type { SupabaseClient } from "@supabase/supabase-js";
+import { ZODIAC_MAP } from "../constants/zodiac";
+import type { Horoscope, HoroscopeSource } from "../types/horoscope";
+import type { MezamashiHoroscope } from "../types/mezamashi";
+import { mezamashiToHoroscope } from "./mezamashi";
+import type { GogoHoroscope } from "../types/gogo";
+import { gogoToHoroscope } from "./gogo";
 
-export const BROADCAST_SOURCES: HoroscopeSource[] = ['ohaasa', 'gogo', 'mezamashi'];
+export const BROADCAST_SOURCES: HoroscopeSource[] = [
+  "ohaasa",
+  "gogo",
+  "mezamashi",
+];
 
 export function isBroadcastSource(value: unknown): value is HoroscopeSource {
-  return BROADCAST_SOURCES.some(source => source === value);
+  return BROADCAST_SOURCES.some((source) => source === value);
 }
 
 /** 소스를 섞거나 불완전한 날짜를 공개하지 않는다. */
-export function latestCompleteBroadcast(rows: Horoscope[], source: HoroscopeSource): Horoscope[] {
-  const dates = [...new Set(rows.map(row => row.date))].sort().reverse();
+export function latestCompleteBroadcast(
+  rows: Horoscope[],
+  source: HoroscopeSource,
+): Horoscope[] {
+  const dates = [...new Set(rows.map((row) => row.date))].sort().reverse();
   for (const date of dates) {
-    const group = rows.filter(row => row.date === date && row.source === source);
+    const group = rows.filter(
+      (row) => row.date === date && row.source === source,
+    );
     if (
       group.length === 12 &&
-      new Set(group.map(row => row.zodiac_sign)).size === 12 &&
-      new Set(group.map(row => row.rank)).size === 12 &&
-      group.every(row => Object.hasOwn(ZODIAC_MAP, row.zodiac_sign) &&
-        Number.isInteger(row.rank) && row.rank >= 1 && row.rank <= 12 && row.advice?.trim() &&
-        (source !== 'mezamashi' || Boolean(row.mezamashi?.lucky_point?.trim() && row.mezamashi?.lucky_color?.trim())))
-    ) return group.sort((a, b) => a.rank - b.rank);
+      new Set(group.map((row) => row.zodiac_sign)).size === 12 &&
+      new Set(group.map((row) => row.rank)).size === 12 &&
+      group.every(
+        (row) =>
+          Object.hasOwn(ZODIAC_MAP, row.zodiac_sign) &&
+          Number.isInteger(row.rank) &&
+          row.rank >= 1 &&
+          row.rank <= 12 &&
+          row.advice?.trim() &&
+          (source !== "mezamashi" ||
+            Boolean(
+              row.mezamashi?.lucky_point?.trim() &&
+              row.mezamashi?.lucky_color?.trim(),
+            )),
+      )
+    )
+      return group.sort((a, b) => a.rank - b.rank);
   }
   return [];
 }
@@ -34,14 +56,25 @@ export async function fetchBroadcastHoroscopes(
   signal: AbortSignal,
 ): Promise<Horoscope[]> {
   const today = new Date(Date.now() + 9 * 3600000).toISOString().slice(0, 10);
-  let query = client.from(source === 'mezamashi' ? 'mezamashi_horoscopes' : 'horoscopes')
-    .select('*').lte('date', today);
-  if (source !== 'mezamashi') query = query.eq('source', source);
-  const { data, error } = await query.order('date', { ascending: false })
-    .order('rank', { ascending: true }).limit(168).abortSignal(signal);
+  const table =
+    source === "mezamashi"
+      ? "mezamashi_horoscopes"
+      : source === "gogo"
+        ? "gogo_horoscopes"
+        : "horoscopes";
+  let query = client.from(table).select("*").lte("date", today);
+  if (source === "ohaasa") query = query.eq("source", source);
+  const { data, error } = await query
+    .order("date", { ascending: false })
+    .order("rank", { ascending: true })
+    .limit(168)
+    .abortSignal(signal);
   if (error) throw error;
-  const rows = source === 'mezamashi'
-    ? ((data ?? []) as MezamashiHoroscope[]).map(mezamashiToHoroscope)
-    : (data ?? []) as Horoscope[];
+  const rows =
+    source === "mezamashi"
+      ? ((data ?? []) as MezamashiHoroscope[]).map(mezamashiToHoroscope)
+      : source === "gogo"
+        ? ((data ?? []) as GogoHoroscope[]).map(gogoToHoroscope)
+        : ((data ?? []) as Horoscope[]);
   return latestCompleteBroadcast(rows, source);
 }

@@ -1,0 +1,110 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
+Description: Independent daily Gogo and Mezamashi collection without notification dispatch
+
+Parameters:
+  ApplicationSecretsArn:
+    Type: String
+    Description: Existing backend Secrets Manager JSON secret ARN
+  OpenAIModel:
+    Type: String
+    Default: gpt-4o
+  BroadcastScheduleState:
+    Type: String
+    Default: DISABLED
+    AllowedValues: [DISABLED, ENABLED]
+
+Resources:
+  BroadcastCrawlerFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ../../backend
+      Handler: src/lambda/broadcast-crawl-handler.handler
+      Runtime: nodejs22.x
+      Architectures: [arm64]
+      Timeout: 900
+      MemorySize: 1024
+      Policies:
+        - AWSLambdaBasicExecutionRole
+        - Statement:
+            - Effect: Allow
+              Action: sqs:SendMessage
+              Resource: !GetAtt BroadcastDeadLetterQueue.Arn
+      Environment:
+        Variables:
+          SUPABASE_URL: !Sub "{{resolve:secretsmanager:${ApplicationSecretsArn}:SecretString:SUPABASE_URL}}"
+          SUPABASE_SERVICE_ROLE_KEY: !Sub "{{resolve:secretsmanager:${ApplicationSecretsArn}:SecretString:SUPABASE_SERVICE_ROLE_KEY}}"
+          OPENAI_API_KEY: !Sub "{{resolve:secretsmanager:${ApplicationSecretsArn}:SecretString:OPENAI_API_KEY}}"
+          OPENAI_MODEL: !Ref OpenAIModel
+      EventInvokeConfig:
+        MaximumEventAgeInSeconds: 900
+        MaximumRetryAttempts: 0
+        DestinationConfig:
+          OnFailure:
+            Type: SQS
+            Destination: !GetAtt BroadcastDeadLetterQueue.Arn
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        EntryPoints: [src/lambda/broadcast-crawl-handler.ts]
+        Minify: true
+        Sourcemap: true
+        Target: es2022
+
+  BroadcastCrawlerLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub "/aws/lambda/${BroadcastCrawlerFunction}"
+      RetentionInDays: 30
+
+  BroadcastDeadLetterQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      MessageRetentionPeriod: 1209600
+
+  BroadcastSchedulerRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: scheduler.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: InvokeBroadcastCollectorOnly
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action: lambda:InvokeFunction
+                Resource: !GetAtt BroadcastCrawlerFunction.Arn
+              - Effect: Allow
+                Action: sqs:SendMessage
+                Resource: !GetAtt BroadcastDeadLetterQueue.Arn
+
+  BroadcastSchedule:
+    Type: AWS::Scheduler::Schedule
+    Properties:
+      Description: Collect both broadcasts every 20 minutes from 06:05 through 07:45 KST
+      ScheduleExpression: cron(5,25,45 6-7 * * ? *)
+      ScheduleExpressionTimezone: Asia/Seoul
+      FlexibleTimeWindow:
+        Mode: "OFF"
+      State: !Ref BroadcastScheduleState
+      Target:
+        Arn: !GetAtt BroadcastCrawlerFunction.Arn
+        RoleArn: !GetAtt BroadcastSchedulerRole.Arn
+        Input: '{"dryRun":false}'
+        RetryPolicy:
+          MaximumEventAgeInSeconds: 900
+          MaximumRetryAttempts: 0
+        DeadLetterConfig:
+          Arn: !GetAtt BroadcastDeadLetterQueue.Arn
+
+Outputs:
+  BroadcastCrawlerFunctionName:
+    Value: !Ref BroadcastCrawlerFunction
+  BroadcastScheduleName:
+    Value: !Ref BroadcastSchedule
