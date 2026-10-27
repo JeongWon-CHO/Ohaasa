@@ -26,6 +26,7 @@ interface FinalHeaderProps {
   onSavePress?: () => void;
   saving?: boolean;
   rightSlot?: ReactNode;
+  leadingAction?: ReactNode;
   /**
    * 상단 안전영역을 이 헤더가 직접 먹을지.
    *
@@ -52,6 +53,7 @@ export function FinalHeader({
   onSavePress,
   saving = false,
   rightSlot,
+  leadingAction,
   withTopInset = true,
   bleed = false,
 }: FinalHeaderProps) {
@@ -73,7 +75,8 @@ export function FinalHeader({
         <Text style={styles.title}>{title ?? APP_TITLE}</Text>
         {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
       </View>
-      <View style={styles.actions}>
+      <View style={[styles.actions, !!leadingAction && styles.compactActions]}>
+        {leadingAction}
         {onSavePress && (
           <TouchableOpacity
             onPress={onSavePress}
@@ -147,6 +150,10 @@ const styles = StyleSheet.create({
   actions: {
     flexDirection: "row",
     gap: 20,
+  },
+  compactActions: {
+    gap: 10,
+    alignItems: "center",
   },
   iconButton: {
     padding: 6,
