@@ -11,7 +11,17 @@ function makeEntry(
   lucky_color: string,
   lucky_item: string,
 ): GogoEntry {
-  return { zodiac_sign, rank: 1, advice: "", lucky_color, lucky_item, money_score: 3, love_score: 3, work_score: 3, health_score: 3 };
+  return {
+    zodiac_sign,
+    rank: 1,
+    advice: "",
+    lucky_color,
+    lucky_item,
+    money_score: 3,
+    love_score: 3,
+    work_score: 3,
+    health_score: 3,
+  };
 }
 
 // ============================================================
@@ -19,8 +29,18 @@ function makeEntry(
 // ============================================================
 
 const ALL_SIGNS = [
-  "aries", "taurus", "gemini", "cancer", "leo", "virgo",
-  "libra", "scorpio", "sagittarius", "capricorn", "aquarius", "pisces",
+  "aries",
+  "taurus",
+  "gemini",
+  "cancer",
+  "leo",
+  "virgo",
+  "libra",
+  "scorpio",
+  "sagittarius",
+  "capricorn",
+  "aquarius",
+  "pisces",
 ] as const;
 
 // ============================================================
@@ -34,19 +54,39 @@ describe("translateGogoEntries() — no OPENAI_API_KEY", () => {
     delete process.env.OPENAI_API_KEY;
   });
 
+  it("전용 수집에서 색상 번역을 생략해 캐시된 필드의 중복 번역을 막는다", async () => {
+    const { translateGogoEntries } = await import("./translator");
+    const result = await translateGogoEntries(
+      [makeEntry("aries", "ゴールド", "本")],
+      {
+        includeColors: false,
+        includeItems: false,
+      },
+    );
+    expect(result.get("aries")).toEqual({
+      zodiac_sign: "aries",
+      lucky_color_ko: null,
+      lucky_item_ko: null,
+    });
+  });
+
   // ----------------------------------------------------------
   // 1. COLOR_MAP 매핑 동작
   // ----------------------------------------------------------
   describe("COLOR_MAP", () => {
     it("매핑된 색상은 API key 없이도 한국어를 반환한다", async () => {
       const { translateGogoEntries } = await import("./translator");
-      const result = await translateGogoEntries([makeEntry("aries", "ゴールド", "コスメ")]);
+      const result = await translateGogoEntries([
+        makeEntry("aries", "ゴールド", "コスメ"),
+      ]);
       expect(result.get("aries")?.lucky_color_ko).toBe("금색");
     });
 
     it("매핑에 없는 색상은 null을 반환한다", async () => {
       const { translateGogoEntries } = await import("./translator");
-      const result = await translateGogoEntries([makeEntry("aries", "マゼンタ", "コスメ")]);
+      const result = await translateGogoEntries([
+        makeEntry("aries", "マゼンタ", "コスメ"),
+      ]);
       expect(result.get("aries")?.lucky_color_ko).toBeNull();
     });
 
@@ -55,20 +95,39 @@ describe("translateGogoEntries() — no OPENAI_API_KEY", () => {
 
       const cases: Array<[string, string]> = [
         // 한자
-        ["赤", "빨간색"],   ["青", "파란색"],    ["黄色", "노란색"],
-        ["緑", "초록색"],   ["白", "흰색"],       ["黒", "검은색"],
-        ["紫", "보라색"],   ["茶色", "갈색"],     ["水色", "하늘색"],
-        ["灰色", "회색"],   ["橙色", "주황색"],
+        ["赤", "빨간색"],
+        ["青", "파란색"],
+        ["黄色", "노란색"],
+        ["緑", "초록색"],
+        ["白", "흰색"],
+        ["黒", "검은색"],
+        ["紫", "보라색"],
+        ["茶色", "갈색"],
+        ["水色", "하늘색"],
+        ["灰色", "회색"],
+        ["橙色", "주황색"],
         // 카타카나
-        ["ゴールド", "금색"],     ["シルバー", "은색"],   ["グレー", "회색"],
-        ["ピンク", "분홍색"],     ["ネイビー", "남색"],   ["ベージュ", "베이지색"],
-        ["ラベンダー", "연보라색"], ["オレンジ色", "주황색"], ["ブルー", "파란색"],
-        ["イエロー", "노란색"],   ["ホワイト", "흰색"],   ["ブラック", "검은색"],
-        ["グリーン", "초록색"],   ["レッド", "빨간색"],   ["パープル", "보라색"],
+        ["ゴールド", "금색"],
+        ["シルバー", "은색"],
+        ["グレー", "회색"],
+        ["ピンク", "분홍색"],
+        ["ネイビー", "남색"],
+        ["ベージュ", "베이지색"],
+        ["ラベンダー", "연보라색"],
+        ["オレンジ色", "주황색"],
+        ["ブルー", "파란색"],
+        ["イエロー", "노란색"],
+        ["ホワイト", "흰색"],
+        ["ブラック", "검은색"],
+        ["グリーン", "초록색"],
+        ["レッド", "빨간색"],
+        ["パープル", "보라색"],
       ];
 
       for (const [ja, ko] of cases) {
-        const result = await translateGogoEntries([makeEntry("aries", ja, "dummy")]);
+        const result = await translateGogoEntries([
+          makeEntry("aries", ja, "dummy"),
+        ]);
         expect(result.get("aries")?.lucky_color_ko, `${ja} → ${ko}`).toBe(ko);
       }
     });
@@ -77,23 +136,27 @@ describe("translateGogoEntries() — no OPENAI_API_KEY", () => {
       const { translateGogoEntries } = await import("./translator");
 
       const sampleColors: Array<[string, string]> = [
-        ["ゴールド", "금색"],   // aries
-        ["グレー",   "회색"],   // taurus
-        ["黒",       "검은색"], // gemini
-        ["紫",       "보라색"], // cancer
-        ["ネイビー", "남색"],   // leo
-        ["水色",     "하늘색"], // virgo
-        ["オレンジ色","주황색"],// libra
-        ["青",       "파란색"], // scorpio
-        ["黄色",     "노란색"], // sagittarius
-        ["赤",       "빨간색"], // capricorn
-        ["シルバー", "은색"],   // aquarius
-        ["茶色",     "갈색"],   // pisces
+        ["ゴールド", "금색"], // aries
+        ["グレー", "회색"], // taurus
+        ["黒", "검은색"], // gemini
+        ["紫", "보라색"], // cancer
+        ["ネイビー", "남색"], // leo
+        ["水色", "하늘색"], // virgo
+        ["オレンジ色", "주황색"], // libra
+        ["青", "파란색"], // scorpio
+        ["黄色", "노란색"], // sagittarius
+        ["赤", "빨간색"], // capricorn
+        ["シルバー", "은색"], // aquarius
+        ["茶色", "갈색"], // pisces
       ];
 
       for (const [ja, ko] of sampleColors) {
-        const result = await translateGogoEntries([makeEntry("aries", ja, "dummy")]);
-        expect(result.get("aries")?.lucky_color_ko, `sample color ${ja}`).toBe(ko);
+        const result = await translateGogoEntries([
+          makeEntry("aries", ja, "dummy"),
+        ]);
+        expect(result.get("aries")?.lucky_color_ko, `sample color ${ja}`).toBe(
+          ko,
+        );
       }
     });
   });
@@ -104,7 +167,9 @@ describe("translateGogoEntries() — no OPENAI_API_KEY", () => {
   describe("lucky_item_ko without API key", () => {
     it("API key 없으면 lucky_item_ko는 null이다", async () => {
       const { translateGogoEntries } = await import("./translator");
-      const result = await translateGogoEntries([makeEntry("aries", "ゴールド", "コスメ")]);
+      const result = await translateGogoEntries([
+        makeEntry("aries", "ゴールド", "コスメ"),
+      ]);
       expect(result.get("aries")?.lucky_item_ko).toBeNull();
     });
   });
@@ -141,7 +206,9 @@ describe("translateGogoEntries() — no OPENAI_API_KEY", () => {
 
     it("각 entry에 zodiac_sign, lucky_color_ko, lucky_item_ko 필드가 있다", async () => {
       const { translateGogoEntries } = await import("./translator");
-      const result = await translateGogoEntries([makeEntry("aries", "ゴールド", "コスメ")]);
+      const result = await translateGogoEntries([
+        makeEntry("aries", "ゴールド", "コスメ"),
+      ]);
       const entry = result.get("aries");
       expect(entry).toHaveProperty("zodiac_sign");
       expect(entry).toHaveProperty("lucky_color_ko");
@@ -156,7 +223,7 @@ describe("translateGogoEntries() — no OPENAI_API_KEY", () => {
     it("같은 색상을 가진 여러 entry가 동일한 한국어 값을 갖는다", async () => {
       const { translateGogoEntries } = await import("./translator");
       const entries = [
-        makeEntry("aries",  "ゴールド", "コスメ"),
+        makeEntry("aries", "ゴールド", "コスメ"),
         makeEntry("taurus", "ゴールド", "写真"),
         makeEntry("gemini", "ゴールド", "手帳"),
       ];

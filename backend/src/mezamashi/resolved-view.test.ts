@@ -78,6 +78,7 @@ beforeAll(async () => {
   for (const name of [
     "20261026000000_mezamashi_horoscopes.sql",
     "20261026010000_resolved_horoscopes.sql",
+    "20261027000000_gogo_horoscopes.sql",
   ]) {
     await db.exec(
       readFileSync(
@@ -89,7 +90,7 @@ beforeAll(async () => {
 }, 30_000);
 beforeEach(async () => {
   await db.exec(
-    "reset role; truncate public.horoscopes, public.mezamashi_horoscopes;",
+    "reset role; truncate public.horoscopes, public.mezamashi_horoscopes, public.gogo_horoscopes;",
   );
 });
 afterAll(async () => {
@@ -97,6 +98,44 @@ afterAll(async () => {
 });
 
 describe("실제 PostgreSQL 조회 뷰: 날짜별 하나의 완전한 소스", () => {
+  it("새 고고 테이블의 데이터는 기존 운세 선택에 개입하지 않고 익명 읽기만 허용한다", async () => {
+    await insert("ohaasa", "2026-10-26");
+    const before = await selected("2026-10-26");
+    await db.exec(`insert into public.gogo_horoscopes
+      (date,zodiac_sign,zodiac_name,rank,advice,lucky_color,lucky_item,money_score,love_score,work_score,health_score)
+      values ('2026-10-26','aries','おひつじ座',1,'本文','青','本',3,3,3,3);
+      set role anon;`);
+    expect(
+      (await db.query("select * from public.gogo_horoscopes")).rows,
+    ).toHaveLength(1);
+    expect(await selected("2026-10-26")).toEqual(before);
+    await expect(
+      db.exec("delete from public.gogo_horoscopes"),
+    ).rejects.toThrow();
+    await db.exec("reset role; truncate public.gogo_horoscopes;");
+  });
+  it("새 고고 테이블은 service_role 저장과 PK 재실행을 허용하고 잘못된 점수는 거부한다", async () => {
+    await db.exec(`set role service_role;
+      insert into public.gogo_horoscopes
+      (date,zodiac_sign,zodiac_name,rank,advice,lucky_color,lucky_item,money_score,love_score,work_score,health_score)
+      values ('2026-10-27','aries','おひつじ座',1,'本文','青','本',3,3,3,3);
+      insert into public.gogo_horoscopes select * from public.gogo_horoscopes
+      on conflict (date,zodiac_sign) do update set advice_ko='번역';`);
+    const result = await db.query<{ advice_ko: string }>(
+      "select advice_ko from public.gogo_horoscopes",
+    );
+    expect(result.rows).toEqual([{ advice_ko: "번역" }]);
+    await expect(
+      db.exec("update public.gogo_horoscopes set money_score=7"),
+    ).rejects.toThrow();
+    await expect(
+      db.exec("update public.gogo_horoscopes set zodiac_sign='unknown'"),
+    ).rejects.toThrow();
+    await expect(
+      db.exec("update public.gogo_horoscopes set rank=13"),
+    ).rejects.toThrow();
+    await db.exec("reset role;");
+  });
   it("평일에는 오하아사만 선택한다", async () => {
     await insert("ohaasa", "2026-10-23");
     await insert("mezamashi", "2026-10-23");

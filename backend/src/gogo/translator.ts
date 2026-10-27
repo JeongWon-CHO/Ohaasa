@@ -10,47 +10,47 @@ import type { GogoEntry } from "./parser";
 
 const COLOR_MAP: Record<string, string> = {
   // 한자 색상
-  "赤": "빨간색",
-  "青": "파란색",
-  "黄色": "노란색",
-  "黄": "노란색",
-  "緑": "초록색",
-  "白": "흰색",
-  "黒": "검은색",
-  "紫": "보라색",
-  "茶色": "갈색",
-  "茶": "갈색",
-  "水色": "하늘색",
-  "灰色": "회색",
-  "灰": "회색",
-  "橙色": "주황색",
-  "橙": "주황색",
-  "金色": "금색",
-  "銀色": "은색",
-  "桃色": "분홍색",
+  赤: "빨간색",
+  青: "파란색",
+  黄色: "노란색",
+  黄: "노란색",
+  緑: "초록색",
+  白: "흰색",
+  黒: "검은색",
+  紫: "보라색",
+  茶色: "갈색",
+  茶: "갈색",
+  水色: "하늘색",
+  灰色: "회색",
+  灰: "회색",
+  橙色: "주황색",
+  橙: "주황색",
+  金色: "금색",
+  銀色: "은색",
+  桃色: "분홍색",
   // 카타카나 (loanwords)
-  "ゴールド": "금색",
-  "シルバー": "은색",
-  "グレー": "회색",
-  "ピンク": "분홍색",
-  "ネイビー": "남색",
-  "ベージュ": "베이지색",
-  "ラベンダー": "연보라색",
-  "オレンジ色": "주황색",
-  "オレンジ": "주황색",
-  "ブルー": "파란색",
-  "イエロー": "노란색",
-  "ホワイト": "흰색",
-  "ブラック": "검은색",
-  "グリーン": "초록색",
-  "レッド": "빨간색",
-  "パープル": "보라색",
-  "ライトブルー": "연파란색",
-  "スカイブルー": "하늘색",
-  "マリンブルー": "마린 블루",
-  "ボルドー": "버건디색",
-  "ターコイズ": "청록색",
-  "サーモンピンク": "연어핑크색",
+  ゴールド: "금색",
+  シルバー: "은색",
+  グレー: "회색",
+  ピンク: "분홍색",
+  ネイビー: "남색",
+  ベージュ: "베이지색",
+  ラベンダー: "연보라색",
+  オレンジ色: "주황색",
+  オレンジ: "주황색",
+  ブルー: "파란색",
+  イエロー: "노란색",
+  ホワイト: "흰색",
+  ブラック: "검은색",
+  グリーン: "초록색",
+  レッド: "빨간색",
+  パープル: "보라색",
+  ライトブルー: "연파란색",
+  スカイブルー: "하늘색",
+  マリンブルー: "마린 블루",
+  ボルドー: "버건디색",
+  ターコイズ: "청록색",
+  サーモンピンク: "연어핑크색",
 };
 
 // ============================================================
@@ -62,7 +62,8 @@ const OPENAI_TIMEOUT_MS = 20_000;
 
 function getClient(): OpenAI | null {
   if (!process.env.OPENAI_API_KEY) return null;
-  if (!_client) _client = new OpenAI({ timeout: OPENAI_TIMEOUT_MS, maxRetries: 0 });
+  if (!_client)
+    _client = new OpenAI({ timeout: OPENAI_TIMEOUT_MS, maxRetries: 0 });
   return _client;
 }
 
@@ -101,7 +102,7 @@ async function callGPT(
     return text;
   } catch (err) {
     console.warn(
-      `[gogo-ko] ${logLabel}: GPT call failed: ${err instanceof Error ? err.message : String(err)}`
+      `[gogo-ko] ${logLabel}: GPT call failed: ${err instanceof Error ? err.message : String(err)}`,
     );
     return null;
   }
@@ -114,7 +115,9 @@ async function translateColor(color: string): Promise<string | null> {
   }
   // GPT fallback (key 없으면 null)
   if (!getClient()) {
-    console.warn(`[gogo-ko] color "${color}": not in COLOR_MAP and no OPENAI_API_KEY, returning null`);
+    console.warn(
+      `[gogo-ko] color "${color}": not in COLOR_MAP and no OPENAI_API_KEY, returning null`,
+    );
     return null;
   }
   return callGPT(
@@ -146,6 +149,7 @@ export interface GogoKoEntry {
 
 export interface GogoTranslationOptions {
   includeItems?: boolean;
+  includeColors?: boolean;
 }
 
 /**
@@ -159,19 +163,23 @@ export interface GogoTranslationOptions {
  */
 export async function translateGogoEntries(
   entries: GogoEntry[],
-  { includeItems = true }: GogoTranslationOptions = {},
+  { includeItems = true, includeColors = true }: GogoTranslationOptions = {},
 ): Promise<Map<string, GogoKoEntry>> {
-  const uniqueColors = [...new Set(entries.map((e) => e.lucky_color))];
+  const uniqueColors = includeColors
+    ? [...new Set(entries.map((e) => e.lucky_color))]
+    : [];
   const uniqueItems = includeItems
     ? [...new Set(entries.map((e) => e.lucky_item))]
     : [];
 
-  const mappedCount = uniqueColors.filter((c) => Object.prototype.hasOwnProperty.call(COLOR_MAP, c)).length;
+  const mappedCount = uniqueColors.filter((c) =>
+    Object.prototype.hasOwnProperty.call(COLOR_MAP, c),
+  ).length;
   const gptColorCount = uniqueColors.length - mappedCount;
   console.log(
     `[gogo-ko] ${uniqueColors.length} unique colors` +
-    ` (${mappedCount} mapped, ${gptColorCount} GPT),` +
-    ` ${uniqueItems.length} unique items (GPT${includeItems ? "" : ", skipped"})`
+      ` (${mappedCount} mapped, ${gptColorCount} GPT),` +
+      ` ${uniqueItems.length} unique items (GPT${includeItems ? "" : ", skipped"})`,
   );
 
   // 색상 번역 (unique 값별 1회)
@@ -194,6 +202,6 @@ export async function translateGogoEntries(
         lucky_color_ko: colorKoMap.get(e.lucky_color) ?? null,
         lucky_item_ko: itemKoMap.get(e.lucky_item) ?? null,
       },
-    ])
+    ]),
   );
 }
