@@ -66,20 +66,21 @@ export function JournalEntryButton({ date }: { date: string }) {
       }}
       style={({ pressed }) => [styles.button, (!ready || pressed) && styles.dimmed]}
     >
-      <Feather name="edit-3" size={18} color={colors.actionText} />
+      <Feather name="edit-3" size={14} color={colors.actionText} />
       <Text style={styles.label}>{label}</Text>
-      <Feather name="chevron-right" size={18} color={colors.actionText} />
     </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
   button: {
+    alignSelf: 'center',
     marginHorizontal: 24,
-    marginTop: spacing.lg,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-    minHeight: 48,
+    marginTop: 20,
+    marginBottom: spacing.xs,
+    paddingHorizontal: 24,
+    paddingVertical: 6,
+    minHeight: 44,
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
@@ -87,8 +88,9 @@ const styles = StyleSheet.create({
     backgroundColor: colors.action,
   },
   label: {
-    flex: 1,
-    fontSize: 15,
+    flexShrink: 1,
+    textAlign: 'center',
+    fontSize: 14,
     fontFamily: 'NotoSansKR_500Medium',
     color: colors.actionText,
   },

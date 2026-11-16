@@ -275,7 +275,7 @@ export default function TodayScreen() {
 
 const styles = StyleSheet.create({
   menuCard: {
-    marginTop: 16,
+    marginTop: 18,
     marginHorizontal: 24,
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.xs,
@@ -293,7 +293,7 @@ const styles = StyleSheet.create({
   menuTitle: {
     flex: 1,
     flexShrink: 1,
-    fontSize: 13,
+    fontSize: 14,
     lineHeight: 20,
     fontFamily: 'NotoSansKR_400Regular',
     color: colors.text,

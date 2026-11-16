@@ -118,7 +118,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.xs,
     minHeight: 44,
-    paddingHorizontal: spacing.sm,
+    paddingLeft: spacing.sm,
+    // 헤더(28)와 달력(16)의 여백 차이를 보정해 글자 오른쪽 끝을 맞춘다.
+    marginRight: spacing.lg - layout.headerPaddingH,
   },
   archiveLabel: {
     fontSize: 13,
@@ -127,7 +129,7 @@ const styles = StyleSheet.create({
   },
   scroll: {
     flex: 1,
-    marginTop: spacing.lg,
+    marginTop: spacing.xxl,
   },
   content: {
     paddingHorizontal: spacing.lg,
