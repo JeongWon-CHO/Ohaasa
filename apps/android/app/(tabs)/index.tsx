@@ -1,4 +1,4 @@
-import { BroadcastPicker } from '@/src/components/BroadcastPicker';
+// import { BroadcastPicker } from '@/src/components/BroadcastPicker';
 import { MezamashiFortune } from '@/src/components/MezamashiFortune';
 import { isTodayHoroscope } from '@ohaasa/shared/lib/horoscopeDate';
 import { useCallback, useRef, useState } from 'react';
@@ -170,7 +170,8 @@ export default function TodayScreen() {
       >
         {/* Header */}
         <FinalHeader
-          leadingAction={<BroadcastPicker currentSource={horoscope?.source} />}
+          // 방송 선택 진입점 임시 숨김
+          // leadingAction={<BroadcastPicker currentSource={horoscope?.source} />}
           subtitle={!horoscope || isToday ? COPY.headerToday : COPY.headerPast}
           onSharePress={horoscope ? share : undefined}
           sharing={sharing}
