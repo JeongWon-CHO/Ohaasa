@@ -285,9 +285,8 @@ export default function JournalWriteScreen() {
           <View style={[styles.footer, { paddingBottom: insets.bottom + spacing.lg }]}>
             {step === 'done' ? (
               <Pressable
-                // 다 쓰고 나면 홈으로 보낸다. 방금 쓴 걸 다시 읽히는 것보다
-                // 달력에 오늘이 채워진 걸 보여주는 게 흐름의 끝으로 맞다.
-                onPress={() => router.replace('/(tabs)')}
+                // 운세·달력·모아보기 등 일기를 쓰기 시작한 화면으로 돌아간다.
+                onPress={() => router.canGoBack() ? router.back() : router.replace('/(tabs)/journal')}
                 style={styles.primaryBtn}
               >
                 <Text style={styles.primaryText}>다 남겼어요</Text>

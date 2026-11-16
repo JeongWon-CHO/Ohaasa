@@ -191,6 +191,7 @@ function RootLayoutNav() {
                   name="journal-view"
                   options={{ headerShown: false }}
                 />
+                <Stack.Screen name="archive" options={{ headerShown: false }} />
                 <Stack.Screen
                   name="horoscope"
                   options={{ headerShown: false }}

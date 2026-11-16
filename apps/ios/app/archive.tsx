@@ -8,6 +8,7 @@ import {
   useWindowDimensions,
   View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import {
   ArchiveMonthHeader,
@@ -25,7 +26,7 @@ import { useJournalArchive } from '@/src/hooks/useJournalArchive';
 import type { DailyJournal } from '@/src/lib/journal';
 
 /**
- * 보관함 = 쌓인 그림.
+ * 모아보기 = 쌓인 그림.
  *
  * 홈 달력과 역할이 겹치지 않게 나눈다 — 달력은 "이번 달을 채우는" 자리고,
  * 여기는 "지금까지 그린 걸 훑는" 자리다. 그래서 빈칸을 그리지 않고
@@ -33,6 +34,7 @@ import type { DailyJournal } from '@/src/lib/journal';
  */
 export default function ArchiveScreen() {
   const { width } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
 
   const { sections, loading, isEmpty, loadMore, refresh } = useJournalArchive();
 
@@ -65,7 +67,11 @@ export default function ArchiveScreen() {
   return (
     <ScreenBackground>
       <ResponsiveContainer>
-        <FinalHeader subtitle="지금까지 남긴 그림" />
+        <FinalHeader
+          title="모아보기"
+          subtitle="지금까지 남긴 그림"
+          onBackPress={() => router.canGoBack() ? router.back() : router.replace('/(tabs)/journal')}
+        />
         <SectionList<DailyJournal[], { yearMonth: string; count: number }>
           style={styles.list}
           sections={listSections}
@@ -86,8 +92,8 @@ export default function ArchiveScreen() {
           showsVerticalScrollIndicator={false}
           contentContainerStyle={[
             styles.content,
-            // 탭바가 레이아웃 공간을 차지하므로 여기에 탭바 높이를 더하지 않는다.
-            { paddingBottom: spacing.xl },
+            // 모아보기는 탭 밖에 있으므로 홈 표시기 영역을 직접 확보한다.
+            { paddingBottom: insets.bottom + spacing.xl },
           ]}
           ListEmptyComponent={
             // 첫 조회 중에는 아무것도 띄우지 않는다 — 기록이 있는데도

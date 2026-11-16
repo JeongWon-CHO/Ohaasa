@@ -92,18 +92,27 @@ export default function TabLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: "홈",
+          title: "오늘",
           tabBarIcon: ({ color, focused }) => (
-            <TabBarIcon name="calendar" color={color} focused={focused} />
+            <TabBarIcon name="sun" color={color} focused={focused} />
           ),
         }}
       />
       <Tabs.Screen
-        name="archive"
+        name="journal"
         options={{
-          title: "보관함",
+          title: "일기",
           tabBarIcon: ({ color, focused }) => (
-            <TabBarIcon name="grid" color={color} focused={focused} />
+            <TabBarIcon name="book-open" color={color} focused={focused} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="stats"
+        options={{
+          title: "통계",
+          tabBarIcon: ({ color, focused }) => (
+            <TabBarIcon name="bar-chart-2" color={color} focused={focused} />
           ),
         }}
       />

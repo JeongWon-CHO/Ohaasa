@@ -1,6 +1,6 @@
 import { Feather } from '@expo/vector-icons';
 import { StyleSheet, Text, View } from 'react-native';
-import type { ComponentProps } from 'react';
+import type { ComponentProps, ReactNode } from 'react';
 import type { MezamashiHoroscope } from '@ohaasa/shared/types/mezamashi';
 import { ZODIAC_MAP } from '@ohaasa/shared/constants/zodiac';
 
@@ -36,9 +36,11 @@ function InfoRow({
 export function MezamashiFortune({
   horoscope,
   showHeading = true,
+  afterAdvice,
 }: {
   horoscope: MezamashiHoroscope;
   showHeading?: boolean;
+  afterAdvice?: ReactNode;
 }) {
   const [year, month, day] = horoscope.date.split('-').map(Number);
   // 요일은 날짜 자체로 계산한다. 기기의 시간대와 무관하게 방송일을 표시한다.
@@ -69,6 +71,7 @@ export function MezamashiFortune({
         advice={horoscope.advice_ko ?? horoscope.advice}
         style={styles.fortune}
       />
+      {afterAdvice}
 
       <FinalCard style={styles.card}>
         <Text style={styles.cardTitle}>오늘의 행운</Text>

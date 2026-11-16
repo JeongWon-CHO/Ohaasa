@@ -56,7 +56,7 @@ export function usePushNavigation() {
     if (!pendingRef.current || !ready) return;
     pendingRef.current = null;
     resetToLatestDate();
-    // 이미 운세 화면이면 날짜만 최신으로 되돌린다 — push하면 같은 화면이 겹쳐 쌓인다.
-    if (root !== 'horoscope') router.push('/horoscope');
+    // 상세 화면을 닫고 기존 탭으로 돌아간다. 오늘 탭을 중복해서 쌓지 않는다.
+    router.dismissTo('/(tabs)');
   }, [tapTick, ready, root, resetToLatestDate]);
 }
