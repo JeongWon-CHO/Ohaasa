@@ -2,16 +2,9 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { collectAndSave, translateEntries, type GogoRow } from "./pipeline";
 import { parse, type GogoEntry } from "./parser";
-import { fetchHtml as fetchCat, parse as parseCat } from "./todays-cat";
 import { fetchHtml } from "./fetcher";
 
 vi.mock("./fetcher", () => ({ fetchHtml: vi.fn(async () => "fixture") }));
-vi.mock("./todays-cat", () => ({
-  fetchHtml: vi.fn(async () => {
-    throw new Error("fallback offline");
-  }),
-  parse: vi.fn(),
-}));
 vi.mock("./parser", () => ({ parse: vi.fn() }));
 vi.mock("./translator", () => ({ translateGogoEntries: vi.fn() }));
 vi.mock("../translator/translate", () => ({
@@ -64,35 +57,10 @@ function database(
 }
 
 describe("고고 전용 저장", () => {
-  it("공식 실패 시 예비 소스도 같은 고고 전용 저장 경로를 사용한다", async () => {
+  it("공식 접속 실패는 DB 변경 없이 오류로 반환한다", async () => {
     vi.mocked(fetchHtml).mockRejectedValueOnce(new Error("official offline"));
-    vi.mocked(fetchCat).mockResolvedValueOnce("cat HTML");
-    vi.mocked(parseCat).mockReturnValueOnce({ date, entries });
-    const existing = await translateEntries(
-      entries,
-      date,
-      [],
-      async () => "기존 번역",
-    );
-    const db = database(existing);
-    expect(await collectAndSave(db.client, date)).toEqual({
-      status: "saved",
-      date,
-      count: 12,
-    });
-    expect(db.upsert).toHaveBeenCalledWith(existing, {
-      onConflict: "date,zodiac_sign",
-    });
-  });
-  it("예비 소스의 날짜 불일치도 DB를 변경하지 않는다", async () => {
-    vi.mocked(fetchHtml).mockRejectedValueOnce(new Error("official offline"));
-    vi.mocked(fetchCat).mockResolvedValueOnce("cat HTML");
-    vi.mocked(parseCat).mockReturnValueOnce({ date: "2026-10-26", entries });
     const db = database();
-    expect(await collectAndSave(db.client, date)).toMatchObject({
-      status: "stale",
-      date: "2026-10-26",
-    });
+    await expect(collectAndSave(db.client, date)).rejects.toThrow("official offline");
     expect(db.from).not.toHaveBeenCalled();
   });
   it("동일한 원문·번역은 재사용하고 변경된 필드만 번역한다", async () => {

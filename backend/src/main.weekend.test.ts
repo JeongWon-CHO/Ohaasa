@@ -1,19 +1,16 @@
 import { beforeEach, afterEach, describe, expect, it, vi } from "vitest";
 import { crawlAndSave } from "./main";
+import { fetchJson as fetchOhaasa } from "./crawler/fetcher";
+import { parse as parseOhaasa } from "./crawler/parser";
 import { fetchHtml } from "./gogo/fetcher";
 import { parse as parseGogo } from "./gogo/parser";
-import { fetchHtml as fetchCat, parse as parseCat } from "./gogo/todays-cat";
 import { collectAndSave } from "./mezamashi/pipeline";
 import { fetchJson } from "./mezamashi/fetcher";
 import { parse as parseMezamashi } from "./mezamashi/parser";
 
+vi.mock("./crawler/fetcher", () => ({ fetchJson: vi.fn() }));
+vi.mock("./crawler/parser", () => ({ parse: vi.fn() }));
 vi.mock("./gogo/fetcher", () => ({ fetchHtml: vi.fn() }));
-vi.mock("./gogo/todays-cat", () => ({
-  fetchHtml: vi.fn(async () => {
-    throw new Error("fallback offline");
-  }),
-  parse: vi.fn(),
-}));
 vi.mock("./gogo/parser", () => ({ parse: vi.fn() }));
 vi.mock("./gogo/translator", () => ({
   translateGogoEntries: vi.fn(async () => new Map()),
@@ -78,17 +75,6 @@ afterEach(() => {
 });
 
 describe("주말 수집 대체 흐름", () => {
-  it("공식 실패 후 Today's Cat이 정상이면 고고로 저장하고 메자마시를 호출하지 않는다", async () => {
-    vi.mocked(fetchHtml).mockRejectedValueOnce(new Error("official offline"));
-    vi.mocked(fetchCat).mockResolvedValueOnce("cat HTML");
-    vi.mocked(parseCat).mockReturnValueOnce({ date: "2026-10-24", entries });
-    expect(await crawlAndSave(db, false, false)).toBe(true);
-    expect(collectAndSave).not.toHaveBeenCalled();
-    expect(upsert).toHaveBeenCalledWith(
-      expect.arrayContaining([expect.objectContaining({ source: "gogo" })]),
-      { onConflict: "date,zodiac_sign" },
-    );
-  });
   it("고고 정상 시 기존 테이블에 저장하고 메자마시를 호출하지 않는다", async () => {
     expect(await crawlAndSave(db, false, false)).toBe(true);
     expect(collectAndSave).not.toHaveBeenCalled();
@@ -143,4 +129,37 @@ describe("주말 수집 대체 흐름", () => {
     expect(from).not.toHaveBeenCalled();
     expect(collectAndSave).not.toHaveBeenCalled();
   });
+});
+
+describe("평일 고고 실패 시 오하아사 수집 유지", () => {
+  it.each(["network", "stale", "incomplete"])(
+    "고고 %s여도 오하아사 12개를 저장하고 메자마시는 호출하지 않는다",
+    async (failure) => {
+      vi.setSystemTime(new Date("2026-11-16T00:00:00Z"));
+      vi.mocked(fetchOhaasa).mockResolvedValue({} as Awaited<ReturnType<typeof fetchOhaasa>>);
+      vi.mocked(parseOhaasa).mockReturnValue(signs.map((zodiac_sign, i) => ({
+        date: "2026-11-16", zodiac_sign, zodiac_name: zodiac_sign,
+        rank: i + 1, advice: "オハアサ本文", lucky_item_ohaasa: null,
+      })));
+      if (failure === "network") {
+        vi.mocked(fetchHtml).mockRejectedValueOnce(new Error("offline"));
+      } else {
+        vi.mocked(parseGogo).mockReturnValue({
+          date: failure === "stale" ? "2026-11-15" : "2026-11-16",
+          entries: failure === "incomplete" ? entries.slice(1) : entries,
+        });
+      }
+      expect(await crawlAndSave(db, false, false)).toBe(true);
+      expect(collectAndSave).not.toHaveBeenCalled();
+      const rows = (upsert.mock.calls[0] as unknown as [Record<string, unknown>[]])[0];
+      expect(rows).toHaveLength(12);
+      for (const row of rows) {
+        expect(row).toMatchObject({
+          date: "2026-11-16", source: "ohaasa", advice: "オハアサ本文",
+          lucky_color: null, money_score: null, love_score: null,
+          work_score: null, health_score: null,
+        });
+      }
+    },
+  );
 });
