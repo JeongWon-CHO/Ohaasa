@@ -7,6 +7,8 @@
     "crawl:dry": "tsx src/main.ts --dry-run",
     "crawl:save": "tsx src/main.ts --no-notify",
     "crawl:mezamashi": "tsx src/mezamashi/main.ts",
+    "community:preview": "node --import tsx scripts/community-preview.mjs",
+    "community:test": "node --import tsx --test scripts/community-preview.check.mjs ../.github/scripts/community-automation.test.mjs",
     "test": "vitest run",
     "test:watch": "vitest"
   },

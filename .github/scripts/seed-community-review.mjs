@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+import { COMMUNITY_EXAMPLE_PROMPT } from '../../backend/scripts/community-prompt.mjs';
 import { createHash } from 'node:crypto';
 import { pathToFileURL } from 'node:url';
 import { database, required } from './community-api.mjs';
@@ -20,7 +20,7 @@ function validateText(value, limit) {
   return body;
 }
 
-export const COMMUNITY_EXAMPLE_PROMPT = readFileSync(new URL('../../backend/prompts/community-writing.md', import.meta.url), 'utf8');
+export { COMMUNITY_EXAMPLE_PROMPT };
 
 export async function generateExample(question, existingAnswer, env = required, request = fetch, context) {
   let lastError;
@@ -114,6 +114,7 @@ export async function seedReviewContent(db = database, env = required, generate 
   let base;
   try { base = env('REVIEW_ANSWER_DEVICE_ID'); } catch { base = DEFAULT_AUTHORS.REVIEW_ANSWER_DEVICE_ID; }
   const seen = new Map();
+  const seenReplies = new Set();
   let dates;
   for (let slot = 0; slot < 10; slot++) {
     // Keep the original author and use stable UUIDs so reruns and blocking remain effective.
@@ -130,9 +131,10 @@ export async function seedReviewContent(db = database, env = required, generate 
     };
     const slotGenerate = async (question, existingAnswer, config) => {
       for (let attempt = 0; attempt < 3; attempt++) {
-        const value = await generate(question, existingAnswer, config, undefined, { style: STYLES[slot], avoidRepeating: [...seen.values()] });
+        const value = await generate(question, existingAnswer, config, undefined, { style: STYLES[slot], avoidRepeating: [...seen.values()], avoidRepeatingReplies: [...seenReplies] });
         if (existingAnswer || ![...seen.values()].includes(value.answer)) {
           seen.set(`generated:${slot}:${question}`, value.answer);
+          seenReplies.add(value.reply);
           return value;
         }
       }

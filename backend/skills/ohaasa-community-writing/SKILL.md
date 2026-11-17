@@ -25,11 +25,13 @@ description: 오하아사 오늘의 질문에 맞는 한국어 커뮤니티 예�
 Ohaasa 저장소 루트 기준으로 다음 파일을 확인한다. backend에서 작업 중이면 `backend/`를 제외하고 나머지 경로는 부모 디렉터리에서 찾는다.
 
 - `backend/skills/ohaasa-community-writing/`: 버전 관리하는 스킬 원본과 참고 자료. 로컬에 설치된 동명 스킬을 수정했다면 이 원본에도 반영한다.
-- `backend/prompts/community-writing.md`: 자동 생성이 실제로 읽는 프롬프트. 참고 자료 전체가 자동으로 전달되지는 않는다.
+- `backend/prompts/community-writing.md`: 자동 생성의 기본 규칙.
+- `backend/scripts/community-prompt.mjs`: 기본 규칙과 좋은·나쁜 예시 파일을 실행 시작 때 한 번 읽고 작성·자체 검토 순서를 합친다. 코드 작업 지침인 SKILL.md 전체는 생성에 전달하지 않는다.
+- `backend/scripts/community-preview.mjs`: DB 없이 생성 결과를 확인하는 로컬 명령. backend에서 `npm run community:preview -- "질문" --count 3`으로 실행한다. 기존 답변에 대한 댓글을 확인하려면 `--answer "기존 답변"`을 추가한다. OPENAI_API_KEY 환경변수 또는 backend/.env를 사용하며 실제 생성 API 비용이 발생한다.
 - `.github/scripts/seed-community-review.mjs`: 프롬프트 로딩, variation, 기존 답변 맥락, 길이·안전 검증과 배치 동작.
 - `packages/shared/src/constants/dailyQuestions.ts` 및 `daily-questions/`: 질문과 주제 범위.
 - `.github/scripts/community-automation.test.mjs`: 생성 요청과 배치 회귀 검증.
 
 스킬 초안·예시를 다듬는 작업과 운영 프롬프트 수정은 구분해 보고한다. 원하는 문체가 확인되면 관련 기준과 선별한 예시만 운영 프롬프트에 반영한다. 글쓰기 변경을 이유로 모델·스케줄·DB 구조를 변경하지 않는다. JSON 계약, 안전 필터, 중복 방지와 기존 작성자 식별을 유지한다.
 
-운영 프롬프트나 호출 코드를 바꿨다면 backend에서 `node --import tsx --test ../.github/scripts/community-automation.test.mjs`를 실행한다. 문서만 바꿨다면 링크, 예시의 길이와 질문 적합성을 확인한다. API를 호출하지 않았다면 실제 모델 생성 품질을 검증했다고 말하지 않는다. 스킬 사용 자체는 게시·배포·운영 DB 수정의 승인이 아니다.
+운영 프롬프트나 호출 코드를 바꿨다면 backend에서 `npm run community:test`를 실행한다. 세 자료의 실제 요청 포함, 정상 생성 한 번의 호출, 짧은 답변·댓글과 기존 배치 동작을 확인한다. 자체 검토 과정을 출력하거나 별도 검토 호출을 추가하지 않는다. 실패 재시도는 기존 생성기의 제한을 따른다. 문서만 바꿨다면 링크, 예시의 길이와 질문 적합성을 확인한다. API를 호출하지 않았다면 실제 모델 생성 품질을 검증했다고 말하지 않는다. 스킬 사용 자체는 게시·배포·운영 DB 수정의 승인이 아니다.
