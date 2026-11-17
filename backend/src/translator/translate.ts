@@ -45,7 +45,7 @@ function getClient(): OpenAI | null {
 }
 
 function getModel(): string {
-  return process.env.OPENAI_MODEL ?? "gpt-4o";
+  return process.env.OPENAI_MODEL ?? "gpt-5.4-mini";
 }
 
 // ============================================================
@@ -81,7 +81,10 @@ async function callGPT(
     const response = await client.chat.completions.create({
       model,
       temperature: 0,
-      max_tokens: 300,
+      max_completion_tokens: 300,
+      ...(model === "gpt-5.4-mini" || model.startsWith("gpt-5.4-mini-")
+        ? { reasoning_effort: "none" as const }
+        : {}),
       messages,
     });
     const text = response.choices[0]?.message?.content?.trim() ?? "";
