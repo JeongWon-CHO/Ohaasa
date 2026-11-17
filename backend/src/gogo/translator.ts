@@ -68,7 +68,7 @@ function getClient(): OpenAI | null {
 }
 
 function getModel(): string {
-  return process.env.OPENAI_MODEL ?? "gpt-4o";
+  return process.env.OPENAI_MODEL ?? "gpt-5.4-mini";
 }
 
 // ============================================================
@@ -84,11 +84,15 @@ async function callGPT(
   const client = getClient();
   if (!client) return null;
 
+  const model = getModel();
   try {
     const response = await client.chat.completions.create({
-      model: getModel(),
+      model,
       temperature: 0,
-      max_tokens: maxTokens,
+      max_completion_tokens: maxTokens,
+      ...(model === "gpt-5.4-mini" || model.startsWith("gpt-5.4-mini-")
+        ? { reasoning_effort: "none" as const }
+        : {}),
       messages: [
         { role: "system", content: systemPrompt },
         { role: "user", content: userContent },
