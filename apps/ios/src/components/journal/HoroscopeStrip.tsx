@@ -54,7 +54,7 @@ export function HoroscopeStrip() {
   const advice = horoscope.advice_ko ?? horoscope.advice;
 
   return (
-    <Pressable style={styles.strip} onPress={() => router.push('/horoscope')}>
+    <Pressable style={styles.strip} onPress={() => router.navigate('/(tabs)')}>
       {/* 이모지는 OS 폰트라 통제가 안 된다 — 앱이 쓰는 별자리 원형 아이콘으로 통일한다. */}
       <View
         style={[

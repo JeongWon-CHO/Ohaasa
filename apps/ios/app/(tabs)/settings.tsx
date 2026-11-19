@@ -494,7 +494,7 @@ export default function SettingsScreen() {
               title="오늘의 오하아사 보기"
               description="별자리 운세 · 전체 순위 · 통계"
               showChevron
-              onPress={() => router.push('/horoscope')}
+              onPress={() => router.navigate('/(tabs)')}
               style={styles.aboutRow}
             />
           </SettingsSection>

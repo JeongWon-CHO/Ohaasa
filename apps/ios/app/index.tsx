@@ -39,12 +39,8 @@ export default function IndexScreen() {
 
       router.replace(seen ? '/(tabs)' : '/onboarding?initialStep=selection');
 
-      // 운세 알림으로 켜진 경우엔 같은 tick에 운세까지 밀어 넣는다. 홈을 거치긴 하지만
-      // 머물지 않고, 뒤로가기를 누르면 홈이 남아 있어야 하므로 replace가 아니라 push다.
-      // 온보딩 중이면 끼어들지 않되 탭은 가져간다 — 안 그러면 훅이 나중에 다시 연다.
-      if (tap && claimNotificationTap(tap.id) && seen) {
-        router.push('/horoscope');
-      }
+      // 첫 화면이 최신 운세이므로 별도 화면을 push하지 않는다.
+      if (tap) claimNotificationTap(tap.id);
     }
 
     routeByOnboardingState();
