@@ -50,7 +50,6 @@ module.exports = {
         foregroundImage: './assets/images/adaptive-icon.png',
         backgroundColor: '#FAD4C0',
       },
-      edgeToEdgeEnabled: true,
       predictiveBackGestureEnabled: false,
       package: packageName,
       googleServicesFile: './google-services.json',
